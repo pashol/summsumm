@@ -7,6 +7,8 @@ import '../models/ai_model.dart';
 import '../providers/models_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/ai_service.dart';
+import '../widgets/glass_card.dart';
+import '../widgets/neumorphic_button.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key, this.isInitialSetup = false});
@@ -140,7 +142,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           if (widget.isInitialSetup) ...[
-            Card(
+            GlassCard(
               color: cs.primaryContainer,
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -385,7 +387,7 @@ class _SectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    return Card(
+    return GlassCard(
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
