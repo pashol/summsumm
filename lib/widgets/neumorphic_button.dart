@@ -38,19 +38,19 @@ class _NeumorphicButtonState extends State<NeumorphicButton> {
           boxShadow: _isPressed
               ? [
                   BoxShadow(
-                    color: color.withOpacity(0.4),
+                    color: color.withValues(alpha: 0.4),
                     offset: const Offset(2, 2),
                     blurRadius: 4,
                   ),
                 ]
               : [
                   BoxShadow(
-                    color: color.withOpacity(0.4),
+                    color: color.withValues(alpha: 0.4),
                     offset: const Offset(4, 4),
                     blurRadius: 8,
                   ),
                   BoxShadow(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     offset: const Offset(-4, -4),
                     blurRadius: 8,
                   ),
