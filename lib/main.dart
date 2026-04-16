@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'models/document.dart';
 import 'providers/settings_provider.dart';
 import 'screens/settings_screen.dart';
 import 'screens/summary_sheet.dart';
@@ -21,13 +22,19 @@ void main() async {
   }
 
   final action = intentData?['action'] as String? ?? '';
-  final text = intentData?['text'] as String?;
+  final documents = (intentData?['documents'] as List<dynamic>? ?? [])
+      .map((doc) => Document(
+            id: doc['text'].hashCode.toString(),
+            text: doc['text'] as String,
+          ))
+      .toList();
 
-  final openSettings = action == 'app.summsumm.OPEN_SETTINGS' || text == null;
+  final openSettings =
+      action == 'app.summsumm.OPEN_SETTINGS' || documents.isEmpty;
 
   runApp(
     ProviderScope(
-      child: SummsummApp(openSettings: openSettings, initialText: text),
+      child: SummsummApp(openSettings: openSettings, documents: documents),
     ),
   );
 }
@@ -62,8 +69,7 @@ ThemeData _buildTheme(Brightness brightness) {
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(color: colorScheme.primary, width: 1.5),
       ),
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     ),
     sliderTheme: const SliderThemeData(
       showValueIndicator: ShowValueIndicator.onDrag,
@@ -89,11 +95,11 @@ class SummsummApp extends ConsumerStatefulWidget {
   const SummsummApp({
     super.key,
     required this.openSettings,
-    this.initialText,
+    required this.documents,
   });
 
   final bool openSettings;
-  final String? initialText;
+  final List<Document> documents;
 
   @override
   ConsumerState<SummsummApp> createState() => _SummsummAppState();
@@ -117,7 +123,7 @@ class _SummsummAppState extends ConsumerState<SummsummApp> {
       themeMode: ThemeMode.system,
       home: widget.openSettings
           ? const SettingsScreen(isInitialSetup: true)
-          : _SummarySheetHost(initialText: widget.initialText!),
+          : _SummarySheetHost(documents: widget.documents),
     );
   }
 }
@@ -125,9 +131,9 @@ class _SummsummAppState extends ConsumerState<SummsummApp> {
 /// A transparent host scaffold that immediately shows the summary bottom sheet.
 /// Dismissing the sheet exits the app (returns to the calling app).
 class _SummarySheetHost extends StatefulWidget {
-  const _SummarySheetHost({required this.initialText});
+  const _SummarySheetHost({required this.documents});
 
-  final String initialText;
+  final List<Document> documents;
 
   @override
   State<_SummarySheetHost> createState() => _SummarySheetHostState();
@@ -149,7 +155,10 @@ class _SummarySheetHostState extends State<_SummarySheetHost>
         vsync: this,
         duration: const Duration(milliseconds: 400),
       )..forward(),
-      builder: (ctx) => SummarySheet(initialText: widget.initialText),
+      builder: (ctx) => SummarySheet(
+        documents: widget.documents,
+        initialIndex: 0,
+      ),
     );
     // Sheet dismissed — return to calling app
     if (mounted) SystemNavigator.pop();
