@@ -22,22 +22,45 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
-            .setMethodCallHandler { call, result ->
-                when (call.method) {
-                    "getInitialIntent" -> result.success(
-                        mapOf(
-                            "action" to (intent.action ?: ""),
-                            "text" to extractText()
-                        )
-                    )
-                    "offerSettingsShortcut" -> {
-                        offerSettingsShortcutIfNeeded()
-                        result.success(null)
-                    }
-                    else -> result.notImplemented()
+    MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
+        .setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getInitialIntent" -> result.success(getInitialIntent())
+                "offerSettingsShortcut" -> {
+                    offerSettingsShortcutIfNeeded()
+                    result.success(null)
                 }
+                else -> result.notImplemented()
             }
+        }
+    }
+
+    private fun getInitialIntent(): Map<String, Any?>? {
+        val intent = intent ?: return null
+        val action = intent.action ?: return null
+        val documents = mutableListOf<Map<String, String?>>()
+
+        // Handle ACTION_SEND (single document)
+        if (Intent.ACTION_SEND == action && "text/plain" == intent.type) {
+            val text = intent.getStringExtra(Intent.EXTRA_TEXT)
+            text?.let { documents.add(mapOf("text" to it)) }
+        }
+        // Handle ACTION_SEND_MULTIPLE (multiple documents)
+        else if (Intent.ACTION_SEND_MULTIPLE == action && "text/plain" == intent.type) {
+            val texts = intent.getStringArrayListExtra(Intent.EXTRA_TEXT)
+            texts?.forEach { text -> documents.add(mapOf("text" to text)) }
+        }
+        // Handle ACTION_PROCESS_TEXT (text selection)
+        else if (Intent.ACTION_PROCESS_TEXT == action) {
+            val text = intent.getStringExtra(Intent.EXTRA_PROCESS_TEXT)
+            text?.let { documents.add(mapOf("text" to it)) }
+        }
+
+        return if (documents.isNotEmpty()) {
+            mapOf("action" to action, "documents" to documents)
+        } else {
+            null
+        }
     }
 
     private fun extractText(): String? = when (intent.action) {
