@@ -87,3 +87,7 @@ coverage/
 
 # Claude/AI local settings
 .claude/
+
+# Symlinks
+CLAUDE.md
+AGENTS.md
