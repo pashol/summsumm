@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Used during the launch sequence to avoid a white flash -->
+    <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+    </style>
+
+    <!-- Transparent activity theme — lets the underlying app show through
+         while the bottom sheet floats on top. -->
+    <style name="TransparentTheme" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+
+    <!-- Fallback for non-share launches (settings) -->
+    <style name="NormalTheme" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">?android:colorBackground</item>
+    </style>
+</resources>

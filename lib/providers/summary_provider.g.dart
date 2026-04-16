@@ -1,0 +1,24 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+part of 'summary_provider.dart';
+
+// **************************************************************************
+// RiverpodGenerator
+// **************************************************************************
+
+String _$summaryHash() => r'3a4227284832fa613b343861314435d54a290e9f';
+
+/// See also [Summary].
+@ProviderFor(Summary)
+final summaryProvider = NotifierProvider<Summary, SummaryState>.internal(
+  Summary.new,
+  name: r'summaryProvider',
+  debugGetCreateSourceHash:
+      const bool.fromEnvironment('dart.vm.product') ? null : _$summaryHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef _$Summary = Notifier<SummaryState>;
+// ignore_for_file: type=lint
+// ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

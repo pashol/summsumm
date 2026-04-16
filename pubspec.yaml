@@ -1,0 +1,32 @@
+name: summsumm
+description: AI Text Summarizer — share-menu and text-selection AI summarizer.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+  flutter: '>=3.27.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.6.1
+  http: ^1.3.0
+  flutter_secure_storage: ^9.2.0
+  flutter_markdown: ^0.7.0
+  flutter_tts: ^4.2.0
+  shared_preferences: ^2.5.0
+  riverpod_annotation: ^2.6.1
+  google_fonts: ^6.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  lints: ^5.0.0
+  build_runner: ^2.4.14
+  riverpod_generator: ^2.6.3
+  riverpod_lint: ^2.6.3
+  custom_lint: ^0.7.0
+
+flutter:
+  uses-material-design: true
