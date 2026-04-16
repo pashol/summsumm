@@ -6,15 +6,24 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/chat_message.dart';
+import '../models/document.dart';
 import '../models/summary_state.dart';
 import '../providers/settings_provider.dart';
 import '../providers/summary_provider.dart';
+import '../widgets/document_carousel.dart';
+import '../widgets/glass_card.dart';
+import '../widgets/neumorphic_button.dart';
 import 'settings_screen.dart';
 
 class SummarySheet extends ConsumerStatefulWidget {
-  const SummarySheet({super.key, required this.initialText});
+  final List<Document> documents;
+  final int initialIndex;
 
-  final String initialText;
+  const SummarySheet({
+    super.key,
+    required this.documents,
+    this.initialIndex = 0,
+  });
 
   @override
   ConsumerState<SummarySheet> createState() => _SummarySheetState();
@@ -22,6 +31,7 @@ class SummarySheet extends ConsumerStatefulWidget {
 
 class _SummarySheetState extends ConsumerState<SummarySheet>
     with SingleTickerProviderStateMixin {
+  late int _activeIndex;
   final _scrollCtrl = ScrollController();
   final _followUpCtrl = TextEditingController();
   final _followUpFocus = FocusNode();
@@ -32,6 +42,7 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
   @override
   void initState() {
     super.initState();
+    _activeIndex = widget.initialIndex;
     _entryController = AnimationController(
       duration: const Duration(milliseconds: 400),
       vsync: this,
@@ -76,7 +87,7 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
     }
 
     await ref.read(summaryProvider.notifier).summarize(
-          inputText: widget.initialText,
+          inputText: widget.documents[_activeIndex].text,
           apiKey: apiKey,
           settings: settings,
         );
@@ -94,7 +105,7 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
 
     await ref.read(summaryProvider.notifier).askFollowUp(
           question: question,
-          originalText: widget.initialText,
+          originalText: widget.documents[_activeIndex].text,
           apiKey: apiKey,
           settings: settings,
         );
@@ -124,7 +135,7 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
     }
 
     await ref.read(summaryProvider.notifier).factCheck(
-          inputText: widget.initialText,
+          inputText: widget.documents[_activeIndex].text,
           apiKey: apiKey,
           settings: settings,
         );
@@ -177,7 +188,10 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
                   scrollCtrl: _scrollCtrl,
                   sheetScrollCtrl: sheetScrollCtrl,
                   summaryState: summaryState,
-                  initialText: widget.initialText,
+                  documents: widget.documents,
+                  activeIndex: _activeIndex,
+                  onIndexChanged: (index) =>
+                      setState(() => _activeIndex = index),
                   followUpCtrl: _followUpCtrl,
                   followUpFocus: _followUpFocus,
                   onCopy: () => _copyToClipboard(summaryState.summary),
@@ -214,7 +228,9 @@ class _SheetBody extends StatelessWidget {
     required this.scrollCtrl,
     required this.sheetScrollCtrl,
     required this.summaryState,
-    required this.initialText,
+    required this.documents,
+    required this.activeIndex,
+    required this.onIndexChanged,
     required this.followUpCtrl,
     required this.followUpFocus,
     required this.onCopy,
@@ -232,7 +248,9 @@ class _SheetBody extends StatelessWidget {
   final ScrollController scrollCtrl;
   final ScrollController sheetScrollCtrl;
   final SummaryState summaryState;
-  final String initialText;
+  final List<Document> documents;
+  final int activeIndex;
+  final ValueChanged<int> onIndexChanged;
   final TextEditingController followUpCtrl;
   final FocusNode followUpFocus;
   final VoidCallback onCopy;
@@ -262,8 +280,7 @@ class _SheetBody extends StatelessWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: cs.surface.withValues(alpha: 0.82),
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(28)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
             border: Border(
               top: BorderSide(
                 color: cs.outlineVariant.withValues(alpha: 0.4),
@@ -293,114 +310,122 @@ class _SheetBody extends StatelessWidget {
                 ),
               ),
 
-          // Header
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.settings_outlined),
-                  tooltip: 'Settings',
-                  onPressed: onSettings,
+              // Header
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.settings_outlined),
+                      tooltip: 'Settings',
+                      onPressed: onSettings,
+                    ),
+                    Expanded(
+                      child: Text(
+                        summaryState.isFactChecking
+                            ? 'Fact Check'
+                            : 'AI Summary',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      tooltip: 'Close',
+                      onPressed: onClose,
+                    ),
+                  ],
                 ),
-                Expanded(
-                  child: Text(
-                    summaryState.isFactChecking ? 'Fact Check' : 'AI Summary',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w600),
-                  ),
+              ),
+              const Divider(height: 1),
+
+              // Scrollable content
+              Expanded(
+                child: ListView(
+                  controller: scrollCtrl,
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  children: [
+                    DocumentCarousel(
+                      documents: documents,
+                      activeIndex: activeIndex,
+                      onIndexChanged: onIndexChanged,
+                    ),
+                    // Input text preview
+                    _TextPreview(text: documents[activeIndex].text),
+                    const SizedBox(height: 12),
+
+                    // Loading shimmer
+                    if (isLoading) const _ShimmerLoading(),
+
+                    // Streaming / done summary
+                    if (summaryState.summary.isNotEmpty || isStreaming) ...[
+                      _SummaryContent(
+                        summary: summaryState.summary,
+                        isCursorVisible: summaryState.isCursorVisible,
+                        isStreaming: isStreaming,
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+
+                    // Error message (shown briefly before auto-close)
+                    if (isError)
+                      Text(
+                        summaryState.error,
+                        style: TextStyle(color: cs.error),
+                      ),
+
+                    // Chat history
+                    if (summaryState.chat.isNotEmpty) ...[
+                      const Divider(),
+                      ...summaryState.chat.map((msg) => _ChatBubble(msg: msg)),
+                    ],
+
+                    // Streaming follow-up reply
+                    if (summaryState.streamingReply.isNotEmpty)
+                      _ChatBubble(
+                        msg: null,
+                        streamingContent: summaryState.streamingReply,
+                        isCursorVisible: summaryState.isCursorVisible,
+                      ),
+
+                    const SizedBox(height: 8),
+                  ],
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  tooltip: 'Close',
-                  onPressed: onClose,
+              ),
+
+              // Action buttons (shown when done)
+              if (isDone) ...[
+                const Divider(height: 1),
+                _ActionBar(
+                  ttsState: summaryState.ttsState,
+                  onReadAloud: onReadAloud,
+                  onPauseSpeaking: onPauseSpeaking,
+                  onResumeSpeaking: onResumeSpeaking,
+                  onStopSpeaking: onStopSpeaking,
+                  onCopy: onCopy,
+                  onFactCheck: onFactCheck,
                 ),
               ],
-            ),
-          ),
-          const Divider(height: 1),
 
-          // Scrollable content
-          Expanded(
-            child: ListView(
-              controller: scrollCtrl,
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-              children: [
-                // Input text preview
-                _TextPreview(text: initialText),
-                const SizedBox(height: 12),
-
-                // Loading shimmer
-                if (isLoading) const _ShimmerLoading(),
-
-                // Streaming / done summary
-                if (summaryState.summary.isNotEmpty || isStreaming) ...[
-                  _SummaryContent(
-                    summary: summaryState.summary,
-                    isCursorVisible: summaryState.isCursorVisible,
-                    isStreaming: isStreaming,
-                  ),
-                  const SizedBox(height: 8),
-                ],
-
-                // Error message (shown briefly before auto-close)
-                if (isError)
-                  Text(
-                    summaryState.error,
-                    style: TextStyle(color: cs.error),
-                  ),
-
-                // Chat history
-                if (summaryState.chat.isNotEmpty) ...[
-                  const Divider(),
-                  ...summaryState.chat.map((msg) => _ChatBubble(msg: msg)),
-                ],
-
-                // Streaming follow-up reply
-                if (summaryState.streamingReply.isNotEmpty)
-                  _ChatBubble(
-                    msg: null,
-                    streamingContent: summaryState.streamingReply,
-                    isCursorVisible: summaryState.isCursorVisible,
-                  ),
-
-                const SizedBox(height: 8),
+              // Follow-up input (shown when done and under 3 turns)
+              if (isDone &&
+                  summaryState.followUpCount < 3 &&
+                  summaryState.chat.length < 6) ...[
+                const Divider(height: 1),
+                _FollowUpInput(
+                  controller: followUpCtrl,
+                  focusNode: followUpFocus,
+                  onSend: onSendFollowUp,
+                  remainingTurns: 3 - summaryState.followUpCount,
+                ),
               ],
-            ),
+
+              // Safe area bottom padding
+              SizedBox(height: MediaQuery.of(context).padding.bottom),
+            ],
           ),
-
-          // Action buttons (shown when done)
-          if (isDone) ...[
-            const Divider(height: 1),
-            _ActionBar(
-              ttsState: summaryState.ttsState,
-              onReadAloud: onReadAloud,
-              onPauseSpeaking: onPauseSpeaking,
-              onResumeSpeaking: onResumeSpeaking,
-              onStopSpeaking: onStopSpeaking,
-              onCopy: onCopy,
-              onFactCheck: onFactCheck,
-            ),
-          ],
-
-          // Follow-up input (shown when done and under 3 turns)
-          if (isDone &&
-              summaryState.followUpCount < 3 &&
-              summaryState.chat.length < 6) ...[
-            const Divider(height: 1),
-            _FollowUpInput(
-              controller: followUpCtrl,
-              focusNode: followUpFocus,
-              onSend: onSendFollowUp,
-              remainingTurns: 3 - summaryState.followUpCount,
-            ),
-          ],
-
-          // Safe area bottom padding
-          SizedBox(height: MediaQuery.of(context).padding.bottom),
-        ],
-      ),
         ),
       ),
     );
@@ -443,9 +468,13 @@ class _SummaryContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final displayText = isStreaming && isCursorVisible ? '$summary▋' : summary;
 
-    return MarkdownBody(
-      data: displayText,
-      styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)),
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      child: MarkdownBody(
+        key: ValueKey(summary.hashCode),
+        data: displayText,
+        styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)),
+      ),
     );
   }
 }
@@ -750,8 +779,7 @@ class _ActionButtonState extends State<_ActionButton>
             return Transform.scale(
               scale: _scaleAnimation.value,
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -762,11 +790,11 @@ class _ActionButtonState extends State<_ActionButton>
                       style: Theme.of(context).textTheme.labelSmall,
                     ),
                   ],
+                ),
               ),
-            ),
-          );
-        },
-      ),
+            );
+          },
+        ),
       ),
     );
   }
