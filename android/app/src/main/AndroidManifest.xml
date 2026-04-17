@@ -3,6 +3,11 @@
     package="app.summsumm">
 
     <uses-permission android:name="android.permission.INTERNET" />
+  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+  <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+  <uses-permission android:name="android.permission.RECORD_AUDIO" />
+  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+  <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
     <application
         android:label="AI Text Summarizer"
@@ -36,21 +41,32 @@
                 <data android:mimeType="text/plain" />
             </intent-filter>
 
-            <!-- PDF share (single) -->
-            <intent-filter>
-                <action android:name="android.intent.action.SEND" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="application/pdf" />
-            </intent-filter>
+        <!-- PDF share (single) -->
+        <intent-filter>
+            <action android:name="android.intent.action.SEND" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <data android:mimeType="application/pdf" />
+        </intent-filter>
 
-            <!-- PDF share (multiple) -->
-            <intent-filter>
+        <meta-data
+            android:name="android.app.file_provider"
+            android:resource="@xml/file_provider" />
+
+        <!-- PDF share (multiple) -->
+        <intent-filter>
                 <action android:name="android.intent.action.SEND_MULTIPLE" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="application/pdf" />
             </intent-filter>
 
-            <!-- Settings shortcut -->
+            <!-- Open PDF directly from file manager / PDF viewer -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <data android:mimeType="application/pdf" />
+        </intent-filter>
+
+        <!-- Settings shortcut -->
             <intent-filter>
                 <action android:name="app.summsumm.OPEN_SETTINGS" />
                 <category android:name="android.intent.category.DEFAULT" />
