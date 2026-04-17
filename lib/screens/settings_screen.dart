@@ -191,7 +191,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               if (isProviderOpenAi) ...[
                 DropdownButtonFormField<String>(
                   initialValue: settings.openaiModel.isEmpty
-                      ? null
+                      ? kOpenAiModels.first.id
                       : settings.openaiModel,
                   decoration: const InputDecoration(
                     labelText: 'Model',
