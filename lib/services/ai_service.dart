@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io' as io;
 
 import 'package:http/http.dart' as http;
 
@@ -93,6 +94,86 @@ class AiService {
       client.close();
     }
   }
+
+  Stream<String> streamCompletionWithFile({
+    required String apiKey,
+    required String model,
+    required io.File file,
+    required String prompt,
+    required String provider,
+  }) async* {
+    final isProviderOpenAi = provider == 'openai';
+
+    if (isProviderOpenAi) {
+      throw const AiException(
+          'PDF upload not supported with OpenAI. Use OpenRouter.');
+    }
+
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('https://openrouter.ai/api/v1/chat/completions'),
+    );
+    request.headers.addAll({
+      'Authorization': 'Bearer $apiKey',
+      ..._openRouterAttributionHeaders(),
+    });
+
+    // Add file as multipart
+    request.files.add(await http.MultipartFile.fromPath('file', file.path));
+
+    request.fields.addAll({
+      'model': model,
+      'messages': jsonEncode([
+        {
+          'role': 'system',
+          'content': _pdfSystemPrompt,
+        },
+        {
+          'role': 'user',
+          'content': prompt,
+        },
+      ]),
+      'stream': 'true',
+    });
+
+    final http.Client client = http.Client();
+    try {
+      final streamedResponse = await request.send().timeout(_connectTimeout);
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode != 200) {
+        throw AiException(parseError(response.statusCode, response.body));
+      }
+
+      final decoded = response.body;
+      for (final line in decoded.split('\n')) {
+        final trimmedLine = line.trim();
+        if (trimmedLine.isEmpty) continue;
+        if (!trimmedLine.startsWith('data:')) continue;
+        final data = trimmedLine.substring(5).trim();
+        if (data == '[DONE]') return;
+        try {
+          final json = jsonDecode(data) as Map<String, dynamic>;
+          final delta = (json['choices'] as List?)?.first?['delta']?['content'];
+          if (delta is String && delta.isNotEmpty) yield delta;
+        } catch (_) {}
+      }
+    } on TimeoutException {
+      throw const AiException('Connection timed out. Please try again.');
+    } finally {
+      client.close();
+    }
+  }
+
+  static const _pdfSystemPrompt = '''
+You are an AI PDF summarizer. Rules:
+- Preserve ALL formatting: tables → markdown table, equations → LaTeX syntax
+- Headings: Output as markdown (# for H1, ## for H2)
+- Scanned text: Flag uncertain OCR with [UNVERIFIED]
+- Multi-page: Summarize structure (ToC, references) first, then key sections
+- If a page seems scanned/contains only images, note [SCANNED PAGE]
+- Be concise but thorough: capture key points, not every detail
+''';
 
   Future<List<AIModel>> fetchOpenRouterModels(String apiKey) async {
     AiException? lastError;

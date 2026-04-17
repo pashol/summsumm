@@ -15,6 +15,8 @@ class SummaryState {
   final String streamingReply;
   final TtsState ttsState;
   final bool isFactChecking;
+  final String source;
+  final List<String> warnings;
 
   SummaryState({
     required this.status,
@@ -27,6 +29,8 @@ class SummaryState {
     required this.streamingReply,
     this.ttsState = TtsState.stopped,
     this.isFactChecking = false,
+    this.source = 'text',
+    this.warnings = const [],
   }) : chat = List.unmodifiable(chat);
 
   factory SummaryState.initial() => SummaryState(
@@ -40,6 +44,8 @@ class SummaryState {
         streamingReply: '',
         ttsState: TtsState.stopped,
         isFactChecking: false,
+        source: 'text',
+        warnings: const [],
       );
 
   SummaryState copyWith({
@@ -53,6 +59,8 @@ class SummaryState {
     String? streamingReply,
     TtsState? ttsState,
     bool? isFactChecking,
+    String? source,
+    List<String>? warnings,
   }) =>
       SummaryState(
         status: status ?? this.status,
@@ -65,6 +73,8 @@ class SummaryState {
         streamingReply: streamingReply ?? this.streamingReply,
         ttsState: ttsState ?? this.ttsState,
         isFactChecking: isFactChecking ?? this.isFactChecking,
+        source: source ?? this.source,
+        warnings: warnings ?? this.warnings,
       );
 
   @override
@@ -80,7 +90,9 @@ class SummaryState {
         other.isCursorVisible == isCursorVisible &&
         other.streamingReply == streamingReply &&
         other.ttsState == ttsState &&
-        other.isFactChecking == isFactChecking;
+        other.isFactChecking == isFactChecking &&
+        other.source == source &&
+        listEquals(other.warnings, warnings);
   }
 
   @override
@@ -95,6 +107,8 @@ class SummaryState {
         streamingReply,
         ttsState,
         isFactChecking,
+        source,
+        Object.hashAll(warnings),
       );
 }
 

@@ -22,12 +22,24 @@ void main() async {
   }
 
   final action = intentData?['action'] as String? ?? '';
-  final documents = (intentData?['documents'] as List<dynamic>? ?? [])
-      .map((doc) => Document(
-            id: doc['text'].hashCode.toString(),
-            text: doc['text'] as String,
-          ))
-      .toList();
+  final documents =
+      (intentData?['documents'] as List<dynamic>? ?? []).map((doc) {
+    final text = doc['text'] as String? ?? '';
+    final uri = doc['uri'] as String?;
+    final name = doc['name'] as String?;
+    final size = doc['size'] as int?;
+    final error = doc['error'] as String?;
+
+    return Document(
+      id: (text.isNotEmpty ? text : uri ?? '').hashCode.toString(),
+      text: text,
+      title: name,
+      uri: uri,
+      name: name,
+      size: size,
+      error: error,
+    );
+  }).toList();
 
   final openSettings =
       action == 'app.summsumm.OPEN_SETTINGS' || documents.isEmpty;

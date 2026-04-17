@@ -12,7 +12,6 @@ import '../providers/settings_provider.dart';
 import '../providers/summary_provider.dart';
 import '../widgets/document_carousel.dart';
 import '../widgets/glass_card.dart';
-import '../widgets/neumorphic_button.dart';
 import 'settings_screen.dart';
 
 class SummarySheet extends ConsumerStatefulWidget {
@@ -90,6 +89,7 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
           inputText: widget.documents[_activeIndex].text,
           apiKey: apiKey,
           settings: settings,
+          document: widget.documents[_activeIndex],
         );
   }
 
@@ -211,6 +211,19 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
                   onClose: () => Navigator.of(context).pop(),
                   onSettings: _openSettings,
                   onSendFollowUp: _sendFollowUp,
+                  onRetryPdf: () async {
+                    final settings = ref.read(settingsProvider);
+                    final notifier = ref.read(settingsProvider.notifier);
+                    final apiKey =
+                        await notifier.getApiKey(settings.provider) ?? '';
+                    await ref
+                        .read(summaryProvider.notifier)
+                        .retryPdfWithFallbackModel(
+                          document: widget.documents[_activeIndex],
+                          apiKey: apiKey,
+                          settings: settings,
+                        );
+                  },
                 ),
               ),
             );
@@ -243,6 +256,7 @@ class _SheetBody extends StatelessWidget {
     required this.onClose,
     required this.onSettings,
     required this.onSendFollowUp,
+    required this.onRetryPdf,
   });
 
   final ScrollController scrollCtrl;
@@ -263,6 +277,7 @@ class _SheetBody extends StatelessWidget {
   final VoidCallback onClose;
   final VoidCallback onSettings;
   final VoidCallback onSendFollowUp;
+  final VoidCallback onRetryPdf;
 
   @override
   Widget build(BuildContext context) {
@@ -279,7 +294,7 @@ class _SheetBody extends StatelessWidget {
         filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: cs.surface.withValues(alpha: 0.82),
+            color: Colors.transparent,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
             border: Border(
               top: BorderSide(
@@ -287,13 +302,6 @@ class _SheetBody extends StatelessWidget {
                 width: 0.5,
               ),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.12),
-                blurRadius: 24,
-                offset: const Offset(0, -4),
-              ),
-            ],
           ),
           child: Column(
             children: [
@@ -310,7 +318,7 @@ class _SheetBody extends StatelessWidget {
                 ),
               ),
 
-              // Header
+// Header
               Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -347,11 +355,12 @@ class _SheetBody extends StatelessWidget {
                   controller: scrollCtrl,
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                   children: [
-                    DocumentCarousel(
-                      documents: documents,
-                      activeIndex: activeIndex,
-                      onIndexChanged: onIndexChanged,
-                    ),
+                    if (documents.length > 1)
+                      DocumentCarousel(
+                        documents: documents,
+                        activeIndex: activeIndex,
+                        onIndexChanged: onIndexChanged,
+                      ),
                     // Input text preview
                     _TextPreview(text: documents[activeIndex].text),
                     const SizedBox(height: 12),
@@ -363,8 +372,6 @@ class _SheetBody extends StatelessWidget {
                     if (summaryState.summary.isNotEmpty || isStreaming) ...[
                       _SummaryContent(
                         summary: summaryState.summary,
-                        isCursorVisible: summaryState.isCursorVisible,
-                        isStreaming: isStreaming,
                       ),
                       const SizedBox(height: 8),
                     ],
@@ -394,6 +401,39 @@ class _SheetBody extends StatelessWidget {
                   ],
                 ),
               ),
+
+              // Warnings (e.g., scanned PDF)
+              if (isDone && summaryState.warnings.isNotEmpty) ...[
+                const Divider(height: 1),
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        color: cs.error,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          summaryState.warnings.first,
+                          style: TextStyle(
+                            color: cs.error,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                      if (summaryState.source == 'pdf')
+                        TextButton(
+                          onPressed: onRetryPdf,
+                          child: const Text('Retry'),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
 
               // Action buttons (shown when done)
               if (isDone) ...[
@@ -454,26 +494,19 @@ class _TextPreview extends StatelessWidget {
 }
 
 class _SummaryContent extends StatelessWidget {
-  const _SummaryContent({
-    required this.summary,
-    required this.isCursorVisible,
-    required this.isStreaming,
-  });
+  const _SummaryContent({required this.summary});
 
   final String summary;
-  final bool isCursorVisible;
-  final bool isStreaming;
 
   @override
   Widget build(BuildContext context) {
-    final displayText = isStreaming && isCursorVisible ? '$summary▋' : summary;
-
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 300),
-      child: MarkdownBody(
-        key: ValueKey(summary.hashCode),
-        data: displayText,
-        styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)),
+    return GlassCard(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: MarkdownBody(
+          data: summary,
+          styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)),
+        ),
       ),
     );
   }
@@ -613,25 +646,43 @@ class _ChatBubble extends StatelessWidget {
 
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.78,
+      child: GlassCard(
+        color: isUser
+            ? cs.primaryContainer.withOpacity(0.76)
+            : cs.secondaryContainer.withOpacity(0.76),
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.78,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                isUser
+                    ? cs.primaryContainer.withOpacity(0.84)
+                    : cs.secondaryContainer.withOpacity(0.84),
+                isUser
+                    ? cs.primaryContainer.withOpacity(0.6)
+                    : cs.secondaryContainer.withOpacity(0.6),
+              ],
+            ),
+          ),
+          child: streamingContent != null || msg?.role == 'assistant'
+              ? MarkdownBody(
+                  data: displayContent,
+                  styleSheet: MarkdownStyleSheet.fromTheme(
+                    Theme.of(context),
+                  ),
+                )
+              : Text(
+                  displayContent,
+                  style: TextStyle(color: cs.onPrimaryContainer),
+                ),
         ),
-        decoration: BoxDecoration(
-          color: isUser ? cs.primaryContainer : cs.secondaryContainer,
-          borderRadius: radius,
-        ),
-        child: streamingContent != null || msg?.role == 'assistant'
-            ? MarkdownBody(
-                data: displayContent,
-                styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)),
-              )
-            : Text(
-                displayContent,
-                style: TextStyle(color: cs.onPrimaryContainer),
-              ),
       ),
     );
   }
