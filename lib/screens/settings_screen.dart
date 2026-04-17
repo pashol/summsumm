@@ -365,6 +365,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ],
           ),
+          const SizedBox(height: 16),
+          _SectionCard(
+            title: 'Voice Input',
+            icon: Icons.mic,
+            children: [
+              ListTile(
+                title: const Text('Voice Input'),
+                subtitle: const Text('Long-press send button to record voice'),
+                trailing: const Icon(Icons.mic),
+              ),
+            ],
+          ),
           const SizedBox(height: 32),
         ],
       ),

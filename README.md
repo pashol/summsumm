@@ -13,6 +13,7 @@ Ever wanted to quickly summarize articles, emails, or lengthy texts without leav
 - **Text-to-Speech**: Listen to summaries on the go with built-in TTS support — perfect for multitasking
 - **Fact Check mode**: Verify claims with the investigative journalist AI prompt that identifies TRUE/FALSE/UNVERIFIED claims
 - **Streaming summaries**: Watch summaries generate in real-time
+- **Voice Input**: Long-press the send button to record a follow-up question. The app will transcribe your voice using OpenAI Whisper (if OpenAI API key is configured), Voxtral (if OpenRouter API key is configured), or local speech-to-text as fallback.
 - **Customizable**: Select your preferred AI model and adjust summarization style
 
 ## Setup
@@ -93,6 +94,9 @@ lib/
     ├── glass_card.dart
     └── neumorphic_button.dart
 ```
+
+## Permissions
+- **Microphone**: Required for voice input functionality (recording follow-up questions).
 
 ## Privacy
 
