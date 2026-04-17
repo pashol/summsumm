@@ -43,6 +43,7 @@ class AiService {
       'model': model,
       'messages': messages,
       'stream': true,
+      ..._maxTokensParam(model, isProviderOpenAi, 4096),
     });
 
     final http.Client client = http.Client();
@@ -142,6 +143,7 @@ class AiService {
               {'role': 'user', 'content': userContent},
             ],
             'stream': true,
+            ..._maxTokensParam(model, true, 4096),
           })
         : jsonEncode({
             'models': _pdfModelChain,
@@ -190,6 +192,20 @@ class AiService {
     } finally {
       client.close();
     }
+  }
+
+  static Map<String, int> _maxTokensParam(
+    String model,
+    bool isOpenAi,
+    int count,
+  ) {
+    if (!isOpenAi) return {'max_tokens': count};
+    // gpt-5.x and o-series require max_completion_tokens; others use max_tokens
+    final usesCompletionTokens =
+        RegExp(r'^o\d|gpt-5', caseSensitive: false).hasMatch(model);
+    return usesCompletionTokens
+        ? {'max_completion_tokens': count}
+        : {'max_tokens': count};
   }
 
   // Fallback chain: Gemini first (native PDF + cheapest), Haiku as backup.
@@ -311,7 +327,7 @@ You are a helpful assistant that summarizes documents concisely. Formatting rule
               'messages': [
                 {'role': 'user', 'content': 'Hi'},
               ],
-              'max_tokens': 1,
+              ..._maxTokensParam(model, isProviderOpenAi, 10),
             }),
           )
           .timeout(_connectTimeout);

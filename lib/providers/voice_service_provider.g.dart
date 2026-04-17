@@ -1,24 +1,26 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'summary_provider.dart';
+part of 'voice_service_provider.dart';
 
 // **************************************************************************
 // RiverpodGenerator
 // **************************************************************************
 
-String _$summaryHash() => r'fa48f75059241b9369e396226d712917a552ca69';
+String _$voiceServiceHash() => r'de716fd989da7a6c7cfdac6d5ad218a45ccf2e5a';
 
-/// See also [Summary].
-@ProviderFor(Summary)
-final summaryProvider = NotifierProvider<Summary, SummaryState>.internal(
-  Summary.new,
-  name: r'summaryProvider',
+/// See also [voiceService].
+@ProviderFor(voiceService)
+final voiceServiceProvider = Provider<VoiceService>.internal(
+  voiceService,
+  name: r'voiceServiceProvider',
   debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product') ? null : _$summaryHash,
+      const bool.fromEnvironment('dart.vm.product') ? null : _$voiceServiceHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );
 
-typedef _$Summary = Notifier<SummaryState>;
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef VoiceServiceRef = ProviderRef<VoiceService>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

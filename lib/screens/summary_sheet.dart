@@ -10,6 +10,7 @@ import '../models/document.dart';
 import '../models/summary_state.dart';
 import '../providers/settings_provider.dart';
 import '../providers/summary_provider.dart';
+import 'package:summsumm/providers/voice_service_provider.dart';
 import '../widgets/document_carousel.dart';
 import '../widgets/glass_card.dart';
 import 'settings_screen.dart';
@@ -30,6 +31,31 @@ class SummarySheet extends ConsumerStatefulWidget {
 
 class _SummarySheetState extends ConsumerState<SummarySheet>
     with SingleTickerProviderStateMixin {
+  bool _isRecording = false;
+
+  void _startRecording(LongPressStartDetails _) async {
+    setState(() => _isRecording = true);
+    await ref.read(voiceServiceProvider).startRecording();
+  }
+
+  void _stopRecordingAndSendHandler(LongPressEndDetails _) async {
+    setState(() => _isRecording = false);
+    final filePath = await ref.read(voiceServiceProvider).stopRecording();
+    if (filePath == null) return;
+
+    final settings = ref.read(settingsProvider);
+    final notifier = ref.read(settingsProvider.notifier);
+    final apiKey = await notifier.getApiKey(settings.provider) ?? '';
+
+    await ref.read(summaryProvider.notifier).askFollowUpWithVoice(
+          audioFilePath: filePath,
+          originalText: widget.documents[_activeIndex].text,
+          apiKey: apiKey,
+          settings: settings,
+          document: widget.documents[_activeIndex],
+        );
+  }
+
   late int _activeIndex;
   final _scrollCtrl = ScrollController();
   final _followUpCtrl = TextEditingController();
@@ -213,6 +239,9 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
                   onClose: () => Navigator.of(context).pop(),
                   onSettings: _openSettings,
                   onSendFollowUp: _sendFollowUp,
+                  isRecording: _isRecording,
+                  onLongPressStart: _startRecording,
+                  onLongPressEnd: _stopRecordingAndSendHandler,
                   onRetryPdf: () async {
                     final settings = ref.read(settingsProvider);
                     final notifier = ref.read(settingsProvider.notifier);
@@ -259,6 +288,9 @@ class _SheetBody extends StatelessWidget {
     required this.onSettings,
     required this.onSendFollowUp,
     required this.onRetryPdf,
+    this.isRecording = false,
+    this.onLongPressStart,
+    this.onLongPressEnd,
   });
 
   final ScrollController scrollCtrl;
@@ -279,6 +311,9 @@ class _SheetBody extends StatelessWidget {
   final VoidCallback onClose;
   final VoidCallback onSettings;
   final VoidCallback onSendFollowUp;
+  final bool isRecording;
+  final void Function(LongPressStartDetails)? onLongPressStart;
+  final void Function(LongPressEndDetails)? onLongPressEnd;
   final VoidCallback onRetryPdf;
 
   @override
@@ -461,6 +496,9 @@ class _SheetBody extends StatelessWidget {
                   focusNode: followUpFocus,
                   onSend: onSendFollowUp,
                   remainingTurns: 3 - summaryState.followUpCount,
+                  isRecording: isRecording,
+                  onLongPressStart: onLongPressStart,
+                  onLongPressEnd: onLongPressEnd,
                 ),
               ],
 
@@ -853,18 +891,66 @@ class _ActionButtonState extends State<_ActionButton>
   }
 }
 
-class _FollowUpInput extends StatelessWidget {
+class _FollowUpInput extends StatefulWidget {
   const _FollowUpInput({
     required this.controller,
     required this.focusNode,
     required this.onSend,
     required this.remainingTurns,
+    required this.isRecording,
+    required this.onLongPressStart,
+    required this.onLongPressEnd,
   });
 
   final TextEditingController controller;
   final FocusNode focusNode;
   final VoidCallback onSend;
   final int remainingTurns;
+  final bool isRecording;
+  final void Function(LongPressStartDetails)? onLongPressStart;
+  final void Function(LongPressEndDetails)? onLongPressEnd;
+
+  @override
+  State<_FollowUpInput> createState() => _FollowUpInputState();
+}
+
+class _FollowUpInputState extends State<_FollowUpInput>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulseCtrl;
+  late final Animation<double> _scaleAnim;
+  late final Animation<double> _opacityAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _scaleAnim = Tween<double>(begin: 1.0, end: 1.5).animate(
+      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeOut),
+    );
+    _opacityAnim = Tween<double>(begin: 0.7, end: 0.0).animate(
+      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeOut),
+    );
+  }
+
+  @override
+  void didUpdateWidget(_FollowUpInput old) {
+    super.didUpdateWidget(old);
+    if (widget.isRecording && !old.isRecording) {
+      _pulseCtrl.repeat();
+    } else if (!widget.isRecording && old.isRecording) {
+      _pulseCtrl.stop();
+      _pulseCtrl.reset();
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulseCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -879,12 +965,12 @@ class _FollowUpInput extends StatelessWidget {
         children: [
           Expanded(
             child: TextField(
-              controller: controller,
-              focusNode: focusNode,
+              controller: widget.controller,
+              focusNode: widget.focusNode,
               textInputAction: TextInputAction.send,
-              onSubmitted: (_) => onSend(),
+              onSubmitted: (_) => widget.onSend(),
               decoration: InputDecoration(
-                hintText: remainingTurns == 1
+                hintText: widget.remainingTurns == 1
                     ? 'Last follow-up question...'
                     : 'Ask a follow-up question...',
                 border: OutlineInputBorder(
@@ -899,9 +985,46 @@ class _FollowUpInput extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          IconButton.filled(
-            icon: const Icon(Icons.send),
-            onPressed: onSend,
+          GestureDetector(
+            onLongPressStart: widget.onLongPressStart,
+            onLongPressEnd: widget.onLongPressEnd,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                if (widget.isRecording)
+                  AnimatedBuilder(
+                    animation: _pulseCtrl,
+                    builder: (context, _) => Transform.scale(
+                      scale: _scaleAnim.value,
+                      child: Opacity(
+                        opacity: _opacityAnim.value,
+                        child: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.red,
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                IconButton.filled(
+                  icon: widget.isRecording
+                      ? const Icon(Icons.mic)
+                      : const Icon(Icons.send),
+                  style: widget.isRecording
+                      ? IconButton.styleFrom(
+                          backgroundColor: Colors.red.shade700,
+                        )
+                      : null,
+                  onPressed: widget.onSend,
+                ),
+              ],
+            ),
           ),
         ],
       ),

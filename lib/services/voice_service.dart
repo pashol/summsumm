@@ -73,54 +73,21 @@ class VoiceService {
     if (!await file.exists()) return null;
 
     final bytes = await file.readAsBytes();
-    final base64Data = base64Encode(bytes);
-
-    final response = await http.post(
+    final request = http.MultipartRequest(
+      'POST',
       Uri.parse('https://openrouter.ai/api/v1/audio/transcriptions'),
-      headers: {
-        'Authorization': 'Bearer $apiKey',
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://summsumm.app',
-        'X-Title': 'SummSumm',
-      },
-      body: jsonEncode({
-        'file': base64Data,
-        'model': 'mistralai/voxtral-24b-2507',
-      }),
     );
-
-    if (response.statusCode == 200) {
-      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-      return decoded['text'] as String?;
-    }
-    return null;
-  }
-
-  Future<String?> transcribeWithOpenRouter(
-      String filePath, String apiKey) async {
-    final file = File(filePath);
-    if (!await file.exists()) return null;
-
-    final bytes = await file.readAsBytes();
-    final base64Data = base64Encode(bytes);
-
-    final response = await http.post(
-      Uri.parse('https://openrouter.ai/api/v1/audio/transcriptions'),
-      headers: {
-        'Authorization': 'Bearer $apiKey',
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://summsumm.app',
-        'X-Title': 'SummSumm',
-      },
-      body: jsonEncode({
-        'file': base64Data,
-        'model': 'mistralai/voxtral-24b-2507',
-      }),
+    request.headers['Authorization'] = 'Bearer $apiKey';
+    request.headers['HTTP-Referer'] = 'https://summsumm.app';
+    request.headers['X-Title'] = 'SummSumm';
+    request.files.add(
+      http.MultipartFile.fromBytes('file', bytes, filename: 'audio.aac'),
     );
+    request.fields['model'] = 'mistralai/voxtral-24b-2507';
 
+    final response = await http.Response.fromStream(await request.send());
     if (response.statusCode == 200) {
-      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-      return decoded['text'] as String?;
+      return jsonDecode(response.body)['text'] as String?;
     }
     return null;
   }

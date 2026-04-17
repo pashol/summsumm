@@ -362,7 +362,8 @@ class Summary extends _$Summary {
             )
             .listen(
           (delta) {
-            if (_mounted) state = state.copyWith(summary: state.summary + delta);
+            if (_mounted)
+              state = state.copyWith(summary: state.summary + delta);
           },
           onError: (Object e) {
             _stopBlink();
@@ -631,6 +632,45 @@ class Summary extends _$Summary {
         error: 'Failed to process PDF: ${e.toString()}',
       );
     }
+  }
+
+  Future<void> askFollowUpWithVoice({
+    required String audioFilePath,
+    required String originalText,
+    required String apiKey,
+    required AppSettings settings,
+    Document? document,
+  }) async {
+    if (state.followUpCount >= _maxFollowUps) return;
+    if (state.status == SummaryStatus.streaming) return;
+
+    _cancelStream();
+    _stopBlink();
+    await _tts.stop();
+
+    // Transcribe audio
+    final question = await ref.read(aiServiceProvider).transcribeAudio(
+          filePath: audioFilePath,
+          provider: settings.provider,
+          apiKey: apiKey,
+        );
+
+    if (question == null || question.isEmpty) {
+      state = state.copyWith(
+        status: SummaryStatus.error,
+        error: 'Could not transcribe voice input. Please try again.',
+      );
+      return;
+    }
+
+    // Reuse existing askFollowUp logic
+    await askFollowUp(
+      question: question,
+      originalText: originalText,
+      apiKey: apiKey,
+      settings: settings,
+      document: document,
+    );
   }
 
   Future<void> _summarizePdf(
