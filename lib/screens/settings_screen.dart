@@ -300,7 +300,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               ),
                             )
                           : const Icon(Icons.wifi_tethering),
-                      label: const Text('Test Connection'),
+                      label: const Text('Test Only'),
                     ),
                   ),
                 ],
