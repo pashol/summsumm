@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io' as io;
 import 'dart:async';
 
@@ -170,6 +171,7 @@ class Summary extends _$Summary {
     required String originalText,
     required String apiKey,
     required AppSettings settings,
+    Document? document,
   }) async {
     if (state.followUpCount >= _maxFollowUps) return;
     if (state.status == SummaryStatus.streaming) return;
@@ -187,28 +189,62 @@ class Summary extends _$Summary {
       isSpeaking: false,
     );
 
-    final trimmedOriginal = originalText.length > _maxInputChars
-        ? originalText.substring(0, _maxInputChars)
-        : originalText;
-
     final langSuffix = _langSuffix(settings.language, 'Your entire response');
 
     final systemPrompt =
-        'You are an AI assistant helping a user understand a text.\n'
+        'You are an AI assistant helping a user understand a document.\n'
         '\n'
         'You previously generated this summary:\n'
         '${state.summary}\n'
         '\n'
-        'Answer follow-up questions based on the text above. '
+        'Answer follow-up questions based on the document. '
         'Be concise and accurate. Plain text only, no markdown. '
-        'If the answer is in the text, refer to it specifically. '
+        'If the answer is in the document, refer to it specifically. '
         'If it is not, answer from your general knowledge and note that '
-        'the text does not cover this.'
+        'the document does not cover this.'
         '$langSuffix';
+
+    final isPdf = document != null && document.isPdf && !document.hasError;
+    Map<String, dynamic> contextMessage;
+
+    if (isPdf) {
+      final file = await _getPdfFile(document.uri!);
+      if (file == null || !await file.exists()) {
+        state = state.copyWith(
+          status: SummaryStatus.error,
+          error: 'Failed to re-read PDF for follow-up.',
+        );
+        return;
+      }
+      final base64Data = base64Encode(await file.readAsBytes());
+      final langSuffix2 = _langSuffix(settings.language, 'Summary');
+      contextMessage = {
+        'role': 'user',
+        'content': [
+          {
+            'type': 'file',
+            'file': {
+              'filename': 'document.pdf',
+              'file_data': 'data:application/pdf;base64,$base64Data',
+            },
+          },
+          {
+            'type': 'text',
+            'text': 'Provide a concise summary of this PDF document. '
+                '$langSuffix2\n\nPlease summarize the key points and main takeaways.',
+          },
+        ],
+      };
+    } else {
+      final trimmedOriginal = originalText.length > _maxInputChars
+          ? originalText.substring(0, _maxInputChars)
+          : originalText;
+      contextMessage = {'role': 'user', 'content': trimmedOriginal};
+    }
 
     final messages = [
       {'role': 'system', 'content': systemPrompt},
-      {'role': 'user', 'content': trimmedOriginal},
+      contextMessage,
       {'role': 'assistant', 'content': state.summary},
       ...state.chat.take(state.chat.length - 1).map((m) => m.toApiMap()),
       userMsg.toApiMap(),
@@ -273,49 +309,107 @@ class Summary extends _$Summary {
     required String inputText,
     required String apiKey,
     required AppSettings settings,
+    Document? document,
   }) async {
     _cancelStream();
     _stopBlink();
     await _tts.stop();
 
-    const maxFactCheckChars = 10000;
-    final trimmed = inputText.length > maxFactCheckChars
-        ? inputText.substring(0, maxFactCheckChars)
-        : inputText;
-
     final langSuffix = _langSuffix(settings.language, 'Your entire response');
+    const factCheckSystemPrompt =
+        'You are a critical investigative journalist. Verify the factual claims in the provided content with rigorous skepticism.';
+    final factCheckInstruction =
+        'Analyze the content and identify the 5-8 most significant factual claims. '
+        'For each claim, determine if it is TRUE, FALSE, or UNVERIFIED based on your knowledge.\n'
+        '\n'
+        'Respond in EXACTLY this plain text format (no markdown, no asterisks):\n'
+        '\n'
+        'Overall: [one sentence summarizing the overall credibility of this content]\n'
+        '\n'
+        '✅ TRUE (1): [specific claim] → [brief explanation of why it is true]\n'
+        '❌ FALSE (2): [specific claim] → [brief explanation of what is actually true]\n'
+        '⚠️ UNVERIFIED (3): [specific claim] → [brief explanation of why this is hard to verify]\n'
+        '\n'
+        'Use the exact emoji prefixes shown. Number each claim sequentially across all categories. '
+        'Do not include external links or URLs.'
+        '$langSuffix';
 
-    final messages = [
-      {
-        'role': 'system',
-        'content':
-            'You are a critical investigative journalist. Verify the factual claims in the following content with rigorous skepticism.',
-      },
-      {
-        'role': 'user',
-        'content': 'Analyze the content and identify the 5-8 most significant factual claims. '
-            'For each claim, determine if it is TRUE, FALSE, or UNVERIFIED based on your knowledge.\n'
-            '\n'
-            'Respond in EXACTLY this plain text format (no markdown, no asterisks):\n'
-            '\n'
-            'Overall: [one sentence summarizing the overall credibility of this content]\n'
-            '\n'
-            '✅ TRUE (1): [specific claim] → [brief explanation of why it is true]\n'
-            '❌ FALSE (2): [specific claim] → [brief explanation of what is actually true]\n'
-            '⚠️ UNVERIFIED (3): [specific claim] → [brief explanation of why this is hard to verify]\n'
-            '\n'
-            'Use the exact emoji prefixes shown. Number each claim sequentially across all categories. '
-            'Do not include external links or URLs.'
-            '$langSuffix\n\nContent:\n$trimmed',
-      },
-    ];
+    final isPdf = document != null && document.isPdf && !document.hasError;
 
     _startBlink();
     state = SummaryState.initial().copyWith(
       status: SummaryStatus.streaming,
       summary: '',
       isFactChecking: true,
+      source: isPdf ? 'pdf' : null,
     );
+
+    if (isPdf) {
+      try {
+        final file = await _getPdfFile(document.uri!);
+        if (file == null || !await file.exists()) {
+          throw Exception('Failed to read PDF file');
+        }
+        _streamSub = ref
+            .read(aiServiceProvider)
+            .streamCompletionWithFile(
+              apiKey: apiKey,
+              model: settings.activeModel,
+              file: file,
+              prompt: factCheckInstruction,
+              provider: settings.provider,
+              systemPrompt: factCheckSystemPrompt,
+            )
+            .listen(
+          (delta) {
+            if (_mounted) state = state.copyWith(summary: state.summary + delta);
+          },
+          onError: (Object e) {
+            _stopBlink();
+            if (_mounted) {
+              state = state.copyWith(
+                status: SummaryStatus.error,
+                error: e.toString(),
+              );
+            }
+          },
+          onDone: () {
+            _stopBlink();
+            if (_mounted) {
+              state = state.copyWith(
+                status: SummaryStatus.done,
+                isCursorVisible: false,
+                isFactChecking: true,
+              );
+            }
+          },
+          cancelOnError: true,
+        );
+      } on AiException catch (e) {
+        _stopBlink();
+        state = state.copyWith(status: SummaryStatus.error, error: e.message);
+      } catch (e) {
+        _stopBlink();
+        state = state.copyWith(
+          status: SummaryStatus.error,
+          error: 'Failed to process PDF: ${e.toString()}',
+        );
+      }
+      return;
+    }
+
+    const maxFactCheckChars = 10000;
+    final trimmed = inputText.length > maxFactCheckChars
+        ? inputText.substring(0, maxFactCheckChars)
+        : inputText;
+
+    final messages = [
+      {'role': 'system', 'content': factCheckSystemPrompt},
+      {
+        'role': 'user',
+        'content': '$factCheckInstruction\n\nContent:\n$trimmed',
+      },
+    ];
 
     try {
       _streamSub = ref
@@ -544,8 +638,7 @@ class Summary extends _$Summary {
     String apiKey,
     AppSettings settings,
   ) async {
-    // Use model optimized for PDFs
-    const pdfModel = 'anthropic/claude-sonnet-4.6';
+    final pdfModel = settings.activeModel;
 
     state = SummaryState.initial().copyWith(
       status: SummaryStatus.loading,

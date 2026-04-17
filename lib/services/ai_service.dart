@@ -5,6 +5,7 @@ import 'dart:io' as io;
 import 'package:http/http.dart' as http;
 
 import '../models/ai_model.dart';
+import 'voice_service.dart';
 
 const _openRouterEndpoint = 'https://openrouter.ai/api/v1/chat/completions';
 const _openRouterModelsEndpoint = 'https://openrouter.ai/api/v1/models';
@@ -22,10 +23,12 @@ Map<String, String> _openRouterAttributionHeaders() => const {
     };
 
 class AiService {
+  final VoiceService _voiceService = VoiceService();
+
   Stream<String> streamCompletion({
     required String apiKey,
     required String model,
-    required List<Map<String, String>> messages,
+    required List<Map<String, dynamic>> messages,
     required String provider,
   }) async* {
     final isProviderOpenAi = provider == 'openai';
@@ -101,62 +104,86 @@ class AiService {
     required io.File file,
     required String prompt,
     required String provider,
+    String? systemPrompt,
   }) async* {
+    final bytes = await file.readAsBytes();
+    final base64Data = base64Encode(bytes);
+
     final isProviderOpenAi = provider == 'openai';
+    final endpoint = isProviderOpenAi ? _openAiEndpoint : _openRouterEndpoint;
 
-    if (isProviderOpenAi) {
-      throw const AiException(
-          'PDF upload not supported with OpenAI. Use OpenRouter.');
-    }
-
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse('https://openrouter.ai/api/v1/chat/completions'),
-    );
+    final request = http.Request('POST', Uri.parse(endpoint));
     request.headers.addAll({
       'Authorization': 'Bearer $apiKey',
-      ..._openRouterAttributionHeaders(),
+      'Content-Type': 'application/json',
+      if (!isProviderOpenAi) ..._openRouterAttributionHeaders(),
     });
 
-    // Add file as multipart
-    request.files.add(await http.MultipartFile.fromPath('file', file.path));
+    final userContent = [
+      {
+        'type': 'file',
+        'file': {
+          'filename': 'document.pdf',
+          'file_data': 'data:application/pdf;base64,$base64Data',
+        },
+      },
+      {
+        'type': 'text',
+        'text': prompt,
+      },
+    ];
 
-    request.fields.addAll({
-      'model': model,
-      'messages': jsonEncode([
-        {
-          'role': 'system',
-          'content': _pdfSystemPrompt,
-        },
-        {
-          'role': 'user',
-          'content': prompt,
-        },
-      ]),
-      'stream': 'true',
-    });
+    final effectiveSystemPrompt = systemPrompt ?? _pdfSystemPrompt;
+    request.body = isProviderOpenAi
+        ? jsonEncode({
+            'model': model,
+            'messages': [
+              {'role': 'system', 'content': effectiveSystemPrompt},
+              {'role': 'user', 'content': userContent},
+            ],
+            'stream': true,
+          })
+        : jsonEncode({
+            'models': _pdfModelChain,
+            'provider': {
+              'sort': 'price',
+              'allow_fallbacks': true,
+            },
+            'messages': [
+              {'role': 'system', 'content': effectiveSystemPrompt},
+              {'role': 'user', 'content': userContent},
+            ],
+            'stream': true,
+          });
 
     final http.Client client = http.Client();
     try {
-      final streamedResponse = await request.send().timeout(_connectTimeout);
-      final response = await http.Response.fromStream(streamedResponse);
-
+      final response = await client.send(request).timeout(_connectTimeout);
       if (response.statusCode != 200) {
-        throw AiException(parseError(response.statusCode, response.body));
+        final body = await response.stream.bytesToString();
+        throw AiException(parseError(response.statusCode, body));
       }
 
-      final decoded = response.body;
-      for (final line in decoded.split('\n')) {
-        final trimmedLine = line.trim();
-        if (trimmedLine.isEmpty) continue;
-        if (!trimmedLine.startsWith('data:')) continue;
-        final data = trimmedLine.substring(5).trim();
-        if (data == '[DONE]') return;
-        try {
-          final json = jsonDecode(data) as Map<String, dynamic>;
-          final delta = (json['choices'] as List?)?.first?['delta']?['content'];
-          if (delta is String && delta.isNotEmpty) yield delta;
-        } catch (_) {}
+      String buffer = '';
+      await for (final chunk in response.stream
+          .transform(utf8.decoder)
+          .timeout(_streamIdleTimeout)) {
+        buffer += chunk;
+        final lines = buffer.split('\n');
+        buffer = lines.removeLast();
+        for (final line in lines) {
+          final trimmedLine = line.trim();
+          if (trimmedLine.isEmpty) continue;
+          if (!trimmedLine.startsWith('data:')) continue;
+          final data = trimmedLine.substring(5).trim();
+          if (data == '[DONE]') return;
+          try {
+            final json = jsonDecode(data) as Map<String, dynamic>;
+            final delta =
+                (json['choices'] as List?)?.first?['delta']?['content'];
+            if (delta is String && delta.isNotEmpty) yield delta;
+          } catch (_) {}
+        }
       }
     } on TimeoutException {
       throw const AiException('Connection timed out. Please try again.');
@@ -165,15 +192,40 @@ class AiService {
     }
   }
 
+  // Fallback chain: Gemini first (native PDF + cheapest), Haiku as backup.
+  // Both support native PDF processing via OpenRouter.
+  static const _pdfModelChain = [
+    'google/gemini-3-flash-preview',
+    'anthropic/claude-haiku-4.5',
+  ];
+
   static const _pdfSystemPrompt = '''
-You are an AI PDF summarizer. Rules:
-- Preserve ALL formatting: tables → markdown table, equations → LaTeX syntax
-- Headings: Output as markdown (# for H1, ## for H2)
-- Scanned text: Flag uncertain OCR with [UNVERIFIED]
-- Multi-page: Summarize structure (ToC, references) first, then key sections
-- If a page seems scanned/contains only images, note [SCANNED PAGE]
+You are a helpful assistant that summarizes documents concisely. Formatting rules:
+- Use ## for section headings, ### for sub-headings
+- Use **bold** for key terms and important findings
+- Use bullet lists for enumerations; numbered lists for sequential steps
+- Do NOT use tables, HTML, or color markup
+- Equations: write inline as plain text (e.g. E = mc^2)
+- Scanned text: flag uncertain OCR with [UNVERIFIED]
+- If a page contains only images/scans, note [SCANNED PAGE]
+- Multi-page docs: brief structure overview first, then key sections
 - Be concise but thorough: capture key points, not every detail
 ''';
+
+  Future<String?> transcribeAudio({
+    required String filePath,
+    required String provider,
+    required String apiKey,
+  }) async {
+    switch (provider) {
+      case 'openai':
+        return await _voiceService.transcribeWithOpenAI(filePath, apiKey);
+      case 'openrouter':
+        return await _voiceService.transcribeWithVoxtral(filePath, apiKey);
+      default:
+        return await _voiceService.transcribeLocally(filePath);
+    }
+  }
 
   Future<List<AIModel>> fetchOpenRouterModels(String apiKey) async {
     AiException? lastError;

@@ -53,7 +53,10 @@ class Settings extends _$Settings {
       debugPrint('Settings.setProvider rejected unknown provider: $provider');
       return;
     }
-    final next = state.copyWith(provider: provider);
+    var next = state.copyWith(provider: provider);
+    if (provider == 'openai' && next.openaiModel.isEmpty) {
+      next = next.copyWith(openaiModel: kOpenAiModels.first.id);
+    }
     state = next;
     await _persist(next);
   }

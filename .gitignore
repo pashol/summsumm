@@ -91,3 +91,8 @@ coverage/
 # Symlinks
 CLAUDE.md
 AGENTS.md
+.agents/
+
+# Tool config
+skills-lock.json
+opencode.json

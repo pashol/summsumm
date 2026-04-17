@@ -108,6 +108,7 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
           originalText: widget.documents[_activeIndex].text,
           apiKey: apiKey,
           settings: settings,
+          document: widget.documents[_activeIndex],
         );
   }
 
@@ -138,6 +139,7 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
           inputText: widget.documents[_activeIndex].text,
           apiKey: apiKey,
           settings: settings,
+          document: widget.documents[_activeIndex],
         );
   }
 

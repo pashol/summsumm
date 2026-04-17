@@ -1,11 +1,15 @@
 package app.summsumm
 
-import android.content.ContentResolver
+import android.Manifest
 import android.content.Intent
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.OpenableColumns
+import android.util.Log
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
@@ -15,12 +19,30 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
 
-    companion object {
-        const val CHANNEL = "app.summsumm/intent"
-        const val ACTION_SETTINGS = "app.summsumm.OPEN_SETTINGS"
-        const val PREFS_NAME = "summsumm_prefs"
-        const val KEY_SHORTCUT_CREATED = "shortcut_created"
-        const val MAX_PDF_SIZE_BYTES = 5 * 1024 * 1024 // 5MB
+companion object {
+    const val CHANNEL = "app.summsumm/intent"
+    const val ACTION_SETTINGS = "app.summsumm.OPEN_SETTINGS"
+    const val PREFS_NAME = "summsumm_prefs"
+    const val KEY_SHORTCUT_CREATED = "shortcut_created"
+    const val MAX_PDF_SIZE_BYTES = 5 * 1024 * 1024 // 5MB
+    private const val REQUEST_READ_STORAGE = 1
+}
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_READ_STORAGE) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permission granted, retry reading the URI
+                getInitialIntent()?.let { intentData ->
+                    MethodChannel(flutterEngine!!.dartExecutor.binaryMessenger, CHANNEL)
+                        .invokeMethod("onPermissionGranted", intentData)
+                }
+            }
+        }
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -41,9 +63,11 @@ class MainActivity : FlutterActivity() {
                             val uri = Uri.parse(uriString)
                             val bytes = readContentUriBytes(uri)
                             result.success(bytes?.toList())
-                        } catch (e: Exception) {
-                            result.error("READ_ERROR", e.message, null)
-                        }
+            } catch (e: SecurityException) {
+                result.error("PERMISSION_DENIED", "Permission denied. Please grant storage access.", null)
+            } catch (e: Exception) {
+                result.error("READ_ERROR", e.message, null)
+            }
                     } else {
                         result.error("INVALID_URI", "URI is null", null)
                     }
@@ -55,8 +79,28 @@ class MainActivity : FlutterActivity() {
 
     private fun readContentUriBytes(uri: Uri): ByteArray? {
         return try {
-            contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            if (ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.READ_EXTERNAL_STORAGE
+                ) != PackageManager.PERMISSION_GRANTED &&
+                Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
+                    REQUEST_READ_STORAGE
+                )
+                return null
+            }
+            contentResolver.openInputStream(uri)?.use {
+                val bytes = it.readBytes()
+                Log.d("Summsumm", "Read ${bytes.size} bytes from URI: $uri")
+                bytes
+            }
+        } catch (e: SecurityException) {
+            Log.e("Summsumm", "Permission denied for URI: $uri", e)
+            null
         } catch (e: Exception) {
+            Log.e("Summsumm", "Failed to read URI: $uri", e)
             null
         }
     }
@@ -66,8 +110,13 @@ class MainActivity : FlutterActivity() {
         val action = intent.action ?: return null
         val documents = mutableListOf<Map<String, Any?>>()
 
+        // Handle ACTION_VIEW (open PDF directly from file manager)
+        if (Intent.ACTION_VIEW == action && intent.type == "application/pdf") {
+            val uri = intent.data
+            uri?.let { addPdfDocument(it, documents) }
+        }
         // Handle ACTION_SEND (single document)
-        if (Intent.ACTION_SEND == action) {
+        else if (Intent.ACTION_SEND == action) {
             when (intent.type) {
                 "text/plain" -> {
                     val text = intent.getStringExtra(Intent.EXTRA_TEXT)
@@ -87,7 +136,7 @@ class MainActivity : FlutterActivity() {
                     texts?.forEach { text -> documents.add(mapOf("text" to text)) }
                 }
                 "application/pdf" -> {
-                    val uris = getParcelableArrayListExtraCompat<Uri>(intent, Intent.EXTRA_STREAM)
+                    val uris = getParcelableArrayListExtraCompat(intent, Intent.EXTRA_STREAM)
                     uris?.forEach { uri -> addPdfDocument(uri, documents) }
                 }
             }
@@ -179,20 +228,23 @@ class MainActivity : FlutterActivity() {
     }
 
     @Suppress("DEPRECATION")
-    private fun <T> getParcelableExtraCompat(intent: Intent, extra: String): T? {
+    private fun getParcelableExtraCompat(intent: Intent, extra: String): Uri? {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            intent.getParcelableExtra(extra, T::class.java)
+            intent.getParcelableExtra(extra, Uri::class.java)
         } else {
-            intent.getParcelableExtra(extra)
+            @Suppress("UNCHECKED_CAST")
+            intent.getParcelableExtra(extra) as Uri?
         }
     }
 
     @Suppress("DEPRECATION")
-    private fun <T> getParcelableArrayListExtraCompat(intent: Intent, extra: String): List<T>? {
+    private fun getParcelableArrayListExtraCompat(intent: Intent, extra: String): List<Uri>? {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            intent.getParcelableArrayListExtra(extra, T::class.java)
+            intent.getParcelableArrayListExtra(extra, Uri::class.java)
         } else {
-            intent.getParcelableArrayListExtra(extra)
+            val result = intent.getParcelableArrayListExtra<android.os.Parcelable>(extra)
+            @Suppress("UNCHECKED_CAST")
+            result?.filterIsInstance<Uri>()
         }
     }
 }
