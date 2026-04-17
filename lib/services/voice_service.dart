@@ -21,13 +21,27 @@ class VoiceService {
   }
 
   Future<String?> startRecording() async {
-    // TODO: Implement recording
-    return null;
+    if (_isRecording) return null;
+    _isRecording = true;
+
+    final tempDir = await getTemporaryDirectory();
+    _tempFilePath =
+        '${tempDir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.aac';
+
+    await _recorder.startRecorder(
+      toFile: _tempFilePath,
+      codec: Codec.aacADTS,
+    );
+
+    return _tempFilePath;
   }
 
   Future<String?> stopRecording() async {
-    // TODO: Implement stop recording
-    return null;
+    if (!_isRecording) return null;
+    _isRecording = false;
+
+    await _recorder.stopRecorder();
+    return _tempFilePath;
   }
 
   Future<String?> transcribeWithOpenAI(String filePath, String apiKey) async {
@@ -35,7 +49,8 @@ class VoiceService {
     return null;
   }
 
-  Future<String?> transcribeWithOpenRouter(String filePath, String apiKey) async {
+  Future<String?> transcribeWithOpenRouter(
+      String filePath, String apiKey) async {
     // TODO: Implement Voxtral transcription
     return null;
   }

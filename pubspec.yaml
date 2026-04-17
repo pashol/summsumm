@@ -20,6 +20,8 @@ dependencies:
   google_fonts: ^6.2.1
   path_provider: ^2.1.0
   syncfusion_flutter_pdf: ^33.1.49
+  flutter_sound: ^9.30.0
+  speech_to_text: ^7.3.0
 
 dev_dependencies:
   flutter_test:
