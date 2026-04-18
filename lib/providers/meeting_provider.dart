@@ -1,0 +1,163 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:summsumm/models/meeting.dart';
+import 'package:summsumm/providers/meeting_library_provider.dart';
+import 'package:summsumm/providers/meeting_repository_provider.dart';
+import 'package:summsumm/providers/settings_provider.dart';
+import 'package:summsumm/services/ai_service.dart';
+import 'package:summsumm/services/voice_service.dart';
+
+final voiceServiceProvider = Provider<VoiceService>((ref) => VoiceService());
+final aiServiceProvider = Provider<AiService>((ref) => AiService());
+
+final meetingProvider = NotifierProvider.family<MeetingNotifier, Meeting, String>(
+  MeetingNotifier.new,
+);
+
+class MeetingNotifier extends FamilyNotifier<Meeting, String> {
+  @override
+  Meeting build(String meetingId) {
+    final library = ref.read(meetingLibraryProvider);
+    return library.when(
+      data: (meetings) {
+        try {
+          return meetings.firstWhere((m) => m.id == meetingId);
+        } catch (_) {
+          return _placeholder(meetingId);
+        }
+      },
+      loading: () => _placeholder(meetingId),
+      error: (_, __) => _placeholder(meetingId),
+    );
+  }
+
+  Meeting _placeholder(String meetingId) => Meeting(
+        id: meetingId,
+        createdAt: DateTime.now(),
+        durationSec: 0,
+        audioPath: '',
+        title: '',
+        status: MeetingStatus.recorded,
+      );
+
+  Future<void> transcribe() async {
+    final meeting = state;
+    final settings = ref.read(settingsProvider);
+    final voiceService = ref.read(voiceServiceProvider);
+    final repository = ref.read(meetingRepositoryProvider);
+
+    state = meeting.copyWith(status: MeetingStatus.transcribing);
+    await repository.save(state);
+
+    try {
+      final apiKey = await ref.read(settingsProvider.notifier).getApiKey(settings.provider) ?? '';
+      final transcript = await voiceService.transcribeFile(
+        meeting.audioPath,
+        settings.provider,
+        apiKey,
+      );
+
+      state = meeting.copyWith(
+        transcript: transcript,
+        status: MeetingStatus.transcribed,
+        provider: settings.provider,
+      );
+      await repository.save(state);
+    } catch (e) {
+      state = meeting.copyWith(
+        status: MeetingStatus.failed,
+        lastError: e.toString(),
+      );
+      await repository.save(state);
+      rethrow;
+    }
+  }
+
+  Future<void> summarize() async {
+    final meeting = state;
+    final settings = ref.read(settingsProvider);
+    final aiService = ref.read(aiServiceProvider);
+    final repository = ref.read(meetingRepositoryProvider);
+
+    state = meeting.copyWith(status: MeetingStatus.summarizing);
+    await repository.save(state);
+
+    try {
+      final summary = await aiService.streamCompletion(
+        model: settings.activeModel,
+        messages: [
+          {
+            'role': 'system',
+            'content': _meetingSummaryPrompt,
+          },
+          {
+            'role': 'user',
+            'content': meeting.transcript ?? '',
+          },
+        ],
+        apiKey: await ref.read(settingsProvider.notifier).getApiKey(settings.provider) ?? '',
+        provider: settings.provider,
+      ).toList();
+
+      state = meeting.copyWith(
+        summary: summary.join(),
+        status: MeetingStatus.done,
+      );
+      await repository.save(state);
+    } catch (e) {
+      state = meeting.copyWith(
+        status: MeetingStatus.failed,
+        lastError: e.toString(),
+      );
+      await repository.save(state);
+      rethrow;
+    }
+  }
+
+  Future<void> retry() async {
+    final meeting = state;
+    if (meeting.status == MeetingStatus.failed) {
+      if (meeting.transcript == null) {
+        await transcribe();
+      } else if (meeting.summary == null) {
+        await summarize();
+      }
+    }
+  }
+
+  Future<void> rename(String newTitle) async {
+    final repository = ref.read(meetingRepositoryProvider);
+    state = state.copyWith(title: newTitle);
+    await repository.save(state);
+  }
+
+  Future<void> delete() async {
+    final repository = ref.read(meetingRepositoryProvider);
+    await repository.delete(state);
+  }
+
+  Future<void> archive() async {
+    final repository = ref.read(meetingRepositoryProvider);
+    state = state.copyWith(archived: true);
+    await repository.save(state);
+    ref.read(meetingLibraryProvider.notifier).refresh();
+    ref.read(archivedMeetingsProvider.notifier).refresh();
+  }
+
+  Future<void> unarchive() async {
+    final repository = ref.read(meetingRepositoryProvider);
+    state = state.copyWith(archived: false);
+    await repository.save(state);
+    ref.read(meetingLibraryProvider.notifier).refresh();
+    ref.read(archivedMeetingsProvider.notifier).refresh();
+  }
+}
+
+const _meetingSummaryPrompt = '''
+You are an expert meeting summarizer. Extract:
+1. Key decisions made
+2. Action items with owners
+3. Open questions
+4. Important context
+
+Format as markdown. Be concise and factual.
+''';
