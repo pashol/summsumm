@@ -65,7 +65,7 @@ void main() {
       expect(capturedRequest.url.host, 'openrouter.ai');
       expect(capturedRequest.headers['Authorization'], 'Bearer test-key');
       final body = jsonDecode(capturedRequest.body) as Map<String, dynamic>;
-      expect(body['model'], 'google/gemini-flash-3');
+      expect(body['model'], 'google/gemini-3-flash-preview');
       final messages = body['messages'] as List;
       final content = messages.first['content'] as List;
       final textBlock = content.firstWhere((c) => c['type'] == 'text');
@@ -125,7 +125,7 @@ void main() {
       final service = VoiceService(httpClient: client);
       await service.transcribeFile(audioFile.path, 'openrouter', 'key', diarize: true);
 
-      expect(capturedModel, 'google/gemini-flash-3');
+      expect(capturedModel, 'google/gemini-3-flash-preview');
     });
 
     test('routes to Voxtral when diarize=false and provider=openrouter', () async {
