@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+enum MeetingType { meeting, document }
+
 class Meeting {
   final String id;
   final DateTime createdAt;
@@ -12,6 +14,7 @@ class Meeting {
   final String? lastError;
   final String? provider;
   final bool archived;
+  final MeetingType type;
 
   const Meeting({
     required this.id,
@@ -25,6 +28,7 @@ class Meeting {
     this.lastError,
     this.provider,
     this.archived = false,
+    this.type = MeetingType.meeting,
   });
 
   Meeting copyWith({
@@ -37,8 +41,10 @@ class Meeting {
     String? summary,
     MeetingStatus? status,
     String? lastError,
+    bool clearLastError = false,
     String? provider,
     bool? archived,
+    MeetingType? type,
   }) {
     return Meeting(
       id: id ?? this.id,
@@ -49,9 +55,10 @@ class Meeting {
       transcript: transcript ?? this.transcript,
       summary: summary ?? this.summary,
       status: status ?? this.status,
-      lastError: lastError ?? this.lastError,
+      lastError: clearLastError ? null : (lastError ?? this.lastError),
       provider: provider ?? this.provider,
       archived: archived ?? this.archived,
+      type: type ?? this.type,
     );
   }
 
@@ -68,6 +75,7 @@ class Meeting {
       'lastError': lastError,
       'provider': provider,
       'archived': archived,
+      'type': type.name,
     };
   }
 
@@ -87,6 +95,10 @@ class Meeting {
       lastError: json['lastError'] as String?,
       provider: json['provider'] as String?,
       archived: json['archived'] as bool? ?? false,
+      type: MeetingType.values.firstWhere(
+        (e) => e.name == json['type'],
+        orElse: () => MeetingType.meeting,
+      ),
     );
   }
 }
