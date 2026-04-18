@@ -291,15 +291,25 @@ class VoiceService {
     return [filePath]; // Placeholder: return original file for now
   }
 
-  Future<String?> transcribeFile(String filePath, String provider, String apiKey) async {
+  Future<String?> transcribeFile(
+    String filePath,
+    String provider,
+    String apiKey, {
+    bool diarize = false,
+  }) async {
     final chunks = await splitAudio(filePath);
     final transcriptParts = <String>[];
 
     for (var i = 0; i < chunks.length; i++) {
       try {
-        final transcript = provider == 'openai'
-            ? await transcribeWithOpenAI(chunks[i], apiKey)
-            : await transcribeWithVoxtral(chunks[i], apiKey);
+        final String? transcript;
+        if (diarize && provider == 'openrouter') {
+          transcript = await transcribeWithGemini(chunks[i], apiKey);
+        } else if (provider == 'openai') {
+          transcript = await transcribeWithOpenAI(chunks[i], apiKey);
+        } else {
+          transcript = await transcribeWithVoxtral(chunks[i], apiKey);
+        }
         if (transcript != null) {
           transcriptParts.add(transcript);
         }
