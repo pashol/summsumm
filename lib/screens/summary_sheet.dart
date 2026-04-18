@@ -18,11 +18,15 @@ import 'settings_screen.dart';
 class SummarySheet extends ConsumerStatefulWidget {
   final List<Document> documents;
   final int initialIndex;
+  final void Function(String summary)? onSummarized;
+  final void Function(String error)? onSummaryFailed;
 
   const SummarySheet({
     super.key,
     required this.documents,
     this.initialIndex = 0,
+    this.onSummarized,
+    this.onSummaryFailed,
   });
 
   @override
@@ -33,27 +37,44 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
     with SingleTickerProviderStateMixin {
   bool _isRecording = false;
 
-  void _startRecording(LongPressStartDetails _) async {
-    setState(() => _isRecording = true);
-    await ref.read(voiceServiceProvider).startRecording();
+   void _startRecording(LongPressStartDetails _) async {
+    try {
+      setState(() => _isRecording = true);
+      await ref.read(voiceServiceProvider).startRecording();
+    } catch (e) {
+      setState(() => _isRecording = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to start recording: ${e.toString()}')),
+        );
+      }
+    }
   }
 
-  void _stopRecordingAndSendHandler(LongPressEndDetails _) async {
-    setState(() => _isRecording = false);
-    final filePath = await ref.read(voiceServiceProvider).stopRecording();
-    if (filePath == null) return;
+   void _stopRecordingAndSendHandler(LongPressEndDetails _) async {
+    try {
+      setState(() => _isRecording = false);
+      final filePath = await ref.read(voiceServiceProvider).stopRecording();
+      if (filePath == null) return;
 
-    final settings = ref.read(settingsProvider);
-    final notifier = ref.read(settingsProvider.notifier);
-    final apiKey = await notifier.getApiKey(settings.provider) ?? '';
+      final settings = ref.read(settingsProvider);
+      final notifier = ref.read(settingsProvider.notifier);
+      final apiKey = await notifier.getApiKey(settings.provider) ?? '';
 
-    await ref.read(summaryProvider.notifier).askFollowUpWithVoice(
-          audioFilePath: filePath,
-          originalText: widget.documents[_activeIndex].text,
-          apiKey: apiKey,
-          settings: settings,
-          document: widget.documents[_activeIndex],
+      await ref.read(summaryProvider.notifier).askFollowUpWithVoice(
+            audioFilePath: filePath,
+            originalText: widget.documents[_activeIndex].text,
+            apiKey: apiKey,
+            settings: settings,
+            document: widget.documents[_activeIndex],
+          );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to process voice input: ${e.toString()}')),
         );
+      }
+    }
   }
 
   late int _activeIndex;
@@ -92,8 +113,9 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
   }
 
   Future<void> _startSummary() async {
-    final settings = ref.read(settingsProvider);
     final notifier = ref.read(settingsProvider.notifier);
+    await notifier.load();
+    final settings = ref.read(settingsProvider);
     final apiKey = await notifier.getApiKey(settings.provider) ?? '';
 
     if (apiKey.isEmpty) {
@@ -183,12 +205,22 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
     _scrollCtrl.dispose();
     _followUpCtrl.dispose();
     _followUpFocus.dispose();
-    ref.read(summaryProvider.notifier).reset();
+    // Don't use ref after dispose
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<SummaryState>(summaryProvider, (prev, next) {
+      if (prev?.status != SummaryStatus.done &&
+          next.status == SummaryStatus.done) {
+        widget.onSummarized?.call(next.summary);
+      }
+      if (prev?.status != SummaryStatus.error &&
+          next.status == SummaryStatus.error) {
+        widget.onSummaryFailed?.call(next.error ?? '');
+      }
+    });
     final summaryState = ref.watch(summaryProvider);
     final notifier = ref.read(summaryProvider.notifier);
 
@@ -335,7 +367,7 @@ class _SheetBody extends StatelessWidget {
             borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
             border: Border(
               top: BorderSide(
-                color: cs.outlineVariant.withValues(alpha: 0.4),
+                color: cs.outlineVariant.withOpacity(0.4),
                 width: 0.5,
               ),
             ),
@@ -349,7 +381,7 @@ class _SheetBody extends StatelessWidget {
                   width: 48,
                   height: 5,
                   decoration: BoxDecoration(
-                    color: cs.onSurfaceVariant.withValues(alpha: 0.4),
+                    color: cs.onSurfaceVariant.withOpacity(0.4),
                     borderRadius: BorderRadius.circular(3),
                   ),
                 ),
@@ -500,10 +532,9 @@ class _SheetBody extends StatelessWidget {
                   onLongPressStart: onLongPressStart,
                   onLongPressEnd: onLongPressEnd,
                 ),
+              ] else ...[
+                const SizedBox(height: 8),
               ],
-
-              // Safe area bottom padding
-              SizedBox(height: MediaQuery.of(context).padding.bottom),
             ],
           ),
         ),
@@ -670,46 +701,20 @@ class _ChatBubble extends StatelessWidget {
     final displayContent =
         streamingContent != null && isCursorVisible ? '$content▋' : content;
 
-    final radius = isUser
-        ? const BorderRadius.only(
-            topLeft: Radius.circular(18),
-            topRight: Radius.circular(18),
-            bottomLeft: Radius.circular(18),
-            bottomRight: Radius.circular(4),
-          )
-        : const BorderRadius.only(
-            topLeft: Radius.circular(18),
-            topRight: Radius.circular(18),
-            bottomLeft: Radius.circular(4),
-            bottomRight: Radius.circular(18),
-          );
-
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: GlassCard(
         color: isUser
             ? cs.primaryContainer.withOpacity(0.76)
             : cs.secondaryContainer.withOpacity(0.76),
-        child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 4),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+           child: Container(
+             margin: const EdgeInsets.symmetric(vertical: 8),
+             padding: const EdgeInsets.symmetric(
+               horizontal: 12,
+               vertical: 8,
+             ),
           constraints: BoxConstraints(
             maxWidth: MediaQuery.of(context).size.width * 0.78,
-          ),
-          decoration: BoxDecoration(
-            borderRadius: radius,
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                isUser
-                    ? cs.primaryContainer.withOpacity(0.84)
-                    : cs.secondaryContainer.withOpacity(0.84),
-                isUser
-                    ? cs.primaryContainer.withOpacity(0.6)
-                    : cs.secondaryContainer.withOpacity(0.6),
-              ],
-            ),
           ),
           child: streamingContent != null || msg?.role == 'assistant'
               ? MarkdownBody(
@@ -952,15 +957,63 @@ class _FollowUpInputState extends State<_FollowUpInput>
     super.dispose();
   }
 
+  Widget _buildButton(BuildContext context) {
+    final color = widget.isRecording
+        ? Colors.red.shade700
+        : Theme.of(context).colorScheme.primary;
+    return GestureDetector(
+      onTap: widget.isRecording ? null : widget.onSend,
+      onLongPressStart: widget.onLongPressStart,
+      onLongPressEnd: widget.onLongPressEnd,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          if (widget.isRecording)
+            AnimatedBuilder(
+              animation: _pulseCtrl,
+              builder: (context, _) => Transform.scale(
+                scale: _scaleAnim.value,
+                child: Opacity(
+                  opacity: _opacityAnim.value,
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.red, width: 2),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+            child: Icon(
+              widget.isRecording ? Icons.mic : Icons.send,
+              color: Colors.white,
+              size: 22,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final bottom = 8.0 + MediaQuery.of(context).viewInsets.bottom;
+
+    if (widget.isRecording) {
+      return Padding(
+        padding: EdgeInsets.fromLTRB(12, 8, 12, bottom),
+        child: Center(child: _buildButton(context)),
+      );
+    }
+
     return Padding(
-      padding: EdgeInsets.fromLTRB(
-        12,
-        8,
-        12,
-        8 + MediaQuery.of(context).viewInsets.bottom,
-      ),
+      padding: EdgeInsets.fromLTRB(12, 8, 12, bottom),
       child: Row(
         children: [
           Expanded(
@@ -985,47 +1038,7 @@ class _FollowUpInputState extends State<_FollowUpInput>
             ),
           ),
           const SizedBox(width: 8),
-          GestureDetector(
-            onLongPressStart: widget.onLongPressStart,
-            onLongPressEnd: widget.onLongPressEnd,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                if (widget.isRecording)
-                  AnimatedBuilder(
-                    animation: _pulseCtrl,
-                    builder: (context, _) => Transform.scale(
-                      scale: _scaleAnim.value,
-                      child: Opacity(
-                        opacity: _opacityAnim.value,
-                        child: Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Colors.red,
-                              width: 2,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                IconButton.filled(
-                  icon: widget.isRecording
-                      ? const Icon(Icons.mic)
-                      : const Icon(Icons.send),
-                  style: widget.isRecording
-                      ? IconButton.styleFrom(
-                          backgroundColor: Colors.red.shade700,
-                        )
-                      : null,
-                  onPressed: widget.onSend,
-                ),
-              ],
-            ),
-          ),
+          _buildButton(context),
         ],
       ),
     );
