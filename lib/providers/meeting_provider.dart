@@ -45,8 +45,9 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
     final voiceService = ref.read(voiceServiceProvider);
     final repository = ref.read(meetingRepositoryProvider);
 
-    state = meeting.copyWith(status: MeetingStatus.transcribing);
+    state = meeting.copyWith(status: MeetingStatus.transcribing, clearLastError: true);
     await repository.save(state);
+    ref.read(meetingLibraryProvider.notifier).refresh();
 
     try {
       final apiKey = await ref.read(settingsProvider.notifier).getApiKey(settings.provider) ?? '';
@@ -61,14 +62,17 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
         transcript: transcript,
         status: MeetingStatus.transcribed,
         provider: settings.provider,
+        clearLastError: true,
       );
       await repository.save(state);
+      ref.read(meetingLibraryProvider.notifier).refresh();
     } catch (e) {
       state = meeting.copyWith(
         status: MeetingStatus.failed,
         lastError: e.toString(),
       );
       await repository.save(state);
+      ref.read(meetingLibraryProvider.notifier).refresh();
       rethrow;
     }
   }
@@ -79,8 +83,9 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
     final aiService = ref.read(aiServiceProvider);
     final repository = ref.read(meetingRepositoryProvider);
 
-    state = meeting.copyWith(status: MeetingStatus.summarizing);
+    state = meeting.copyWith(status: MeetingStatus.summarizing, clearLastError: true);
     await repository.save(state);
+    ref.read(meetingLibraryProvider.notifier).refresh();
 
     try {
       final summary = await aiService.streamCompletion(
@@ -102,14 +107,17 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
       state = meeting.copyWith(
         summary: summary.join(),
         status: MeetingStatus.done,
+        clearLastError: true,
       );
       await repository.save(state);
+      ref.read(meetingLibraryProvider.notifier).refresh();
     } catch (e) {
       state = meeting.copyWith(
         status: MeetingStatus.failed,
         lastError: e.toString(),
       );
       await repository.save(state);
+      ref.read(meetingLibraryProvider.notifier).refresh();
       rethrow;
     }
   }
@@ -134,6 +142,7 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
   Future<void> delete() async {
     final repository = ref.read(meetingRepositoryProvider);
     await repository.delete(state);
+    ref.read(meetingLibraryProvider.notifier).refresh();
   }
 
   Future<void> archive() async {
