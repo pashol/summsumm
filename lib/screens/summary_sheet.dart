@@ -82,7 +82,7 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
   }
 
   late int _activeIndex;
-  final _scrollCtrl = ScrollController();
+
   final _followUpCtrl = TextEditingController();
   final _followUpFocus = FocusNode();
   late AnimationController _entryController;
@@ -132,7 +132,7 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
           ),
         );
         await Future<void>.delayed(const Duration(seconds: 3));
-        if (mounted) Navigator.of(context).pop();
+        if (mounted) _handleClose(context);
       }
       return;
     }
@@ -206,7 +206,7 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
   @override
   void dispose() {
     _entryController.dispose();
-    _scrollCtrl.dispose();
+
     _followUpCtrl.dispose();
     _followUpFocus.dispose();
     // Don't use ref after dispose
@@ -294,7 +294,7 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
       minChildSize: 0.4,
       maxChildSize: 1.0,
       expand: false,
-      builder: (_, sheetScrollCtrl) => buildBody(_scrollCtrl),
+      builder: (_, sheetScrollCtrl) => buildBody(sheetScrollCtrl),
     );
   }
 
