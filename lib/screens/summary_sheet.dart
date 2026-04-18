@@ -222,7 +222,7 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
       }
       if (prev?.status != SummaryStatus.error &&
           next.status == SummaryStatus.error) {
-        widget.onSummaryFailed?.call(next.error ?? '');
+        widget.onSummaryFailed?.call(next.error);
       }
     });
     final summaryState = ref.watch(summaryProvider);

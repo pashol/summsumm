@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 
 import 'models/document.dart';
 import 'models/meeting.dart';
+import 'providers/meeting_library_provider.dart';
 import 'providers/settings_provider.dart';
 import 'screens/settings_screen.dart';
 import 'screens/summary_sheet.dart';
@@ -220,16 +221,16 @@ class _SummarySheetHostState extends State<_SummarySheetHost>
   }
 }
 
-class _DocumentSheetHost extends StatefulWidget {
+class _DocumentSheetHost extends ConsumerStatefulWidget {
   const _DocumentSheetHost({required this.documents});
 
   final List<Document> documents;
 
   @override
-  State<_DocumentSheetHost> createState() => _DocumentSheetHostState();
+  ConsumerState<_DocumentSheetHost> createState() => _DocumentSheetHostState();
 }
 
-class _DocumentSheetHostState extends State<_DocumentSheetHost> {
+class _DocumentSheetHostState extends ConsumerState<_DocumentSheetHost> {
   static const double _initialSize = 0.92;
 
   final _dragController = DraggableScrollableController();
@@ -254,7 +255,9 @@ class _DocumentSheetHostState extends State<_DocumentSheetHost> {
       status: MeetingStatus.summarizing,
       type: MeetingType.document,
     );
-    _repo.save(_entry);
+    _repo.save(_entry).then((_) {
+      if (mounted) ref.invalidate(meetingLibraryProvider);
+    });
     _dragController.addListener(_onExtentChanged);
   }
 
@@ -276,11 +279,14 @@ class _DocumentSheetHostState extends State<_DocumentSheetHost> {
   double get _scrimOpacity =>
       (0.54 * (_sheetExtent / _initialSize)).clamp(0.0, 0.54);
 
-  void _closeSheet() => _dragController.animateTo(
-        0.0,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
+  void _closeSheet() {
+    if (!_dragController.isAttached) return;
+    _dragController.animateTo(
+      0.0,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
