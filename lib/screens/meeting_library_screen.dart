@@ -158,12 +158,15 @@ class _MeetingTile extends ConsumerWidget {
           ],
         ),
         trailing: _ActionButton(meeting: meeting, notifier: notifier),
-        onTap: () => Navigator.push<void>(
-          context,
-          MaterialPageRoute<void>(
-            builder: (_) => MeetingDetailScreen(meetingId: meeting.id),
-          ),
-        ),
+        onTap: () async {
+          await Navigator.push<void>(
+            context,
+            MaterialPageRoute<void>(
+              builder: (_) => MeetingDetailScreen(meetingId: meeting.id),
+            ),
+          );
+          ref.read(meetingLibraryProvider.notifier).refresh();
+        },
       ),
     );
   }
