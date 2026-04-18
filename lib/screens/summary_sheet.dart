@@ -235,15 +235,15 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
       });
     }
 
-    Widget buildBody(ScrollController scrollCtrl) => AnimatedBuilder(
+    Widget buildBody(ScrollController ctrl) => AnimatedBuilder(
       animation: _entryController,
       builder: (context, _) => SlideTransition(
         position: _slideAnimation,
         child: FadeTransition(
           opacity: _fadeAnimation,
           child: _SheetBody(
-            scrollCtrl: scrollCtrl,
-            sheetScrollCtrl: scrollCtrl,
+            scrollCtrl: ctrl,
+            sheetScrollCtrl: ctrl,
             summaryState: summaryState,
             documents: widget.documents,
             activeIndex: _activeIndex,
