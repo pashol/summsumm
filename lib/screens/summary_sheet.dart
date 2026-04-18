@@ -1003,41 +1003,37 @@ class _FollowUpInputState extends State<_FollowUpInput>
 
   @override
   Widget build(BuildContext context) {
-    final bottom = 8.0 + MediaQuery.of(context).viewInsets.bottom;
-
-    if (widget.isRecording) {
-      return Padding(
-        padding: EdgeInsets.fromLTRB(12, 8, 12, bottom),
-        child: Center(child: _buildButton(context)),
-      );
-    }
+    final mq = MediaQuery.of(context);
+    final bottom = 8.0 + mq.viewInsets.bottom + mq.padding.bottom;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(12, 8, 12, bottom),
       child: Row(
         children: [
           Expanded(
-            child: TextField(
-              controller: widget.controller,
-              focusNode: widget.focusNode,
-              textInputAction: TextInputAction.send,
-              onSubmitted: (_) => widget.onSend(),
-              decoration: InputDecoration(
-                hintText: widget.remainingTurns == 1
-                    ? 'Last follow-up question...'
-                    : 'Ask a follow-up question...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-                isDense: true,
-              ),
-            ),
+            child: widget.isRecording
+                ? const SizedBox.shrink()
+                : TextField(
+                    controller: widget.controller,
+                    focusNode: widget.focusNode,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => widget.onSend(),
+                    decoration: InputDecoration(
+                      hintText: widget.remainingTurns == 1
+                          ? 'Last follow-up question...'
+                          : 'Ask a follow-up question...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      isDense: true,
+                    ),
+                  ),
           ),
-          const SizedBox(width: 8),
+          if (!widget.isRecording) const SizedBox(width: 8),
           _buildButton(context),
         ],
       ),
