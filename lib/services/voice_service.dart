@@ -30,8 +30,8 @@ class VoiceService {
 
   VoiceService({http.Client? httpClient}) : _http = httpClient ?? http.Client();
 
-  String get recordingFileExtension => 'mp3';
-  Codec get recordingCodec => Codec.mp3;
+  String get recordingFileExtension => 'm4a';
+  Codec get recordingCodec => Codec.aacMP4;
 
   bool get isRecording => _isRecording;
 
@@ -55,7 +55,11 @@ class VoiceService {
   }
 
   Future<void> _initializeInternal() async {
-    await _recorder.openRecorder();
+    try {
+      await _recorder.openRecorder();
+    } catch (e) {
+      throw VoiceTranscriptionException('Failed to open recorder: $e');
+    }
     await _speech.initialize();
   }
 
@@ -134,77 +138,7 @@ class VoiceService {
     );
   }
 
-  Future<String?> transcribeWithVoxtral(String filePath, String apiKey) async {
-    final file = File(filePath);
-    if (!await file.exists()) {
-      throw VoiceTranscriptionException('Audio file missing.');
-    }
-
-    final bytes = await file.readAsBytes();
-    final audioB64 = base64Encode(bytes);
-    final ext = path.extension(filePath).toLowerCase().replaceAll('.', '');
-    final audioFormat = switch (ext) {
-      'm4a' => 'm4a',
-      'aac' => 'm4a',
-      'wav' => 'wav',
-      'flac' => 'flac',
-      'mp3' => 'mp3',
-      'webm' => 'webm',
-      _ => 'ogg',
-    };
-
-    final response = await _http.post(
-      Uri.parse('https://openrouter.ai/api/v1/chat/completions'),
-      headers: {
-        'Authorization': 'Bearer $apiKey',
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://github.com/pashol/summsumm',
-        'X-Title': 'AI Text Summarizer',
-      },
-      body: jsonEncode({
-        'model': 'mistralai/voxtral-small-24b-2507',
-        'messages': [
-          {
-            'role': 'user',
-            'content': [
-              {
-                'type': 'input_audio',
-                'input_audio': {'data': audioB64, 'format': audioFormat},
-              },
-              {
-                'type': 'text',
-                'text':
-                    'Transcribe the audio verbatim. Return only the transcription text, no commentary.',
-              },
-            ],
-          },
-        ],
-      }),
-    );
-
-    if (response.statusCode == 200) {
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
-      final choices = json['choices'] as List?;
-      if (choices == null || choices.isEmpty) return null;
-      final message = choices.first['message'] as Map<String, dynamic>?;
-      final content = message?['content'];
-      if (content is String) return content.trim();
-      if (content is List) {
-        final text = content
-            .whereType<Map<String, dynamic>>()
-            .map((p) => p['text']?.toString() ?? '')
-            .join()
-            .trim();
-        return text.isEmpty ? null : text;
-      }
-      return null;
-    }
-    throw VoiceTranscriptionException(
-      _formatError('OpenRouter', response.statusCode, response.body),
-    );
-  }
-
-  static const _geminiDiarizationModel = 'google/gemini-flash-3';
+  static const _geminiDiarizationModel = 'google/gemini-3-flash-preview';
 
   static const _diarizationPrompt =
       'Transcribe this audio in full. Label each speaker as Speaker 1, Speaker 2, etc. '
@@ -222,8 +156,8 @@ class VoiceService {
     final audioB64 = base64Encode(bytes);
     final ext = path.extension(filePath).toLowerCase().replaceAll('.', '');
     final audioFormat = switch (ext) {
-      'm4a' => 'm4a',
-      'aac' => 'm4a',
+      'm4a' => 'mp4',
+      'aac' => 'aac',
       'wav' => 'wav',
       'flac' => 'flac',
       'mp3' => 'mp3',
@@ -308,7 +242,7 @@ class VoiceService {
         } else if (provider == 'openai') {
           transcript = await transcribeWithOpenAI(chunks[i], apiKey);
         } else {
-          transcript = await transcribeWithVoxtral(chunks[i], apiKey);
+          transcript = await transcribeWithGemini(chunks[i], apiKey);
         }
         if (transcript != null) {
           transcriptParts.add(transcript);
