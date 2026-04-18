@@ -3,17 +3,25 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:summsumm/models/meeting.dart';
 import 'package:summsumm/providers/meeting_provider.dart';
+import 'package:summsumm/providers/settings_provider.dart';
 import 'package:summsumm/widgets/meeting_share_sheet.dart';
 
-class MeetingDetailScreen extends ConsumerWidget {
+class MeetingDetailScreen extends ConsumerStatefulWidget {
   final String meetingId;
 
   const MeetingDetailScreen({super.key, required this.meetingId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final meeting = ref.watch(meetingProvider(meetingId));
-    final provider = ref.watch(meetingProvider(meetingId).notifier);
+  ConsumerState<MeetingDetailScreen> createState() => _MeetingDetailScreenState();
+}
+
+class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen> {
+  bool _diarize = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final meeting = ref.watch(meetingProvider(widget.meetingId));
+    final provider = ref.watch(meetingProvider(widget.meetingId).notifier);
     return Scaffold(
       appBar: AppBar(
         title: Text(meeting.title),
@@ -74,9 +82,38 @@ class MeetingDetailScreen extends ConsumerWidget {
 
   Widget _buildActions(Meeting meeting, MeetingNotifier provider) {
     if (meeting.status == MeetingStatus.recorded) {
-      return ElevatedButton(
-        onPressed: provider.transcribe,
-        child: const Text('Transcribe'),
+      final settings = ref.watch(settingsProvider);
+      final isOpenRouter = settings.provider == 'openrouter';
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Tooltip(
+            message: isOpenRouter ? '' : 'Diarization requires OpenRouter',
+            child: Row(
+              children: [
+                Switch(
+                  value: _diarize,
+                  onChanged: isOpenRouter
+                      ? (v) => setState(() => _diarize = v)
+                      : null,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Diarize speakers',
+                  style: TextStyle(
+                    color: isOpenRouter ? null : Theme.of(context).disabledColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          ElevatedButton(
+            onPressed: () => provider.transcribe(diarize: _diarize),
+            child: const Text('Transcribe'),
+          ),
+        ],
       );
     }
     if (meeting.status == MeetingStatus.transcribed) {
