@@ -19,7 +19,7 @@ class MeetingLibraryScreen extends ConsumerWidget {
     final meetingsAsync = ref.watch(meetingLibraryProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Meeting Library'),
+        title: const Text('Library'),
         actions: [
           IconButton(
             icon: const Icon(Icons.archive_outlined),
@@ -54,7 +54,7 @@ class MeetingLibraryScreen extends ConsumerWidget {
 
   Widget _buildList(List<Meeting> meetings) {
     if (meetings.isEmpty) {
-      return const Center(child: Text('No meetings yet'));
+      return const Center(child: Text('No items yet'));
     }
     return SlidableAutoCloseBehavior(
       child: ListView.builder(
@@ -125,19 +125,34 @@ class _MeetingTile extends ConsumerWidget {
         ],
       ),
       child: ListTile(
+        leading: Icon(
+          meeting.type == MeetingType.document
+              ? Icons.article_outlined
+              : Icons.mic_none,
+        ),
         title: Text(meeting.title),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('${_formatDuration(meeting.durationSec)} • ${meeting.createdAt}',),
+            Text(
+              meeting.type == MeetingType.document
+                  ? '${meeting.createdAt}'
+                  : '${_formatDuration(meeting.durationSec)} • ${meeting.createdAt}',
+            ),
             if (meeting.lastError != null) ...[
               const SizedBox(height: 4),
-              Text(
-                'Error: ${meeting.lastError!}',
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.error, fontSize: 12,),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              Row(
+                children: [
+                  Icon(Icons.error_outline,
+                      color: Theme.of(context).colorScheme.error, size: 12),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Failed — tap for details',
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                        fontSize: 12),
+                  ),
+                ],
               ),
             ],
           ],
@@ -177,9 +192,12 @@ class _MeetingTile extends ConsumerWidget {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Meeting?'),
-        content: const Text(
-            'This will permanently delete the recording and all data.',),
+        title: Text(meeting.type == MeetingType.document
+            ? 'Delete Document?'
+            : 'Delete Meeting?'),
+        content: Text(meeting.type == MeetingType.document
+            ? 'This will permanently delete this document summary.'
+            : 'This will permanently delete the recording and all data.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -256,6 +274,9 @@ class _ActionButton extends StatelessWidget {
       case MeetingStatus.done:
         return const Icon(Icons.check_circle, color: Colors.green);
       case MeetingStatus.failed:
+        if (meeting.type == MeetingType.document) {
+          return const Icon(Icons.error_outline, color: Colors.red);
+        }
         return ElevatedButton(
           onPressed: () => notifier.retry(),
           child: const Text('Retry'),
