@@ -1,0 +1,150 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:summsumm/models/meeting.dart';
+import 'package:summsumm/providers/meeting_provider.dart';
+import 'package:summsumm/widgets/meeting_share_sheet.dart';
+
+class MeetingDetailScreen extends ConsumerWidget {
+  final String meetingId;
+
+  const MeetingDetailScreen({super.key, required this.meetingId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final meeting = ref.watch(meetingProvider(meetingId));
+    final provider = ref.watch(meetingProvider(meetingId).notifier);
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(meeting.title),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share_outlined),
+            tooltip: 'Share',
+            onPressed: () => showMeetingShareSheet(context, meeting),
+          ),
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () => _renameMeeting(context, meeting.title, provider),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete),
+            onPressed: () => _deleteMeeting(context, provider),
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildMetadata(meeting),
+              const SizedBox(height: 20),
+              if (meeting.transcript != null) ...[
+                const Text('Transcript', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text(meeting.transcript!),
+                const SizedBox(height: 20),
+              ],
+              if (meeting.summary != null) ...[
+                const Text('Summary', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                MarkdownBody(data: meeting.summary!),
+                const SizedBox(height: 20),
+              ],
+              _buildActions(meeting, provider),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMetadata(Meeting meeting) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Duration: ${_formatDuration(meeting.durationSec)}'),
+        Text('Recorded: ${meeting.createdAt}'),
+        if (meeting.provider != null) Text('Transcribed by: ${meeting.provider}'),
+      ],
+    );
+  }
+
+  Widget _buildActions(Meeting meeting, MeetingNotifier provider) {
+    if (meeting.status == MeetingStatus.recorded) {
+      return ElevatedButton(
+        onPressed: provider.transcribe,
+        child: const Text('Transcribe'),
+      );
+    }
+    if (meeting.status == MeetingStatus.transcribed) {
+      return ElevatedButton(
+        onPressed: provider.summarize,
+        child: const Text('Summarize'),
+      );
+    }
+    if (meeting.status == MeetingStatus.failed) {
+      return ElevatedButton(
+        onPressed: provider.retry,
+        child: const Text('Retry'),
+      );
+    }
+    return const SizedBox.shrink();
+  }
+
+  String _formatDuration(int seconds) {
+    final mins = seconds ~/ 60;
+    final secs = seconds % 60;
+    return '${mins}m ${secs}s';
+  }
+
+  void _renameMeeting(BuildContext context, String initialTitle, MeetingNotifier provider) {
+    final controller = TextEditingController(text: initialTitle);
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Rename Meeting'),
+        content: TextField(controller: controller),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              provider.rename(controller.text);
+              Navigator.pop(ctx);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _deleteMeeting(BuildContext context, MeetingNotifier provider) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Meeting?'),
+        content: const Text('This will permanently delete the recording and all data.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              provider.delete();
+              Navigator.pop(ctx);
+              Navigator.pop(context);
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+}
