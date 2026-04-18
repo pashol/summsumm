@@ -20,6 +20,8 @@ class SummarySheet extends ConsumerStatefulWidget {
   final int initialIndex;
   final void Function(String summary)? onSummarized;
   final void Function(String error)? onSummaryFailed;
+  final ScrollController? scrollController; // when set, skip inner DraggableScrollableSheet
+  final VoidCallback? onClose; // when set, overrides Navigator.pop()
 
   const SummarySheet({
     super.key,
@@ -27,6 +29,8 @@ class SummarySheet extends ConsumerStatefulWidget {
     this.initialIndex = 0,
     this.onSummarized,
     this.onSummaryFailed,
+    this.scrollController,
+    this.onClose,
   });
 
   @override
@@ -227,73 +231,79 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
     // Auto-dismiss on error after 3 s
     if (summaryState.status == SummaryStatus.error) {
       Future<void>.delayed(const Duration(seconds: 3)).then((_) {
-        if (mounted) Navigator.of(context).pop();
+        if (mounted) _handleClose(context);
       });
     }
+
+    Widget buildBody(ScrollController scrollCtrl) => AnimatedBuilder(
+      animation: _entryController,
+      builder: (context, _) => SlideTransition(
+        position: _slideAnimation,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: _SheetBody(
+            scrollCtrl: scrollCtrl,
+            sheetScrollCtrl: scrollCtrl,
+            summaryState: summaryState,
+            documents: widget.documents,
+            activeIndex: _activeIndex,
+            onIndexChanged: (i) => setState(() => _activeIndex = i),
+            followUpCtrl: _followUpCtrl,
+            followUpFocus: _followUpFocus,
+            onCopy: () => _copyToClipboard(summaryState.summary),
+            onReadAloud: () async {
+              final settings = ref.read(settingsProvider);
+              await notifier.startSpeaking(summaryState.summary, settings);
+            },
+            onPauseSpeaking: notifier.pauseSpeaking,
+            onResumeSpeaking: notifier.resumeSpeaking,
+            onStopSpeaking: notifier.stopSpeaking,
+            onNewSummary: () async {
+              await notifier.reset();
+              await _startSummary();
+            },
+            onFactCheck: _factCheck,
+            onClose: () => _handleClose(context),
+            onSettings: _openSettings,
+            onSendFollowUp: _sendFollowUp,
+            isRecording: _isRecording,
+            onLongPressStart: _startRecording,
+            onLongPressEnd: _stopRecordingAndSendHandler,
+            onRetryPdf: () async {
+              final settings = ref.read(settingsProvider);
+              final notifier = ref.read(settingsProvider.notifier);
+              final apiKey =
+                  await notifier.getApiKey(settings.provider) ?? '';
+              await ref
+                  .read(summaryProvider.notifier)
+                  .retryPdfWithFallbackModel(
+                    document: widget.documents[_activeIndex],
+                    apiKey: apiKey,
+                    settings: settings,
+                  );
+            },
+          ),
+        ),
+      ),
+    );
+
+    if (widget.scrollController != null) return buildBody(widget.scrollController!);
 
     return DraggableScrollableSheet(
       initialChildSize: 0.8,
       minChildSize: 0.4,
       maxChildSize: 1.0,
       expand: false,
-      builder: (context, sheetScrollCtrl) {
-        return AnimatedBuilder(
-          animation: _entryController,
-          builder: (context, child) {
-            return SlideTransition(
-              position: _slideAnimation,
-              child: FadeTransition(
-                opacity: _fadeAnimation,
-                child: _SheetBody(
-                  scrollCtrl: _scrollCtrl,
-                  sheetScrollCtrl: sheetScrollCtrl,
-                  summaryState: summaryState,
-                  documents: widget.documents,
-                  activeIndex: _activeIndex,
-                  onIndexChanged: (index) =>
-                      setState(() => _activeIndex = index),
-                  followUpCtrl: _followUpCtrl,
-                  followUpFocus: _followUpFocus,
-                  onCopy: () => _copyToClipboard(summaryState.summary),
-                  onReadAloud: () async {
-                    final settings = ref.read(settingsProvider);
-                    await notifier.startSpeaking(
-                        summaryState.summary, settings);
-                  },
-                  onPauseSpeaking: notifier.pauseSpeaking,
-                  onResumeSpeaking: notifier.resumeSpeaking,
-                  onStopSpeaking: notifier.stopSpeaking,
-                  onNewSummary: () async {
-                    await notifier.reset();
-                    await _startSummary();
-                  },
-                  onFactCheck: _factCheck,
-                  onClose: () => Navigator.of(context).pop(),
-                  onSettings: _openSettings,
-                  onSendFollowUp: _sendFollowUp,
-                  isRecording: _isRecording,
-                  onLongPressStart: _startRecording,
-                  onLongPressEnd: _stopRecordingAndSendHandler,
-                  onRetryPdf: () async {
-                    final settings = ref.read(settingsProvider);
-                    final notifier = ref.read(settingsProvider.notifier);
-                    final apiKey =
-                        await notifier.getApiKey(settings.provider) ?? '';
-                    await ref
-                        .read(summaryProvider.notifier)
-                        .retryPdfWithFallbackModel(
-                          document: widget.documents[_activeIndex],
-                          apiKey: apiKey,
-                          settings: settings,
-                        );
-                  },
-                ),
-              ),
-            );
-          },
-        );
-      },
+      builder: (_, sheetScrollCtrl) => buildBody(_scrollCtrl),
     );
+  }
+
+  void _handleClose(BuildContext context) {
+    if (widget.onClose != null) {
+      widget.onClose!();
+    } else {
+      Navigator.of(context).pop();
+    }
   }
 }
 
