@@ -2,11 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:uuid/uuid.dart';
 
 import 'models/document.dart';
+import 'models/meeting.dart';
 import 'providers/settings_provider.dart';
 import 'screens/settings_screen.dart';
 import 'screens/summary_sheet.dart';
+import 'screens/meeting_library_screen.dart';
+import 'services/meeting_repository.dart';
+import 'utils/document_title.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,8 +46,7 @@ void main() async {
     );
   }).toList();
 
-  final openSettings =
-      action == 'app.summsumm.OPEN_SETTINGS' || documents.isEmpty;
+  final openSettings = action == 'app.summsumm.OPEN_SETTINGS';
 
   runApp(
     ProviderScope(
@@ -133,9 +137,11 @@ class _SummsummAppState extends ConsumerState<SummsummApp> {
       theme: _buildTheme(Brightness.light),
       darkTheme: _buildTheme(Brightness.dark),
       themeMode: ThemeMode.system,
-      home: widget.openSettings
-          ? const SettingsScreen(isInitialSetup: true)
-          : _SummarySheetHost(documents: widget.documents),
+   home: widget.openSettings
+           ? const SettingsScreen(isInitialSetup: true)
+           : widget.documents.isNotEmpty
+               ? _SummarySheetHost(documents: widget.documents)
+               : const MeetingLibraryScreen(),
     );
   }
 }
@@ -160,6 +166,20 @@ class _SummarySheetHostState extends State<_SummarySheetHost>
   }
 
   Future<void> _showSheet() async {
+    final repo = MeetingRepository();
+    final title = documentTitle(widget.documents);
+    final entry = Meeting(
+      id: const Uuid().v4(),
+      createdAt: DateTime.now(),
+      durationSec: 0,
+      audioPath: '',
+      title: title,
+      transcript: widget.documents.isNotEmpty ? widget.documents.first.text : '',
+      status: MeetingStatus.summarizing,
+      type: MeetingType.document,
+    );
+    await repo.save(entry);
+
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -170,9 +190,20 @@ class _SummarySheetHostState extends State<_SummarySheetHost>
       builder: (ctx) => SummarySheet(
         documents: widget.documents,
         initialIndex: 0,
+        onSummarized: (summary) async {
+          await repo.save(entry.copyWith(
+            summary: summary,
+            status: MeetingStatus.done,
+          ));
+        },
+        onSummaryFailed: (error) async {
+          await repo.save(entry.copyWith(
+            status: MeetingStatus.failed,
+            lastError: error,
+          ));
+        },
       ),
     );
-    // Sheet dismissed — return to calling app
     if (mounted) SystemNavigator.pop();
   }
 
