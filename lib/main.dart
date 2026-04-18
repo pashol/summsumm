@@ -13,6 +13,10 @@ import 'screens/meeting_library_screen.dart';
 import 'services/meeting_repository.dart';
 import 'utils/document_title.dart';
 
+/// Returns true when any document is a PDF (has a content URI).
+bool isDocumentShare(List<Document> documents) =>
+    documents.any((d) => d.isPdf);
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -211,5 +215,116 @@ class _SummarySheetHostState extends State<_SummarySheetHost>
   Widget build(BuildContext context) {
     // Fully transparent host — only the bottom sheet is visible
     return const Scaffold(backgroundColor: Colors.transparent);
+  }
+}
+
+class _DocumentSheetHost extends StatefulWidget {
+  const _DocumentSheetHost({required this.documents});
+
+  final List<Document> documents;
+
+  @override
+  State<_DocumentSheetHost> createState() => _DocumentSheetHostState();
+}
+
+class _DocumentSheetHostState extends State<_DocumentSheetHost> {
+  static const double _initialSize = 0.92;
+
+  final _dragController = DraggableScrollableController();
+  double _sheetExtent = _initialSize;
+  bool _sheetVisible = true;
+
+  late final MeetingRepository _repo;
+  late final Meeting _entry;
+
+  @override
+  void initState() {
+    super.initState();
+    _repo = MeetingRepository();
+    _entry = Meeting(
+      id: const Uuid().v4(),
+      createdAt: DateTime.now(),
+      durationSec: 0,
+      audioPath: '',
+      title: documentTitle(widget.documents),
+      transcript:
+          widget.documents.isNotEmpty ? widget.documents.first.text : '',
+      status: MeetingStatus.summarizing,
+      type: MeetingType.document,
+    );
+    _repo.save(_entry);
+    _dragController.addListener(_onExtentChanged);
+  }
+
+  void _onExtentChanged() {
+    if (!mounted) return;
+    final extent = _dragController.size;
+    setState(() => _sheetExtent = extent);
+    if (extent <= 0.01) setState(() => _sheetVisible = false);
+  }
+
+  @override
+  void dispose() {
+    _dragController.dispose();
+    super.dispose();
+  }
+
+  double get _scrimOpacity =>
+      (0.54 * (_sheetExtent / _initialSize)).clamp(0.0, 0.54);
+
+  void _closeSheet() => _dragController.animateTo(
+        0.0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        children: [
+          AbsorbPointer(
+            absorbing: _sheetExtent > 0.2,
+            child: const MeetingLibraryScreen(),
+          ),
+          IgnorePointer(
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 100),
+              opacity: _scrimOpacity,
+              child: const ColoredBox(
+                color: Colors.black,
+                child: SizedBox.expand(),
+              ),
+            ),
+          ),
+          if (_sheetVisible)
+            DraggableScrollableSheet(
+              controller: _dragController,
+              initialChildSize: _initialSize,
+              minChildSize: 0.0,
+              maxChildSize: _initialSize,
+              snap: true,
+              snapSizes: const [0.0, _initialSize],
+              builder: (ctx, scrollCtrl) => SummarySheet(
+                documents: widget.documents,
+                scrollController: scrollCtrl,
+                onClose: _closeSheet,
+                onSummarized: (summary) async {
+                  await _repo.save(_entry.copyWith(
+                    summary: summary,
+                    status: MeetingStatus.done,
+                  ));
+                },
+                onSummaryFailed: (error) async {
+                  await _repo.save(_entry.copyWith(
+                    status: MeetingStatus.failed,
+                    lastError: error,
+                  ));
+                },
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }
