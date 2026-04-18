@@ -39,7 +39,7 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
         status: MeetingStatus.recorded,
       );
 
-  Future<void> transcribe() async {
+  Future<void> transcribe({bool diarize = false}) async {
     final meeting = state;
     final settings = ref.read(settingsProvider);
     final voiceService = ref.read(voiceServiceProvider);
@@ -54,6 +54,7 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
         meeting.audioPath,
         settings.provider,
         apiKey,
+        diarize: diarize,
       );
 
       state = meeting.copyWith(

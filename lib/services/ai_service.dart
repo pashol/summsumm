@@ -232,12 +232,15 @@ You are a helpful assistant that summarizes documents concisely. Formatting rule
     required String filePath,
     required String provider,
     required String apiKey,
+    bool diarize = false,
   }) async {
     switch (provider) {
       case 'openai':
         return await _voiceService.transcribeWithOpenAI(filePath, apiKey);
       case 'openrouter':
-        return await _voiceService.transcribeWithVoxtral(filePath, apiKey);
+        return await _voiceService.transcribeFile(
+          filePath, provider, apiKey, diarize: diarize,
+        );
       default:
         return await _voiceService.transcribeLocally(filePath);
     }
