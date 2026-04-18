@@ -37,7 +37,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.delete),
-            onPressed: () => _deleteMeeting(context, provider),
+            onPressed: () => _deleteMeeting(context, meeting, provider),
           ),
         ],
       ),
@@ -73,9 +73,37 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Duration: ${_formatDuration(meeting.durationSec)}'),
+        if (meeting.type == MeetingType.meeting)
+          Text('Duration: ${_formatDuration(meeting.durationSec)}'),
         Text('Recorded: ${meeting.createdAt}'),
         if (meeting.provider != null) Text('Transcribed by: ${meeting.provider}'),
+        if (meeting.lastError != null) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.errorContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.error_outline,
+                    color: Theme.of(context).colorScheme.onErrorContainer,
+                    size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    meeting.lastError!,
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onErrorContainer,
+                        fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -123,6 +151,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen> {
       );
     }
     if (meeting.status == MeetingStatus.failed) {
+      if (meeting.type == MeetingType.document) return const SizedBox.shrink();
       return ElevatedButton(
         onPressed: provider.retry,
         child: const Text('Retry'),
@@ -161,12 +190,16 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen> {
     );
   }
 
-  void _deleteMeeting(BuildContext context, MeetingNotifier provider) {
+  void _deleteMeeting(BuildContext context, Meeting meeting, MeetingNotifier provider) {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Meeting?'),
-        content: const Text('This will permanently delete the recording and all data.'),
+        title: Text(meeting.type == MeetingType.document
+            ? 'Delete Document?'
+            : 'Delete Meeting?'),
+        content: Text(meeting.type == MeetingType.document
+            ? 'This will permanently delete this document summary.'
+            : 'This will permanently delete the recording and all data.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
