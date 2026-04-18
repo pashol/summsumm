@@ -19,10 +19,10 @@ class FakePathProvider extends Fake
 
 void main() {
   group('VoiceService recording defaults', () {
-    test('uses mp3 container for microphone capture', () {
+    test('uses m4a container for microphone capture', () {
       final service = VoiceService();
-      expect(service.recordingFileExtension, 'mp3');
-      expect(service.recordingCodec, Codec.mp3);
+      expect(service.recordingFileExtension, 'm4a');
+      expect(service.recordingCodec, Codec.aacMP4);
     });
   });
 
@@ -31,7 +31,7 @@ void main() {
 
     setUp(() async {
       PathProviderPlatform.instance = FakePathProvider();
-      audioFile = File('${Directory.systemTemp.path}/test_audio.mp3');
+      audioFile = File('${Directory.systemTemp.path}/test_audio.m4a');
       await audioFile.writeAsBytes([0x00, 0x01, 0x02]);
     });
 
@@ -87,7 +87,7 @@ void main() {
     test('throws VoiceTranscriptionException if audio file missing', () async {
       final service = VoiceService();
       expect(
-        () => service.transcribeWithGemini('/nonexistent/path.mp3', 'key'),
+        () => service.transcribeWithGemini('/nonexistent/path.m4a', 'key'),
         throwsA(isA<VoiceTranscriptionException>()),
       );
     });
@@ -97,7 +97,7 @@ void main() {
     late File audioFile;
 
     setUp(() async {
-      audioFile = File('${Directory.systemTemp.path}/test_route.mp3');
+      audioFile = File('${Directory.systemTemp.path}/test_route.m4a');
       await audioFile.writeAsBytes([0x00, 0x01]);
     });
 
