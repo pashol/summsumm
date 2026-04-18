@@ -141,11 +141,13 @@ class _SummsummAppState extends ConsumerState<SummsummApp> {
       theme: _buildTheme(Brightness.light),
       darkTheme: _buildTheme(Brightness.dark),
       themeMode: ThemeMode.system,
-   home: widget.openSettings
-           ? const SettingsScreen(isInitialSetup: true)
-           : widget.documents.isNotEmpty
-               ? _SummarySheetHost(documents: widget.documents)
-               : const MeetingLibraryScreen(),
+      home: widget.openSettings
+          ? const SettingsScreen(isInitialSetup: true)
+          : isDocumentShare(widget.documents)
+              ? _DocumentSheetHost(documents: widget.documents)
+              : widget.documents.isNotEmpty
+                  ? _SummarySheetHost(documents: widget.documents)
+                  : const MeetingLibraryScreen(),
     );
   }
 }
@@ -259,8 +261,10 @@ class _DocumentSheetHostState extends State<_DocumentSheetHost> {
   void _onExtentChanged() {
     if (!mounted) return;
     final extent = _dragController.size;
-    setState(() => _sheetExtent = extent);
-    if (extent <= 0.01) setState(() => _sheetVisible = false);
+    setState(() {
+      _sheetExtent = extent;
+      if (extent <= 0.01) _sheetVisible = false;
+    });
   }
 
   @override
