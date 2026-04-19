@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
 import 'package:summsumm/models/meeting.dart';
-import 'package:summsumm/providers/meeting_library_provider.dart';
 import 'package:summsumm/providers/meeting_provider.dart';
 import 'package:summsumm/providers/settings_provider.dart';
 import 'package:summsumm/widgets/meeting_share_sheet.dart';
@@ -17,16 +16,15 @@ class MeetingDetailScreen extends ConsumerStatefulWidget {
   ConsumerState<MeetingDetailScreen> createState() => _MeetingDetailScreenState();
 }
 
-class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen> {
+class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
+    with TickerProviderStateMixin {
   bool _diarize = false;
+  late final TabController _tabController;
 
   @override
-  void initState() {
-    super.initState();
-    // Force refresh of meeting library to ensure we have latest data
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(meetingLibraryProvider.notifier).refresh();
-    });
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
@@ -52,30 +50,32 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildMetadata(meeting),
-              const SizedBox(height: 20),
-              if (meeting.transcript != null) ...[
-                const Text('Transcript', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Text(meeting.transcript!),
-                const SizedBox(height: 20),
-              ],
-              if (meeting.summary != null) ...[
-                const Text('Summary', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                MarkdownBody(data: meeting.summary!),
-                const SizedBox(height: 20),
-              ],
-              _buildActions(meeting, provider),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: _buildMetadata(meeting),
+          ),
+          TabBar(
+            controller: _tabController,
+            tabs: const [
+              Tab(text: 'Summary'),
+              Tab(text: 'Transcript'),
+              Tab(text: 'Chat'),
             ],
           ),
-        ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildSummaryTab(meeting, provider),
+                _buildTranscriptTab(meeting, provider),
+                _buildChatTab(meeting),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
