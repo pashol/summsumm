@@ -1,0 +1,131 @@
+import 'dart:async';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../models/chat_message.dart';
+import '../providers/meeting_provider.dart';
+import '../providers/settings_provider.dart';
+import '../services/ai_service.dart';
+
+class MeetingChatState {
+  final List<ChatMessage> messages;
+  final bool isStreaming;
+  final String? error;
+
+  const MeetingChatState({
+    this.messages = const [],
+    this.isStreaming = false,
+    this.error,
+  });
+
+  MeetingChatState copyWith({
+    List<ChatMessage>? messages,
+    bool? isStreaming,
+    String? error,
+    bool clearError = false,
+  }) =>
+      MeetingChatState(
+        messages: messages ?? this.messages,
+        isStreaming: isStreaming ?? this.isStreaming,
+        error: clearError ? null : (error ?? this.error),
+      );
+}
+
+class MeetingChatNotifier extends StateNotifier<MeetingChatState> {
+  final Ref _ref;
+  StreamSubscription<String>? _streamSub;
+  bool _mounted = true;
+
+  MeetingChatNotifier(this._ref) : super(const MeetingChatState());
+
+  Future<void> sendMessage(
+    String question, {
+    required String transcript,
+    String? summary,
+  }) async {
+    if (state.isStreaming || question.trim().isEmpty) return;
+
+    final userMsg = ChatMessage(role: 'user', content: question.trim());
+    const assistantMsg = ChatMessage(role: 'assistant', content: '');
+    state = state.copyWith(
+      messages: [...state.messages, userMsg, assistantMsg],
+      isStreaming: true,
+      clearError: true,
+    );
+
+    final settings = _ref.read(settingsProvider);
+    final apiKey =
+        await _ref.read(settingsProvider.notifier).getApiKey(settings.provider) ?? '';
+
+    final systemPrompt =
+        'You are a helpful assistant. The user recorded a meeting.\n'
+        'Transcript:\n$transcript\n'
+        '${summary != null ? '\nSummary:\n$summary\n' : ''}'
+        '\nAnswer questions about this meeting concisely.';
+
+    final history = state.messages
+        .take(state.messages.length - 1) // exclude the empty assistant msg
+        .map((m) => m.toApiMap())
+        .toList();
+
+    final apiMessages = <Map<String, dynamic>>[
+      {'role': 'system', 'content': systemPrompt},
+      ...history,
+    ];
+
+    try {
+      final stream = _ref.read(aiServiceProvider).streamCompletion(
+            apiKey: apiKey,
+            model: settings.activeModel,
+            messages: apiMessages,
+            provider: settings.provider,
+          );
+
+      String accumulated = '';
+      _streamSub = stream.listen(
+        (delta) {
+          if (!_mounted) return;
+          accumulated += delta;
+          final updated = List<ChatMessage>.from(state.messages);
+          updated[updated.length - 1] =
+              ChatMessage(role: 'assistant', content: accumulated);
+          state = state.copyWith(messages: updated);
+        },
+        onError: (Object e) {
+          if (!_mounted) return;
+          final msgs = List<ChatMessage>.from(state.messages)
+            ..removeLast();
+          state = state.copyWith(
+            messages: msgs,
+            isStreaming: false,
+            error: e is AiException ? e.message : e.toString(),
+          );
+        },
+        onDone: () {
+          if (!_mounted) return;
+          state = state.copyWith(isStreaming: false);
+        },
+        cancelOnError: true,
+      );
+    } catch (e) {
+      final msgs = List<ChatMessage>.from(state.messages)..removeLast();
+      state = state.copyWith(
+        messages: msgs,
+        isStreaming: false,
+        error: e is AiException ? e.message : e.toString(),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _mounted = false;
+    _streamSub?.cancel();
+    super.dispose();
+  }
+}
+
+final meetingChatProvider =
+    StateNotifierProvider.family<MeetingChatNotifier, MeetingChatState, String>(
+  (ref, meetingId) => MeetingChatNotifier(ref),
+);
