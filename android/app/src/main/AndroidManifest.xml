@@ -30,6 +30,12 @@
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
 
+            <!-- App drawer launcher -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
             <!-- Text selection share menu (e.g. "Ask Grok", "Ask ChatGPT") -->
             <intent-filter>
                 <action android:name="android.intent.action.PROCESS_TEXT" />

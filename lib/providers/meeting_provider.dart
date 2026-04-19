@@ -16,7 +16,7 @@ final meetingProvider = NotifierProvider.family<MeetingNotifier, Meeting, String
 class MeetingNotifier extends FamilyNotifier<Meeting, String> {
   @override
   Meeting build(String meetingId) {
-    final library = ref.read(meetingLibraryProvider);
+    final library = ref.watch(meetingLibraryProvider);
     return library.when(
       data: (meetings) {
         try {

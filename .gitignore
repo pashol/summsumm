@@ -2,6 +2,7 @@
 docs/superpowers/
 
 # Miscellaneous
+.worktrees/
 *.class
 *.lock
 *.log

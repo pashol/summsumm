@@ -1,32 +1,138 @@
 package app.summsumm
 
 import android.Manifest
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
-import android.provider.OpenableColumns
+import android.os.Bundle
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
+
 import androidx.core.graphics.drawable.IconCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
+import android.content.ContentResolver
+import android.provider.OpenableColumns
 
 class MainActivity : FlutterActivity() {
+    companion object {
+        private const val CHANNEL = "app.summsumm/intent"
+        private const val RECORDING_CHANNEL = "app.summsumm/recording"
+        private const val RECORDING_EVENTS_CHANNEL = "app.summsumm/recording_events"
+        private const val STOP_RECORDING_ACTION = "app.summsumm.STOP_RECORDING"
+        private const val REQUEST_READ_STORAGE = 1001
+        private const val MAX_PDF_SIZE_BYTES = 10 * 1024 * 1024 // 10MB
+        private const val PREFS_NAME = "SummsummPrefs"
+        private const val KEY_SHORTCUT_CREATED = "shortcutCreated"
+        private const val ACTION_SETTINGS = "app.summsumm.OPEN_SETTINGS"
+    }
 
-companion object {
-    const val CHANNEL = "app.summsumm/intent"
-    const val ACTION_SETTINGS = "app.summsumm.OPEN_SETTINGS"
-    const val PREFS_NAME = "summsumm_prefs"
-    const val KEY_SHORTCUT_CREATED = "shortcut_created"
-    const val MAX_PDF_SIZE_BYTES = 5 * 1024 * 1024 // 5MB
-    private const val REQUEST_READ_STORAGE = 1
-}
+    private var eventSink: EventChannel.EventSink? = null
+    private var flutterEngineRef: FlutterEngine? = null
+
+    private val stopRecordingReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            eventSink?.success("stopped")
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        ContextCompat.registerReceiver(
+            this,
+            stopRecordingReceiver,
+            IntentFilter(STOP_RECORDING_ACTION),
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        // Notify Flutter about the new intent
+        flutterEngineRef?.let { engine ->
+            MethodChannel(engine.dartExecutor.binaryMessenger, CHANNEL)
+                .invokeMethod("onNewIntent", getInitialIntent())
+        }
+    }
+
+    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+        super.configureFlutterEngine(flutterEngine)
+        flutterEngineRef = flutterEngine
+
+        // MethodChannel for intent handling
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "getInitialIntent" -> result.success(getInitialIntent())
+                    "offerSettingsShortcut" -> {
+                        offerSettingsShortcutIfNeeded()
+                        result.success(null)
+                    }
+                    "readContentUri" -> {
+                        val uriString = call.argument<String>("uri")
+                        if (uriString != null) {
+                            try {
+                                val uri = Uri.parse(uriString)
+                                val bytes = readContentUriBytes(uri)
+                                result.success(bytes?.toList())
+                            } catch (e: SecurityException) {
+                                result.error("PERMISSION_DENIED", "Permission denied. Please grant storage access.", null)
+                            } catch (e: Exception) {
+                                result.error("READ_ERROR", e.message, null)
+                            }
+                        } else {
+                            result.error("INVALID_URI", "URI is null", null)
+                        }
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+
+        // MethodChannel for recording control
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, RECORDING_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "startForegroundService" -> {
+                    val intent = Intent(this, RecordingService::class.java)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        startForegroundService(intent)
+                    } else {
+                        startService(intent)
+                    }
+                    result.success(null)
+                }
+                "stopForegroundService" -> {
+                    val intent = Intent(this, RecordingService::class.java)
+                    stopService(intent)
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        // EventChannel for recording events
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, RECORDING_EVENTS_CHANNEL).setStreamHandler(
+            object : EventChannel.StreamHandler {
+                override fun onListen(args: Any?, sink: EventChannel.EventSink) {
+                    eventSink = sink
+                }
+                override fun onCancel(args: Any?) {
+                    eventSink = null
+                }
+            }
+        )
+    }
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -36,45 +142,19 @@ companion object {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQUEST_READ_STORAGE) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission granted, retry reading the URI
                 getInitialIntent()?.let { intentData ->
-                    MethodChannel(flutterEngine!!.dartExecutor.binaryMessenger, CHANNEL)
-                        .invokeMethod("onPermissionGranted", intentData)
+                    flutterEngineRef?.let { engine ->
+                        MethodChannel(engine.dartExecutor.binaryMessenger, CHANNEL)
+                            .invokeMethod("onPermissionGranted", intentData)
+                    }
                 }
             }
         }
     }
 
-    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
-        super.configureFlutterEngine(flutterEngine)
-
-    MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
-        .setMethodCallHandler { call, result ->
-            when (call.method) {
-                "getInitialIntent" -> result.success(getInitialIntent())
-                "offerSettingsShortcut" -> {
-                    offerSettingsShortcutIfNeeded()
-                    result.success(null)
-                }
-                "readContentUri" -> {
-                    val uriString = call.argument<String>("uri")
-                    if (uriString != null) {
-                        try {
-                            val uri = Uri.parse(uriString)
-                            val bytes = readContentUriBytes(uri)
-                            result.success(bytes?.toList())
-            } catch (e: SecurityException) {
-                result.error("PERMISSION_DENIED", "Permission denied. Please grant storage access.", null)
-            } catch (e: Exception) {
-                result.error("READ_ERROR", e.message, null)
-            }
-                    } else {
-                        result.error("INVALID_URI", "URI is null", null)
-                    }
-                }
-                else -> result.notImplemented()
-            }
-        }
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterReceiver(stopRecordingReceiver)
     }
 
     private fun readContentUriBytes(uri: Uri): ByteArray? {
@@ -91,7 +171,7 @@ companion object {
                 )
                 return null
             }
-            contentResolver.openInputStream(uri)?.use {
+            this.contentResolver.openInputStream(uri)?.use {
                 val bytes = it.readBytes()
                 Log.d("Summsumm", "Read ${bytes.size} bytes from URI: $uri")
                 bytes
@@ -106,17 +186,14 @@ companion object {
     }
 
     private fun getInitialIntent(): Map<String, Any?>? {
-        val intent = intent ?: return null
+        val intent = this.intent ?: return null
         val action = intent.action ?: return null
         val documents = mutableListOf<Map<String, Any?>>()
 
-        // Handle ACTION_VIEW (open PDF directly from file manager)
         if (Intent.ACTION_VIEW == action && intent.type == "application/pdf") {
             val uri = intent.data
             uri?.let { addPdfDocument(it, documents) }
-        }
-        // Handle ACTION_SEND (single document)
-        else if (Intent.ACTION_SEND == action) {
+        } else if (Intent.ACTION_SEND == action) {
             when (intent.type) {
                 "text/plain" -> {
                     val text = intent.getStringExtra(Intent.EXTRA_TEXT)
@@ -127,9 +204,7 @@ companion object {
                     uri?.let { addPdfDocument(it, documents) }
                 }
             }
-        }
-        // Handle ACTION_SEND_MULTIPLE (multiple documents)
-        else if (Intent.ACTION_SEND_MULTIPLE == action) {
+        } else if (Intent.ACTION_SEND_MULTIPLE == action) {
             when (intent.type) {
                 "text/plain" -> {
                     val texts = intent.getStringArrayListExtra(Intent.EXTRA_TEXT)
@@ -140,9 +215,7 @@ companion object {
                     uris?.forEach { uri -> addPdfDocument(uri, documents) }
                 }
             }
-        }
-        // Handle ACTION_PROCESS_TEXT (text selection)
-        else if (Intent.ACTION_PROCESS_TEXT == action) {
+        } else if (Intent.ACTION_PROCESS_TEXT == action) {
             val text = intent.getStringExtra(Intent.EXTRA_PROCESS_TEXT)
             text?.let { documents.add(mapOf("text" to it)) }
         }
@@ -159,7 +232,6 @@ companion object {
         val fileSize = getFileSize(uri)
 
         if (fileSize != null && fileSize > MAX_PDF_SIZE_BYTES) {
-            // Add with error flag instead of rejecting
             documents.add(mapOf(
                 "text" to "",
                 "name" to fileName,
@@ -168,7 +240,6 @@ companion object {
             return
         }
 
-        // Pass the URI as string - Flutter will handle reading the file
         documents.add(mapOf(
             "uri" to uri.toString(),
             "name" to fileName,
@@ -178,7 +249,7 @@ companion object {
 
     private fun getFileName(uri: Uri): String? {
         var name: String? = null
-        contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+        this.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
             if (cursor.moveToFirst()) {
                 val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
                 if (nameIndex >= 0) name = cursor.getString(nameIndex)
@@ -189,7 +260,7 @@ companion object {
 
     private fun getFileSize(uri: Uri): Long? {
         var size: Long? = null
-        contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+        this.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
             if (cursor.moveToFirst()) {
                 val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
                 if (sizeIndex >= 0) size = cursor.getLong(sizeIndex)
@@ -198,18 +269,8 @@ companion object {
         return size
     }
 
-    private fun extractText(): String? = when (intent.action) {
-        Intent.ACTION_PROCESS_TEXT ->
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)?.toString()
-            } else null
-        Intent.ACTION_SEND ->
-            intent.getStringExtra(Intent.EXTRA_TEXT)
-        else -> null
-    }
-
     private fun offerSettingsShortcutIfNeeded() {
-        val prefs: SharedPreferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        val prefs: SharedPreferences = this.getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         if (prefs.getBoolean(KEY_SHORTCUT_CREATED, false)) return
         if (!ShortcutManagerCompat.isRequestPinShortcutSupported(this)) return
 

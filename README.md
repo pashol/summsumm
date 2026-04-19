@@ -1,6 +1,6 @@
 # summsumm
 
-AI Text Summarizer — Powerful Android app that brings AI-powered text summarization directly to your fingertips via Android's share-menu and text-selection.
+AI Text Summarizer — Powerful Android app that brings AI-powered text summarization directly to your fingertips via Android's share-menu and text-selection, with **offline-first meeting recording and transcription**.
 
 ## Why summsumm?
 
@@ -8,6 +8,7 @@ Ever wanted to quickly summarize articles, emails, or lengthy texts without leav
 
 ## Features
 
+### Text Summarization
 - **Share-menu summarization**: Select text in any app and share to summsumm for instant AI summaries
 - **Dual AI providers**: Choose between OpenRouter's diverse model selection or OpenAI's GPT models
 - **Text-to-Speech**: Listen to summaries on the go with built-in TTS support — perfect for multitasking
@@ -15,6 +16,13 @@ Ever wanted to quickly summarize articles, emails, or lengthy texts without leav
 - **Streaming summaries**: Watch summaries generate in real-time
 - **Voice Input**: Long-press the send button to record a follow-up question. The app will transcribe your voice using OpenAI Whisper (if OpenAI API key is configured), Voxtral (if OpenRouter API key is configured), or local speech-to-text as fallback.
 - **Customizable**: Select your preferred AI model and adjust summarization style
+
+### Meeting Mode (Offline-First)
+- **Record meetings**: Capture audio even when offline
+- **Background recording**: Continues while screen is off (foreground service)
+- **Transcribe later**: Process recordings when network is available
+- **Summarize**: Generate concise meeting notes with action items
+- **Library**: Browse all recorded meetings in one place
 
 ## Setup
 
@@ -28,15 +36,22 @@ Ever wanted to quickly summarize articles, emails, or lengthy texts without leav
 
 ## Usage
 
-### Via Share Menu
+### Text Summarization
+#### Via Share Menu
 1. Select text in any app (browser, news reader, email, etc.)
 2. Tap the share button
 3. Choose summsumm from the list
 4. View the AI-generated summary
 
-### Via Text Selection (Android 6.0+)
+#### Via Text Selection (Android 6.0+)
 1. Select text in any app
 2. Tap the "Summarize" option in the popup menu
+
+### Meeting Recording
+1. Launch the app directly (no share intent)
+2. Tap the mic button to start recording
+3. Stop via notification or in-app button
+4. Transcribe and summarize when online
 
 ## Building from Source
 
@@ -68,6 +83,8 @@ flutter build apk --release
 - **HTTP**: http package with SSE support
 - **Storage**: SharedPreferences + flutter_secure_storage
 - **TTS**: flutter_tts
+- **Audio**: flutter_sound for recording/playback
+- **Connectivity**: connectivity_plus for offline detection
 
 ## Project Structure
 
@@ -78,25 +95,40 @@ lib/
 │   ├── app_settings.dart
 │   ├── summary_state.dart
 │   ├── ai_model.dart
-│   └── chat_message.dart
+│   ├── chat_message.dart
+│   └── meeting.dart        # Meeting model
 ├── providers/            # Riverpod providers
 │   ├── settings_provider.dart
 │   ├── summary_provider.dart
-│   └── models_provider.dart
+│   ├── models_provider.dart
+│   ├── meeting_provider.dart
+│   ├── meeting_repository_provider.dart
+│   └── recording_provider.dart
 ├── screens/              # UI screens
 │   ├── settings_screen.dart
-│   └── summary_sheet.dart
+│   ├── summary_sheet.dart
+│   ├── meeting_library_screen.dart
+│   ├── meeting_detail_screen.dart
+│   └── recording_screen.dart
 ├── services/            # Business logic
 │   ├── ai_service.dart
 │   ├── tts_service.dart
-│   └── secure_storage_service.dart
+│   ├── secure_storage_service.dart
+│   ├── voice_service.dart
+│   ├── meeting_repository.dart
+│   └── recording_service.dart
 └── widgets/             # Reusable widgets
     ├── glass_card.dart
     └── neumorphic_button.dart
 ```
 
 ## Permissions
-- **Microphone**: Required for voice input functionality (recording follow-up questions).
+
+- **Microphone**: Required for voice input and meeting recording
+- **Foreground Service**: For background meeting recording
+- **Wake Lock**: To prevent CPU sleep during recording
+- **Notifications**: To show recording controls
+- **Storage**: To save meeting recordings
 
 ## Privacy
 

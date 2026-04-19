@@ -23,11 +23,12 @@ class MeetingShareSheet extends StatelessWidget {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ),
-          ListTile(
-            leading: const Icon(Icons.audio_file_outlined),
-            title: const Text('Share Audio'),
-            onTap: () => _shareAudio(context),
-          ),
+          if (meeting.type == MeetingType.meeting)
+            ListTile(
+              leading: const Icon(Icons.audio_file_outlined),
+              title: const Text('Share Audio'),
+              onTap: () => _shareAudio(context),
+            ),
           if (meeting.transcript != null)
             ListTile(
               leading: const Icon(Icons.text_snippet_outlined),
@@ -72,6 +73,7 @@ class MeetingShareSheet extends StatelessWidget {
 void showMeetingShareSheet(BuildContext context, Meeting meeting) {
   showModalBottomSheet<void>(
     context: context,
+    backgroundColor: Theme.of(context).colorScheme.surface,
     builder: (_) => MeetingShareSheet(meeting: meeting),
   );
 }

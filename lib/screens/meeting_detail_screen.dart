@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:intl/intl.dart';
 import 'package:summsumm/models/meeting.dart';
+import 'package:summsumm/providers/meeting_library_provider.dart';
 import 'package:summsumm/providers/meeting_provider.dart';
 import 'package:summsumm/providers/settings_provider.dart';
 import 'package:summsumm/widgets/meeting_share_sheet.dart';
@@ -17,6 +19,15 @@ class MeetingDetailScreen extends ConsumerStatefulWidget {
 
 class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen> {
   bool _diarize = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Force refresh of meeting library to ensure we have latest data
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(meetingLibraryProvider.notifier).refresh();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -69,13 +80,13 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen> {
     );
   }
 
-  Widget _buildMetadata(Meeting meeting) {
+   Widget _buildMetadata(Meeting meeting) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (meeting.type == MeetingType.meeting)
           Text('Duration: ${_formatDuration(meeting.durationSec)}'),
-        Text('Recorded: ${meeting.createdAt}'),
+        Text('Recorded: ${_formatDateTime(context, meeting.createdAt)}'),
         if (meeting.provider != null) Text('Transcribed by: ${meeting.provider}'),
         if (meeting.lastError != null) ...[
           const SizedBox(height: 12),
@@ -160,10 +171,16 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen> {
     return const SizedBox.shrink();
   }
 
-  String _formatDuration(int seconds) {
+   String _formatDuration(int seconds) {
     final mins = seconds ~/ 60;
     final secs = seconds % 60;
     return '${mins}m ${secs}s';
+  }
+
+   String _formatDateTime(BuildContext context, DateTime dateTime) {
+    // Get the system locale and format accordingly
+    final locale = Localizations.localeOf(context);
+    return DateFormat.yMMMd(locale.languageCode).add_jm().format(dateTime.toLocal());
   }
 
   void _renameMeeting(BuildContext context, String initialTitle, MeetingNotifier provider) {

@@ -138,8 +138,7 @@ class VoiceService {
     );
   }
 
-  static const _geminiDiarizationModel = 'google/gemini-3-flash-preview';
-  static const _voxtralModel = 'mistralai/voxtral-small-24b-2507';
+  static const _geminiTranscriptionModel = 'google/gemini-3-flash-preview';
 
   static const _diarizationPrompt =
       'Transcribe this audio in full. Label each speaker as Speaker 1, Speaker 2, etc. '
@@ -147,7 +146,10 @@ class VoiceService {
       'Format each line as:\n\n[MM:SS] Speaker X: <text>\n\n'
       'Maintain consistent speaker labels throughout. Do not summarize.';
 
-  Future<String?> transcribeWithGemini(String filePath, String apiKey) async {
+  static const _transcriptionPrompt =
+      'Transcribe this audio accurately. Output only the transcript.';
+
+  Future<String?> transcribeWithGemini(String filePath, String apiKey, {bool diarize = false}) async {
     final file = File(filePath);
     if (!await file.exists()) {
       throw VoiceTranscriptionException('Audio file missing.');
@@ -166,6 +168,8 @@ class VoiceService {
       _ => 'ogg',
     };
 
+    final prompt = diarize ? _diarizationPrompt : _transcriptionPrompt;
+
     final response = await _http.post(
       Uri.parse('https://openrouter.ai/api/v1/chat/completions'),
       headers: {
@@ -175,7 +179,7 @@ class VoiceService {
         'X-Title': 'AI Text Summarizer',
       },
       body: jsonEncode({
-        'model': _geminiDiarizationModel,
+        'model': _geminiTranscriptionModel,
         'messages': [
           {
             'role': 'user',
@@ -186,7 +190,7 @@ class VoiceService {
               },
               {
                 'type': 'text',
-                'text': _diarizationPrompt,
+                'text': prompt,
               },
             ],
           },
@@ -216,74 +220,7 @@ class VoiceService {
     );
   }
 
-  Future<String?> transcribeWithVoxtral(String filePath, String apiKey) async {
-    final file = File(filePath);
-    if (!await file.exists()) {
-      throw VoiceTranscriptionException('Audio file missing.');
-    }
 
-    final bytes = await file.readAsBytes();
-    final audioB64 = base64Encode(bytes);
-    final ext = path.extension(filePath).toLowerCase().replaceAll('.', '');
-    final audioFormat = switch (ext) {
-      'm4a' => 'mp4',
-      'aac' => 'aac',
-      'wav' => 'wav',
-      'flac' => 'flac',
-      'mp3' => 'mp3',
-      'webm' => 'webm',
-      _ => 'ogg',
-    };
-
-    final response = await _http.post(
-      Uri.parse('https://openrouter.ai/api/v1/chat/completions'),
-      headers: {
-        'Authorization': 'Bearer $apiKey',
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://github.com/pashol/summsumm',
-        'X-Title': 'AI Text Summarizer',
-      },
-      body: jsonEncode({
-        'model': _voxtralModel,
-        'messages': [
-          {
-            'role': 'user',
-            'content': [
-              {
-                'type': 'input_audio',
-                'input_audio': {'data': audioB64, 'format': audioFormat},
-              },
-              {
-                'type': 'text',
-                'text': 'Transcribe this audio accurately. Output only the transcript.',
-              },
-            ],
-          },
-        ],
-      }),
-    );
-
-    if (response.statusCode == 200) {
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
-      final choices = json['choices'] as List?;
-      if (choices == null || choices.isEmpty) return null;
-      final message = choices.first['message'] as Map<String, dynamic>?;
-      final content = message?['content'];
-      if (content is String) return content.trim();
-      if (content is List) {
-        final text = content
-            .whereType<Map<String, dynamic>>()
-            .map((p) => p['text']?.toString() ?? '')
-            .join()
-            .trim();
-        return text.isEmpty ? null : text;
-      }
-      return null;
-    }
-    throw VoiceTranscriptionException(
-      _formatError('OpenRouter/Voxtral', response.statusCode, response.body),
-    );
-  }
 
   Future<List<String>> splitAudio(String filePath, {Duration chunkLength = const Duration(minutes: 8)}) async {
     final file = File(filePath);
@@ -309,10 +246,9 @@ class VoiceService {
         final String? transcript;
         if (provider == 'openai') {
           transcript = await transcribeWithOpenAI(chunks[i], apiKey);
-        } else if (diarize) {
-          transcript = await transcribeWithGemini(chunks[i], apiKey);
         } else {
-          transcript = await transcribeWithVoxtral(chunks[i], apiKey);
+          // For OpenRouter, use Gemini for both diarization and regular transcription
+          transcript = await transcribeWithGemini(chunks[i], apiKey, diarize: diarize);
         }
         if (transcript != null) {
           transcriptParts.add(transcript);

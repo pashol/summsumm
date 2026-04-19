@@ -40,6 +40,7 @@ class SummarySheet extends ConsumerStatefulWidget {
 class _SummarySheetState extends ConsumerState<SummarySheet>
     with SingleTickerProviderStateMixin {
   bool _isRecording = false;
+  ScrollController? _scrollCtrl;
 
    void _startRecording(LongPressStartDetails _) async {
     try {
@@ -145,7 +146,7 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
         );
   }
 
-  Future<void> _sendFollowUp() async {
+   Future<void> _sendFollowUp() async {
     final question = _followUpCtrl.text.trim();
     if (question.isEmpty) return;
     _followUpCtrl.clear();
@@ -162,6 +163,21 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
           settings: settings,
           document: widget.documents[_activeIndex],
         );
+
+    // Scroll to bottom after sending follow-up
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToBottom();
+    });
+  }
+
+  void _scrollToBottom() {
+    if (_scrollCtrl?.hasClients ?? false) {
+      _scrollCtrl?.animateTo(
+        _scrollCtrl!.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   void _copyToClipboard(String text) {
@@ -215,16 +231,22 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<SummaryState>(summaryProvider, (prev, next) {
-      if (prev?.status != SummaryStatus.done &&
-          next.status == SummaryStatus.done) {
-        widget.onSummarized?.call(next.summary);
-      }
-      if (prev?.status != SummaryStatus.error &&
-          next.status == SummaryStatus.error) {
-        widget.onSummaryFailed?.call(next.error);
-      }
-    });
+     ref.listen<SummaryState>(summaryProvider, (prev, next) {
+        if (prev?.status != SummaryStatus.done &&
+            next.status == SummaryStatus.done) {
+          widget.onSummarized?.call(next.summary);
+        }
+       if (prev?.status != SummaryStatus.error &&
+           next.status == SummaryStatus.error) {
+         widget.onSummaryFailed?.call(next.error);
+       }
+       // Auto-scroll when new chat messages are added
+       if (prev != null && next.chat.length > prev.chat.length) {
+         WidgetsBinding.instance.addPostFrameCallback((_) {
+           _scrollToBottom();
+         });
+       }
+     });
     final summaryState = ref.watch(summaryProvider);
     final notifier = ref.read(summaryProvider.notifier);
 
@@ -287,15 +309,21 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
       ),
     );
 
-    if (widget.scrollController != null) return buildBody(widget.scrollController!);
+     if (widget.scrollController != null) {
+       _scrollCtrl = widget.scrollController!;
+       return buildBody(widget.scrollController!);
+     }
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.8,
-      minChildSize: 0.4,
-      maxChildSize: 1.0,
-      expand: false,
-      builder: (_, sheetScrollCtrl) => buildBody(sheetScrollCtrl),
-    );
+     return DraggableScrollableSheet(
+       initialChildSize: 0.8,
+       minChildSize: 0.4,
+       maxChildSize: 1.0,
+       expand: false,
+       builder: (_, sheetScrollCtrl) {
+         _scrollCtrl = sheetScrollCtrl;
+         return buildBody(sheetScrollCtrl);
+       },
+     );
   }
 
   void _handleClose(BuildContext context) {
@@ -462,9 +490,10 @@ class _SheetBody extends StatelessWidget {
                         style: TextStyle(color: cs.error),
                       ),
 
-                    // Chat history
+                     // Chat history
                     if (summaryState.chat.isNotEmpty) ...[
                       const Divider(),
+                      const SizedBox(height: 8),
                       ...summaryState.chat.map((msg) => _ChatBubble(msg: msg)),
                     ],
 
@@ -711,32 +740,34 @@ class _ChatBubble extends StatelessWidget {
     final displayContent =
         streamingContent != null && isCursorVisible ? '$content▋' : content;
 
-    return Align(
-      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: GlassCard(
-        color: isUser
-            ? cs.primaryContainer.withOpacity(0.76)
-            : cs.secondaryContainer.withOpacity(0.76),
-           child: Container(
-             margin: const EdgeInsets.symmetric(vertical: 8),
-             padding: const EdgeInsets.symmetric(
-               horizontal: 12,
-               vertical: 8,
-             ),
-          constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.78,
-          ),
-          child: streamingContent != null || msg?.role == 'assistant'
-              ? MarkdownBody(
-                  data: displayContent,
-                  styleSheet: MarkdownStyleSheet.fromTheme(
-                    Theme.of(context),
+     return Container(
+       margin: const EdgeInsets.symmetric(vertical: 8),
+      child: Align(
+        alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+        child: GlassCard(
+          color: isUser
+              ? cs.primaryContainer.withOpacity(0.76)
+              : cs.secondaryContainer.withOpacity(0.76),
+             child: Container(
+               padding: const EdgeInsets.symmetric(
+                 horizontal: 12,
+                 vertical: 8,
+               ),
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.78,
+            ),
+            child: streamingContent != null || msg?.role == 'assistant'
+                ? MarkdownBody(
+                    data: displayContent,
+                    styleSheet: MarkdownStyleSheet.fromTheme(
+                      Theme.of(context),
+                    ),
+                  )
+                : Text(
+                    displayContent,
+                    style: TextStyle(color: cs.onPrimaryContainer),
                   ),
-                )
-              : Text(
-                  displayContent,
-                  style: TextStyle(color: cs.onPrimaryContainer),
-                ),
+          ),
         ),
       ),
     );

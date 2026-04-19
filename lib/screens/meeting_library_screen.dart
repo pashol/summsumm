@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:intl/intl.dart';
 
 import '../models/meeting.dart';
 import '../providers/meeting_library_provider.dart';
@@ -134,11 +135,11 @@ class _MeetingTile extends ConsumerWidget {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              meeting.type == MeetingType.document
-                  ? '${meeting.createdAt}'
-                  : '${_formatDuration(meeting.durationSec)} • ${meeting.createdAt}',
-            ),
+              Text(
+                meeting.type == MeetingType.document
+                    ? _formatDateTime(context, meeting.createdAt)
+                    : '${_formatDuration(meeting.durationSec)} • ${_formatDateTime(context, meeting.createdAt)}',
+              ),
             if (meeting.lastError != null) ...[
               const SizedBox(height: 4),
               Row(
@@ -175,6 +176,12 @@ class _MeetingTile extends ConsumerWidget {
     final mins = seconds ~/ 60;
     final secs = seconds % 60;
     return '${mins}m ${secs}s';
+  }
+
+  String _formatDateTime(BuildContext context, DateTime dateTime) {
+    // Get the system locale and format accordingly
+    final locale = Localizations.localeOf(context);
+    return DateFormat.yMMMd(locale.languageCode).add_jm().format(dateTime.toLocal());
   }
 
   void _archive(BuildContext context, MeetingNotifier notifier) {

@@ -293,7 +293,7 @@ class Summary extends _$Summary {
     }
   }
 
-  void _finaliseFollowUp() {
+   void _finaliseFollowUp() {
     final assistantMsg =
         ChatMessage(role: 'assistant', content: state.streamingReply);
     state = state.copyWith(
@@ -302,8 +302,10 @@ class Summary extends _$Summary {
       followUpCount: state.followUpCount + 1,
       status: SummaryStatus.done,
       isCursorVisible: false,
-    );
+     );
   }
+
+
 
   Future<void> factCheck({
     required String inputText,
@@ -634,7 +636,7 @@ class Summary extends _$Summary {
     }
   }
 
-  Future<void> askFollowUpWithVoice({
+   Future<void> askFollowUpWithVoice({
     required String audioFilePath,
     required String originalText,
     required String apiKey,
@@ -649,18 +651,27 @@ class Summary extends _$Summary {
     await _tts.stop();
 
     // Transcribe audio
-    final question = await ref.read(aiServiceProvider).transcribeAudio(
-          filePath: audioFilePath,
-          provider: settings.provider,
-          apiKey: apiKey,
-        );
+    String? question;
+    try {
+      question = await ref.read(aiServiceProvider).transcribeAudio(
+            filePath: audioFilePath,
+            provider: settings.provider,
+            apiKey: apiKey,
+          );
+    } catch (e) {
+      state = state.copyWith(
+        status: SummaryStatus.error,
+        error: 'Transcription failed: ${e.toString()}',
+      );
+      rethrow; // Re-throw to show error in UI
+    }
 
     if (question == null || question.isEmpty) {
       state = state.copyWith(
         status: SummaryStatus.error,
         error: 'Could not transcribe voice input. Please try again.',
       );
-      return;
+      throw Exception('Empty transcription'); // Re-throw to show error in UI
     }
 
     // Reuse existing askFollowUp logic
