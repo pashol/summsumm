@@ -49,7 +49,8 @@ class ImportService {
   }
 
   Future<Directory> _resolveMeetingsDir() async {
-    if (_getMeetingsDir != null) return _getMeetingsDir!();
+    final getter = _getMeetingsDir;
+    if (getter != null) return getter();
     final docsDir = await getApplicationDocumentsDirectory();
     final dir = Directory(p.join(docsDir.path, 'meetings'));
     await dir.create(recursive: true);
