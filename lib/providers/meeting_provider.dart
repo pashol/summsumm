@@ -17,16 +17,21 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
   @override
   Meeting build(String meetingId) {
     final library = ref.watch(meetingLibraryProvider);
-    return library.when(
+    final archived = ref.watch(archivedMeetingsProvider);
+    return _findIn(library, meetingId) ??
+        _findIn(archived, meetingId) ??
+        _placeholder(meetingId);
+  }
+
+  Meeting? _findIn(AsyncValue<List<Meeting>> value, String meetingId) {
+    return value.whenOrNull(
       data: (meetings) {
         try {
           return meetings.firstWhere((m) => m.id == meetingId);
         } catch (_) {
-          return _placeholder(meetingId);
+          return null;
         }
       },
-      loading: () => _placeholder(meetingId),
-      error: (_, __) => _placeholder(meetingId),
     );
   }
 
@@ -38,6 +43,8 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
         title: '',
         status: MeetingStatus.recorded,
       );
+
+  bool get _isPlaceholder => state.title.isEmpty && state.audioPath.isEmpty;
 
   Future<void> transcribe({bool diarize = false}) async {
     final meeting = state;
@@ -146,6 +153,7 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
   }
 
   Future<void> archive() async {
+    if (_isPlaceholder) return;
     final repository = ref.read(meetingRepositoryProvider);
     state = state.copyWith(archived: true);
     await repository.save(state);
@@ -154,6 +162,7 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
   }
 
   Future<void> unarchive() async {
+    if (_isPlaceholder) return;
     final repository = ref.read(meetingRepositoryProvider);
     state = state.copyWith(archived: false);
     await repository.save(state);
@@ -169,5 +178,5 @@ You are an expert meeting summarizer. Extract:
 3. Open questions
 4. Important context
 
-Format as markdown. Be concise and factual.
+Use markdown headers and bullet points. Do not wrap output in a code block. Be concise and factual.
 ''';
