@@ -334,8 +334,10 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                   color: Theme.of(context).colorScheme.error, fontSize: 12,),
             ),
           ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        SafeArea(
+          top: false,
+          child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
           child: Row(
             children: [
               Expanded(
@@ -366,6 +368,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
               ),
             ],
           ),
+        ),
         ),
       ],
     );
