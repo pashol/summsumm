@@ -48,7 +48,22 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Library mode needs an opaque window — the transparent theme is only for share/summary flows.
+        val action = intent?.action
+        if (action == Intent.ACTION_MAIN || action == ACTION_SETTINGS) {
+            setTheme(R.style.NormalTheme)
+        }
         super.onCreate(savedInstanceState)
+        if (action == Intent.ACTION_MAIN || action == ACTION_SETTINGS) {
+            // convertFromTranslucent is a hidden Activity API; use reflection to make the window opaque.
+            try {
+                val m = android.app.Activity::class.java.getDeclaredMethod("convertFromTranslucent")
+                m.isAccessible = true
+                m.invoke(this)
+            } catch (_: Throwable) {
+                // Best-effort; ignore if unavailable.
+            }
+        }
         ContextCompat.registerReceiver(
             this,
             stopRecordingReceiver,

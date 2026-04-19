@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:intl/intl.dart';
 
 import '../models/meeting.dart';
 import '../providers/meeting_library_provider.dart';
 import '../providers/meeting_provider.dart';
+import '../widgets/meeting_share_sheet.dart';
 import 'meeting_detail_screen.dart';
 
 class ArchivedMeetingsScreen extends ConsumerWidget {
@@ -15,21 +17,24 @@ class ArchivedMeetingsScreen extends ConsumerWidget {
     final meetingsAsync = ref.watch(archivedMeetingsProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Archived Meetings')),
-      body: meetingsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
-        data: (meetings) {
-          if (meetings.isEmpty) {
-            return const Center(child: Text('No archived meetings'));
-          }
-          return SlidableAutoCloseBehavior(
-            child: ListView.builder(
-              itemCount: meetings.length,
-              itemBuilder: (ctx, i) =>
-                  _ArchivedMeetingTile(meeting: meetings[i]),
-            ),
-          );
-        },
+      body: Container(
+        color: Theme.of(context).colorScheme.surface,
+        child: meetingsAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(child: Text('Error: $e')),
+          data: (meetings) {
+            if (meetings.isEmpty) {
+              return const Center(child: Text('No archived meetings'));
+            }
+            return SlidableAutoCloseBehavior(
+              child: ListView.builder(
+                itemCount: meetings.length,
+                itemBuilder: (ctx, i) =>
+                    _ArchivedMeetingTile(meeting: meetings[i]),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -48,8 +53,15 @@ class _ArchivedMeetingTile extends ConsumerWidget {
       key: ValueKey(meeting.id),
       startActionPane: ActionPane(
         motion: const DrawerMotion(),
-        extentRatio: 0.3,
+        extentRatio: 0.45,
         children: [
+          SlidableAction(
+            onPressed: (_) => showMeetingShareSheet(context, meeting),
+            backgroundColor: Colors.teal,
+            foregroundColor: Colors.white,
+            icon: Icons.share,
+            label: 'Share',
+          ),
           SlidableAction(
             onPressed: (_) => _unarchive(context, notifier),
             backgroundColor: Colors.blue,
@@ -73,8 +85,39 @@ class _ArchivedMeetingTile extends ConsumerWidget {
         ],
       ),
       child: ListTile(
+        leading: Icon(
+          meeting.type == MeetingType.document
+              ? Icons.article_outlined
+              : Icons.mic_none,
+        ),
         title: Text(meeting.title),
-        subtitle: Text(_formatDuration(meeting.durationSec)),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              meeting.type == MeetingType.document
+                  ? _formatDateTime(context, meeting.createdAt)
+                  : '${_formatDuration(meeting.durationSec)} • ${_formatDateTime(context, meeting.createdAt)}',
+            ),
+            if (meeting.lastError != null) ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(Icons.error_outline,
+                      color: Theme.of(context).colorScheme.error, size: 12,),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Failed — tap for details',
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                        fontSize: 12,),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+        trailing: const Icon(Icons.check_circle, color: Colors.green),
         onTap: () => Navigator.push<void>(
           context,
           MaterialPageRoute<void>(
@@ -91,6 +134,11 @@ class _ArchivedMeetingTile extends ConsumerWidget {
     return '${mins}m ${secs}s';
   }
 
+  String _formatDateTime(BuildContext context, DateTime dateTime) {
+    final locale = Localizations.localeOf(context);
+    return DateFormat.yMMMd(locale.languageCode).add_jm().format(dateTime.toLocal());
+  }
+
   void _unarchive(BuildContext context, MeetingNotifier notifier) {
     notifier.unarchive();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -102,9 +150,12 @@ class _ArchivedMeetingTile extends ConsumerWidget {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Meeting?'),
-        content: const Text(
-            'This will permanently delete the recording and all data.',),
+        title: Text(meeting.type == MeetingType.document
+            ? 'Delete Document?'
+            : 'Delete Meeting?',),
+        content: Text(meeting.type == MeetingType.document
+            ? 'This will permanently delete this document summary.'
+            : 'This will permanently delete the recording and all data.',),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),

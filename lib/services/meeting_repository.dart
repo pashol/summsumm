@@ -17,11 +17,17 @@ class MeetingRepository {
   Future<List<Meeting>> loadAll() async {
     final dir = await _meetingsDir();
     final jsonFiles = dir.listSync().where((entity) => entity.path.endsWith('.json'));
-    return jsonFiles.map((file) {
-      final json = jsonDecode(File(file.path).readAsStringSync()) as Map<String, dynamic>;
-      return Meeting.fromJson(json);
-    }).toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final meetings = <Meeting>[];
+    for (final file in jsonFiles) {
+      try {
+        final json = jsonDecode(File(file.path).readAsStringSync()) as Map<String, dynamic>;
+        meetings.add(Meeting.fromJson(json));
+      } catch (_) {
+        // Skip corrupt or incompatible files
+      }
+    }
+    meetings.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return meetings;
   }
 
   Future<void> save(Meeting meeting) async {

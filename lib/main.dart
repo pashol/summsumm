@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:uuid/uuid.dart';
 
 import 'models/document.dart';
@@ -19,6 +20,9 @@ bool isDocumentShare(List<Document> documents) =>
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Load locale data for intl's DateFormat — without this, non-English locales
+  // throw LocaleDataException when formatting dates in meeting tiles.
+  await initializeDateFormatting();
 
   // Retrieve the intent data from the native layer before the UI builds.
   const channel = MethodChannel('app.summsumm/intent');
@@ -67,6 +71,7 @@ ThemeData _buildTheme(Brightness brightness) {
   final base = ThemeData(colorScheme: colorScheme, useMaterial3: true);
 
   return base.copyWith(
+    scaffoldBackgroundColor: colorScheme.surface,
     textTheme: GoogleFonts.interTextTheme(base.textTheme),
     appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
     cardTheme: CardThemeData(
@@ -126,16 +131,52 @@ class SummsummApp extends ConsumerStatefulWidget {
 }
 
 class _SummsummAppState extends ConsumerState<SummsummApp> {
+  static final _navigatorKey = GlobalKey<NavigatorState>();
+
   @override
   void initState() {
     super.initState();
-    // Load persisted settings on first frame
     Future.microtask(() => ref.read(settingsProvider.notifier).load());
+    _setupNewIntentHandler();
+  }
+
+  void _setupNewIntentHandler() {
+    const channel = MethodChannel('app.summsumm/intent');
+    channel.setMethodCallHandler((call) async {
+      if (call.method != 'onNewIntent') return;
+      final rawData = call.arguments as Map<dynamic, dynamic>?;
+      if (rawData == null) return;
+      final documents =
+          (rawData['documents'] as List<dynamic>? ?? []).map((doc) {
+        final text = (doc['text'] as String?) ?? '';
+        final uri = doc['uri'] as String?;
+        final name = doc['name'] as String?;
+        final size = doc['size'] as int?;
+        final error = doc['error'] as String?;
+        return Document(
+          id: (text.isNotEmpty ? text : uri ?? '').hashCode.toString(),
+          text: text,
+          title: name,
+          uri: uri,
+          name: name,
+          size: size,
+          error: error,
+        );
+      }).toList();
+      if (documents.isNotEmpty) {
+        _navigatorKey.currentState?.push(
+          MaterialPageRoute<void>(
+            builder: (_) => _SummarySheetHost(documents: documents),
+          ),
+        );
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: _navigatorKey,
       title: 'AI Text Summarizer',
       debugShowCheckedModeBanner: false,
       theme: _buildTheme(Brightness.light),
@@ -198,17 +239,24 @@ class _SummarySheetHostState extends State<_SummarySheetHost>
           await repo.save(entry.copyWith(
             summary: summary,
             status: MeetingStatus.done,
-          ));
+          ),);
         },
         onSummaryFailed: (error) async {
           await repo.save(entry.copyWith(
             status: MeetingStatus.failed,
             lastError: error,
-          ));
+          ),);
         },
       ),
     );
-    if (mounted) SystemNavigator.pop();
+    if (mounted) {
+      final nav = Navigator.of(context);
+      if (nav.canPop()) {
+        nav.pop();
+      } else {
+        SystemNavigator.pop();
+      }
+    }
   }
 
   @override
@@ -281,6 +329,7 @@ class _DocumentSheetHostState extends State<_DocumentSheetHost> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent,
       body: Stack(
         children: [
           AbsorbPointer(
@@ -313,13 +362,13 @@ class _DocumentSheetHostState extends State<_DocumentSheetHost> {
                   await _repo.save(_entry.copyWith(
                     summary: summary,
                     status: MeetingStatus.done,
-                  ));
+                  ),);
                 },
                 onSummaryFailed: (error) async {
                   await _repo.save(_entry.copyWith(
                     status: MeetingStatus.failed,
                     lastError: error,
-                  ));
+                  ),);
                 },
               ),
             ),

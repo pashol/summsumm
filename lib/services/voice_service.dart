@@ -83,6 +83,9 @@ class VoiceService {
     await _recorder.startRecorder(
       toFile: _tempFilePath,
       codec: recordingCodec,
+      sampleRate: 16000,
+      bitRate: 64000,
+      numChannels: 1,
     );
 
     return _tempFilePath;

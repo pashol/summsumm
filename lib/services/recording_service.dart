@@ -24,6 +24,9 @@ class RecordingService {
     await _recorder.startRecorder(
       toFile: audioPath,
       codec: Codec.aacMP4,
+      sampleRate: 16000,
+      bitRate: 64000,
+      numChannels: 1,
     );
 
     final meeting = Meeting(
