@@ -119,56 +119,131 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
     );
   }
 
-  Widget _buildActions(Meeting meeting, MeetingNotifier provider) {
-    if (meeting.status == MeetingStatus.recorded) {
-      final settings = ref.watch(settingsProvider);
-      final isOpenRouter = settings.provider == 'openrouter';
-
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Tooltip(
-            message: isOpenRouter ? '' : 'Diarization requires OpenRouter',
-            child: Row(
-              children: [
-                Switch(
-                  value: _diarize,
-                  onChanged: isOpenRouter
-                      ? (v) => setState(() => _diarize = v)
-                      : null,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Diarize speakers',
-                  style: TextStyle(
-                    color: isOpenRouter ? null : Theme.of(context).disabledColor,
-                  ),
-                ),
-              ],
+  Widget _buildSummaryTab(Meeting meeting, MeetingNotifier provider) {
+    Widget content;
+    switch (meeting.status) {
+      case MeetingStatus.recorded:
+        content = const Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              'No transcript yet.\nGo to the Transcript tab to transcribe.',
+              textAlign: TextAlign.center,
             ),
           ),
-          const SizedBox(height: 8),
-          ElevatedButton(
-            onPressed: () => provider.transcribe(diarize: _diarize),
-            child: const Text('Transcribe'),
+        );
+      case MeetingStatus.transcribing:
+        content = const Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 12),
+              Text('Transcribing…'),
+            ],
           ),
-        ],
-      );
+        );
+      case MeetingStatus.transcribed:
+        content = Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: ElevatedButton(
+              onPressed: provider.summarize,
+              child: const Text('Summarize'),
+            ),
+          ),
+        );
+      case MeetingStatus.summarizing:
+        content = const Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 12),
+              Text('Summarizing…'),
+            ],
+          ),
+        );
+      case MeetingStatus.done:
+        content = SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: MarkdownBody(data: meeting.summary ?? ''),
+        );
+      case MeetingStatus.failed:
+        content = const SizedBox.shrink();
     }
-    if (meeting.status == MeetingStatus.transcribed) {
-      return ElevatedButton(
-        onPressed: provider.summarize,
-        child: const Text('Summarize'),
-      );
+    return content;
+  }
+
+  Widget _buildTranscriptTab(Meeting meeting, MeetingNotifier provider) {
+    switch (meeting.status) {
+      case MeetingStatus.recorded:
+        final settings = ref.watch(settingsProvider);
+        final isOpenRouter = settings.provider == 'openrouter';
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Tooltip(
+                message: isOpenRouter ? '' : 'Diarization requires OpenRouter',
+                child: Row(
+                  children: [
+                    Switch(
+                      value: _diarize,
+                      onChanged: isOpenRouter
+                          ? (v) => setState(() => _diarize = v)
+                          : null,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Diarize speakers',
+                      style: TextStyle(
+                        color:
+                            isOpenRouter ? null : Theme.of(context).disabledColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              ElevatedButton(
+                onPressed: () => provider.transcribe(diarize: _diarize),
+                child: const Text('Transcribe'),
+              ),
+            ],
+          ),
+        );
+      case MeetingStatus.transcribing:
+        return const Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 12),
+              Text('Transcribing…'),
+            ],
+          ),
+        );
+      case MeetingStatus.transcribed:
+      case MeetingStatus.summarizing:
+      case MeetingStatus.done:
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Text(meeting.transcript ?? ''),
+        );
+      case MeetingStatus.failed:
+        if (meeting.type == MeetingType.document) return const SizedBox.shrink();
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: ElevatedButton(
+              onPressed: provider.retry,
+              child: const Text('Retry'),
+            ),
+          ),
+        );
     }
-    if (meeting.status == MeetingStatus.failed) {
-      if (meeting.type == MeetingType.document) return const SizedBox.shrink();
-      return ElevatedButton(
-        onPressed: provider.retry,
-        child: const Text('Retry'),
-      );
-    }
-    return const SizedBox.shrink();
   }
 
    String _formatDuration(int seconds) {
