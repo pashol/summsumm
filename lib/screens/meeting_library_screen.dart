@@ -90,7 +90,8 @@ class MeetingLibraryScreen extends ConsumerWidget {
     if (filePath == null) return;
 
     try {
-      await ref.read(importServiceProvider).importFile(filePath);
+      final meeting = await ref.read(importServiceProvider).importFile(filePath);
+      if (meeting == null) return;
       ref.read(meetingLibraryProvider.notifier).refresh();
     } catch (e) {
       if (context.mounted) {
