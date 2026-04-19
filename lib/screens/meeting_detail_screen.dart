@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
 import 'package:summsumm/models/meeting.dart';
+import 'package:summsumm/providers/meeting_chat_provider.dart';
 import 'package:summsumm/providers/meeting_provider.dart';
 import 'package:summsumm/providers/settings_provider.dart';
 import 'package:summsumm/widgets/meeting_share_sheet.dart';
@@ -20,10 +21,14 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
     with TickerProviderStateMixin {
   bool _diarize = false;
   late final TabController _tabController;
+  final TextEditingController _chatInputController = TextEditingController();
+  final ScrollController _chatScrollController = ScrollController();
 
   @override
   void dispose() {
     _tabController.dispose();
+    _chatInputController.dispose();
+    _chatScrollController.dispose();
     super.dispose();
   }
 
@@ -244,6 +249,121 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
           ),
         );
     }
+  }
+
+  Widget _buildChatTab(Meeting meeting) {
+    if (meeting.transcript == null) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text(
+            'Transcribe the meeting first to start chatting.',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    final chatState = ref.watch(meetingChatProvider(meeting.id));
+    final chatNotifier = ref.read(meetingChatProvider(meeting.id).notifier);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_chatScrollController.hasClients) {
+        _chatScrollController.animateTo(
+          _chatScrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+
+    return Column(
+      children: [
+        Expanded(
+          child: ListView.builder(
+            controller: _chatScrollController,
+            padding: const EdgeInsets.all(16),
+            itemCount: chatState.messages.length,
+            itemBuilder: (context, index) {
+              final msg = chatState.messages[index];
+              final isUser = msg.role == 'user';
+              return Align(
+                alignment:
+                    isUser ? Alignment.centerRight : Alignment.centerLeft,
+                child: Container(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 8),
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.75,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isUser
+                        ? Theme.of(context).colorScheme.primaryContainer
+                        : Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(msg.content),
+                ),
+              );
+            },
+          ),
+        ),
+        if (chatState.error != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Text(
+              chatState.error!,
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.error, fontSize: 12),
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _chatInputController,
+                  decoration: const InputDecoration(
+                    hintText: 'Ask about this meeting…',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: chatState.isStreaming
+                      ? null
+                      : (_) => _sendChatMessage(meeting, chatNotifier),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                icon: chatState.isStreaming
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.send),
+                onPressed: chatState.isStreaming
+                    ? null
+                    : () => _sendChatMessage(meeting, chatNotifier),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _sendChatMessage(Meeting meeting, MeetingChatNotifier notifier) {
+    final text = _chatInputController.text.trim();
+    if (text.isEmpty) return;
+    _chatInputController.clear();
+    notifier.sendMessage(
+      text,
+      transcript: meeting.transcript!,
+      summary: meeting.summary,
+    );
   }
 
    String _formatDuration(int seconds) {
