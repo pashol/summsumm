@@ -1,9 +1,11 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
 
 import '../models/meeting.dart';
+import '../providers/import_service_provider.dart';
 import '../providers/meeting_library_provider.dart';
 import '../providers/meeting_provider.dart';
 import '../widgets/meeting_share_sheet.dart';
@@ -23,6 +25,11 @@ class MeetingLibraryScreen extends ConsumerWidget {
         title: const Text('Library'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.upload_file_outlined),
+            tooltip: 'Import file',
+            onPressed: () => _importFile(context, ref),
+          ),
+          IconButton(
             icon: const Icon(Icons.archive_outlined),
             tooltip: 'Archived',
             onPressed: () => Navigator.push<void>(
@@ -41,10 +48,18 @@ class MeetingLibraryScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: meetingsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) => Center(child: Text('Error: $e')),
-        data: (meetings) => _buildList(meetings),
+      body: Container(
+        color: Theme.of(context).colorScheme.surface,
+        child: meetingsAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, s) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text('Error: $e'),
+            ),
+          ),
+          data: (meetings) => _buildList(meetings),
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _startRecording(context, ref),
@@ -63,6 +78,27 @@ class MeetingLibraryScreen extends ConsumerWidget {
         itemBuilder: (ctx, i) => _MeetingTile(meeting: meetings[i]),
       ),
     );
+  }
+
+  Future<void> _importFile(BuildContext context, WidgetRef ref) async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['m4a', 'mp3', 'wav', 'flac', 'aac', 'ogg', 'webm', 'pdf'],
+    );
+    if (result == null || result.files.isEmpty) return;
+    final filePath = result.files.first.path;
+    if (filePath == null) return;
+
+    try {
+      await ref.read(importServiceProvider).importFile(filePath);
+      ref.read(meetingLibraryProvider.notifier).refresh();
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Import failed: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _startRecording(BuildContext context, WidgetRef ref) async {
@@ -145,13 +181,13 @@ class _MeetingTile extends ConsumerWidget {
               Row(
                 children: [
                   Icon(Icons.error_outline,
-                      color: Theme.of(context).colorScheme.error, size: 12),
+                      color: Theme.of(context).colorScheme.error, size: 12,),
                   const SizedBox(width: 4),
                   Text(
                     'Failed — tap for details',
                     style: TextStyle(
                         color: Theme.of(context).colorScheme.error,
-                        fontSize: 12),
+                        fontSize: 12,),
                   ),
                 ],
               ),
@@ -204,10 +240,10 @@ class _MeetingTile extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         title: Text(meeting.type == MeetingType.document
             ? 'Delete Document?'
-            : 'Delete Meeting?'),
+            : 'Delete Meeting?',),
         content: Text(meeting.type == MeetingType.document
             ? 'This will permanently delete this document summary.'
-            : 'This will permanently delete the recording and all data.'),
+            : 'This will permanently delete the recording and all data.',),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -260,6 +296,12 @@ class _ActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     switch (meeting.status) {
       case MeetingStatus.recorded:
+        if (meeting.type == MeetingType.document) {
+          return ElevatedButton(
+            onPressed: () => notifier.summarize(),
+            child: const Text('Summarize'),
+          );
+        }
         return ElevatedButton(
           onPressed: () => notifier.transcribe(),
           child: const Text('Transcribe'),
