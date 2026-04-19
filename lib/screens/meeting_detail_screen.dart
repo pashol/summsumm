@@ -4,6 +4,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
 import 'package:summsumm/models/meeting.dart';
 import 'package:summsumm/providers/meeting_chat_provider.dart';
+import 'package:summsumm/providers/meeting_library_provider.dart';
 import 'package:summsumm/providers/meeting_provider.dart';
 import 'package:summsumm/providers/settings_provider.dart';
 import 'package:summsumm/widgets/meeting_share_sheet.dart';
@@ -25,6 +26,15 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
   final ScrollController _chatScrollController = ScrollController();
 
   @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(meetingLibraryProvider.notifier).refresh();
+    });
+  }
+
+  @override
   void dispose() {
     _tabController.dispose();
     _chatInputController.dispose();
@@ -32,10 +42,25 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
     super.dispose();
   }
 
+  void _scrollChatToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_chatScrollController.hasClients) {
+        _chatScrollController.animateTo(
+          _chatScrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final meeting = ref.watch(meetingProvider(widget.meetingId));
     final provider = ref.watch(meetingProvider(widget.meetingId).notifier);
+    ref.listen(meetingChatProvider(widget.meetingId), (_, __) {
+      _scrollChatToBottom();
+    });
     return Scaffold(
       appBar: AppBar(
         title: Text(meeting.title),
@@ -106,14 +131,14 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
               children: [
                 Icon(Icons.error_outline,
                     color: Theme.of(context).colorScheme.onErrorContainer,
-                    size: 18),
+                    size: 18,),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     meeting.lastError!,
                     style: TextStyle(
                         color: Theme.of(context).colorScheme.onErrorContainer,
-                        fontSize: 13),
+                        fontSize: 13,),
                   ),
                 ),
               ],
@@ -264,18 +289,9 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
       );
     }
 
-    final chatState = ref.watch(meetingChatProvider(meeting.id));
-    final chatNotifier = ref.read(meetingChatProvider(meeting.id).notifier);
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_chatScrollController.hasClients) {
-        _chatScrollController.animateTo(
-          _chatScrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-        );
-      }
-    });
+    final meetingId = meeting.id;
+    final chatState = ref.watch(meetingChatProvider(meetingId));
+    final chatNotifier = ref.read(meetingChatProvider(meetingId).notifier);
 
     return Column(
       children: [
@@ -293,7 +309,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                 child: Container(
                   margin: const EdgeInsets.symmetric(vertical: 4),
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 8),
+                      horizontal: 12, vertical: 8,),
                   constraints: BoxConstraints(
                     maxWidth: MediaQuery.of(context).size.width * 0.75,
                   ),
@@ -315,7 +331,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
             child: Text(
               chatState.error!,
               style: TextStyle(
-                  color: Theme.of(context).colorScheme.error, fontSize: 12),
+                  color: Theme.of(context).colorScheme.error, fontSize: 12,),
             ),
           ),
         Padding(
@@ -342,7 +358,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                     ? const SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2))
+                        child: CircularProgressIndicator(strokeWidth: 2,),)
                     : const Icon(Icons.send),
                 onPressed: chatState.isStreaming
                     ? null
@@ -408,10 +424,10 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
       builder: (ctx) => AlertDialog(
         title: Text(meeting.type == MeetingType.document
             ? 'Delete Document?'
-            : 'Delete Meeting?'),
+            : 'Delete Meeting?',),
         content: Text(meeting.type == MeetingType.document
             ? 'This will permanently delete this document summary.'
-            : 'This will permanently delete the recording and all data.'),
+            : 'This will permanently delete the recording and all data.',),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
