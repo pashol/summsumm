@@ -492,7 +492,7 @@ class _TranscribingIndicatorState extends State<_TranscribingIndicator>
   late AnimationController _controller;
   int _wordIndex = 0;
 
-  static const _words = ['Preparing', 'Analyzing', 'Preprocessing', 'Transcribing', 'Finalizing'];
+  static const _words = ['Initializing', 'Preprocessing', 'Preparing', 'Analyzing', 'Transcribing', 'Finalizing'];
 
   @override
   void initState() {

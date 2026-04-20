@@ -214,9 +214,10 @@ Use markdown headers and bullet points. Do not wrap output in a code block. Be c
 ''';
 
 String _summarizeStatus(String status) {
+  if (status.contains('Initializing')) return 'Initializing';
   if (status.contains('Preprocessing')) return 'Preprocessing';
-  if (status.contains('Analyzing')) return 'Analyzing';
   if (status.contains('Preparing')) return 'Preparing';
+  if (status.contains('Analyzing')) return 'Analyzing';
   if (status.contains('Transcribing')) return 'Transcribing';
   if (status.contains('Finalizing')) return 'Finalizing';
   return 'Processing';
