@@ -514,8 +514,15 @@ class _TranscribingIndicatorState extends State<_TranscribingIndicator>
     super.didUpdateWidget(oldWidget);
     final status = widget.status;
     if (status != null) {
+      // Stop animation when we have real status updates from backend
+      _controller.stop();
       final idx = _words.indexWhere((w) => w == status);
-      if (idx >= 0) _wordIndex = idx;
+      if (idx >= 0 && idx != _wordIndex) {
+        setState(() => _wordIndex = idx);
+      }
+    } else if (!_controller.isAnimating) {
+      // Resume animation when status is null
+      _controller.forward(from: 0);
     }
   }
 
