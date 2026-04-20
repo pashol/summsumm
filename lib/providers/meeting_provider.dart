@@ -2,6 +2,7 @@ import 'dart:io' as io;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:summsumm/models/meeting.dart';
+import 'package:summsumm/models/summary_style.dart';
 import 'package:summsumm/providers/meeting_library_provider.dart';
 import 'package:summsumm/providers/meeting_repository_provider.dart';
 import 'package:summsumm/providers/settings_provider.dart';
@@ -144,11 +145,14 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
     }
   }
 
-  Future<void> summarize() async {
+  Future<void> summarize({SummaryStyle? style, String? language}) async {
     final meeting = state;
     final settings = ref.read(settingsProvider);
     final aiService = ref.read(aiServiceProvider);
     final repository = ref.read(meetingRepositoryProvider);
+
+    final resolvedStyle = style ?? _resolveStyle(settings.summaryStyle, meeting.type);
+    final resolvedLanguage = language ?? settings.language;
 
     if (!await _hasConnectivity(settings.provider)) {
       state = meeting.copyWith(
@@ -165,20 +169,31 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
     ref.read(meetingLibraryProvider.notifier).refresh();
 
     try {
+      final langSuffixText = langSuffix(resolvedLanguage, 'The summary');
+      final systemPrompt = _promptForStyle(resolvedStyle, meeting.type, langSuffixText);
+
       String summary = '';
+      final newSummary = MeetingSummary(
+        id: 'sum_${DateTime.now().millisecondsSinceEpoch}',
+        style: resolvedStyle,
+        language: resolvedLanguage,
+        content: '',
+        createdAt: DateTime.now(),
+      );
 
       if (meeting.type == MeetingType.document) {
         final file = io.File(meeting.audioPath);
         final summaryStream = aiService.streamCompletionWithFile(
           file: file,
           model: settings.activeModel,
-          prompt: 'Summarize this document concisely.',
+          prompt: systemPrompt,
           provider: settings.provider,
           apiKey: await ref.read(settingsProvider.notifier).getApiKey(settings.provider) ?? '',
         );
         await for (final chunk in summaryStream) {
           summary += chunk;
-          state = state.copyWith(summary: summary);
+          final updated = newSummary.copyWith(content: summary);
+          state = state.copyWith(summaries: [...meeting.summaries, updated]);
         }
       } else {
         final summaryStream = aiService.streamCompletion(
@@ -186,7 +201,7 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
           messages: [
             {
               'role': 'system',
-              'content': _meetingSummaryPrompt,
+              'content': systemPrompt,
             },
             {
               'role': 'user',
@@ -198,7 +213,8 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
         );
         await for (final chunk in summaryStream) {
           summary += chunk;
-          state = state.copyWith(summary: summary);
+          final updated = newSummary.copyWith(content: summary);
+          state = state.copyWith(summaries: [...meeting.summaries, updated]);
         }
       }
 
@@ -219,12 +235,35 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
     }
   }
 
+  SummaryStyle _resolveStyle(String settingsStyle, MeetingType type) {
+    final parsed = SummaryStyle.values.firstWhere(
+      (s) => s.name == settingsStyle,
+      orElse: () => SummaryStyle.structured,
+    );
+    final available = SummaryStyle.forType(type);
+    if (available.contains(parsed)) return parsed;
+    return available.first;
+  }
+
+  String _promptForStyle(SummaryStyle style, MeetingType type, String langSuffixText) {
+    switch (style) {
+      case SummaryStyle.concise:
+        return 'You are an expert summarizer. Produce a brief summary with 3-5 bullet points covering only the key points. Do not elaborate. Do not wrap output in a code block.$langSuffixText';
+      case SummaryStyle.brief:
+        return 'You are an expert document summarizer. Write a short paragraph summarizing the key points of this document. Do not use bullet points or headers. Do not wrap output in a code block.$langSuffixText';
+      case SummaryStyle.detailed:
+        return 'You are an expert summarizer. Produce a comprehensive summary with thorough coverage of each topic. Include context and reasoning. Use ## headers for topics, paragraphs for detail. Do not wrap output in a code block.$langSuffixText';
+      case SummaryStyle.structured:
+        return 'You are an expert meeting summarizer. Extract: 1. Key decisions made 2. Action items with owners 3. Open questions 4. Important context. Use markdown headers and bullet points. Do not wrap output in a code block. Be concise and factual.$langSuffixText';
+    }
+  }
+
   Future<void> retry() async {
     final meeting = state;
     if (meeting.status == MeetingStatus.failed) {
       if (meeting.transcript == null) {
         await transcribe();
-      } else if (meeting.summary == null) {
+      } else if (meeting.summaries.isEmpty) {
         await summarize();
       }
     }
@@ -260,13 +299,3 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
     ref.read(archivedMeetingsProvider.notifier).refresh();
   }
 }
-
-const _meetingSummaryPrompt = '''
-You are an expert meeting summarizer. Extract:
-1. Key decisions made
-2. Action items with owners
-3. Open questions
-4. Important context
-
-Use markdown headers and bullet points. Do not wrap output in a code block. Be concise and factual.
-''';
