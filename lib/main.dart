@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:summsumm/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -8,6 +10,7 @@ import 'package:uuid/uuid.dart';
 import 'models/document.dart';
 import 'models/meeting.dart';
 import 'models/summary_style.dart';
+import 'providers/locale_provider.dart';
 import 'providers/settings_provider.dart';
 import 'screens/settings_screen.dart';
 import 'screens/summary_sheet.dart';
@@ -259,18 +262,34 @@ class _SummsummAppState extends ConsumerState<SummsummApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      navigatorKey: _navigatorKey,
-      title: 'AI Text Summarizer',
-      debugShowCheckedModeBanner: false,
-      theme: _buildTheme(Brightness.light),
-      darkTheme: _buildTheme(Brightness.dark),
-      themeMode: ThemeMode.system,
-      home: widget.openSettings
-          ? const SettingsScreen(isInitialSetup: true)
-          : widget.documents.isNotEmpty
-              ? _SummarySheetHost(documents: widget.documents)
-              : const MeetingLibraryScreen(),
+    return Consumer(
+      builder: (context, ref, child) {
+        final locale = ref.watch(localeProvider);
+        return MaterialApp(
+          navigatorKey: _navigatorKey,
+          title: 'AI Text Summarizer',
+          debugShowCheckedModeBanner: false,
+          locale: locale,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [
+            Locale('en'),
+            Locale('de'),
+          ],
+          theme: _buildTheme(Brightness.light),
+          darkTheme: _buildTheme(Brightness.dark),
+          themeMode: ThemeMode.system,
+          home: widget.openSettings
+              ? const SettingsScreen(isInitialSetup: true)
+              : widget.documents.isNotEmpty
+                  ? _SummarySheetHost(documents: widget.documents)
+                  : const MeetingLibraryScreen(),
+        );
+      },
     );
   }
 }
