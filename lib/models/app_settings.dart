@@ -5,6 +5,7 @@ class AppSettings {
   final String openrouterModel;
   final String openaiModel;
   final String language;
+  final String summaryStyle;
   final double ttsSpeed;
   final String openaiKey;
   final String openrouterKey;
@@ -15,6 +16,7 @@ class AppSettings {
     required this.openrouterModel,
     required this.openaiModel,
     required this.language,
+    required this.summaryStyle,
     required this.ttsSpeed,
     required this.openaiKey,
     required this.openrouterKey,
@@ -25,7 +27,8 @@ class AppSettings {
         provider: 'openrouter',
         openrouterModel: '',
         openaiModel: '',
-        language: 'English',
+        language: 'Same as input',
+        summaryStyle: 'structured',
         ttsSpeed: 1.0,
         openaiKey: '',
         openrouterKey: '',
@@ -37,6 +40,7 @@ class AppSettings {
     String? openrouterModel,
     String? openaiModel,
     String? language,
+    String? summaryStyle,
     double? ttsSpeed,
     String? openaiKey,
     String? openrouterKey,
@@ -47,6 +51,7 @@ class AppSettings {
         openrouterModel: openrouterModel ?? this.openrouterModel,
         openaiModel: openaiModel ?? this.openaiModel,
         language: language ?? this.language,
+        summaryStyle: summaryStyle ?? this.summaryStyle,
         ttsSpeed: ttsSpeed ?? this.ttsSpeed,
         openaiKey: openaiKey ?? this.openaiKey,
         openrouterKey: openrouterKey ?? this.openrouterKey,
@@ -58,6 +63,7 @@ class AppSettings {
         'openrouterModel': openrouterModel,
         'openaiModel': openaiModel,
         'language': language,
+        'summaryStyle': summaryStyle,
         'ttsSpeed': ttsSpeed,
         'openaiKey': openaiKey,
         'openrouterKey': openrouterKey,
@@ -69,6 +75,7 @@ class AppSettings {
         openrouterModel: json['openrouterModel'] as String? ?? '',
         openaiModel: json['openaiModel'] as String? ?? '',
         language: json['language'] as String? ?? 'English',
+        summaryStyle: json['summaryStyle'] as String? ?? 'structured',
         ttsSpeed: (json['ttsSpeed'] as num?)?.toDouble() ?? 1.0,
         openaiKey: json['openaiKey'] as String? ?? '',
         openrouterKey: json['openrouterKey'] as String? ?? '',
@@ -91,6 +98,7 @@ class AppSettings {
         other.openrouterModel == openrouterModel &&
         other.openaiModel == openaiModel &&
         other.language == language &&
+        other.summaryStyle == summaryStyle &&
         other.ttsSpeed == ttsSpeed &&
         other.openaiKey == openaiKey &&
         other.openrouterKey == openrouterKey &&
@@ -103,6 +111,7 @@ class AppSettings {
         openrouterModel,
         openaiModel,
         language,
+        summaryStyle,
         ttsSpeed,
         openaiKey,
         openrouterKey,
@@ -158,6 +167,7 @@ const kOpenAiModels = [
 ];
 
 const kSupportedLanguages = [
+  'Same as input',
   'English',
   'German',
   'French',
