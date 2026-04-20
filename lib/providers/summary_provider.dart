@@ -10,6 +10,7 @@ import '../models/app_settings.dart';
 import '../models/chat_message.dart';
 import '../models/document.dart';
 import '../models/summary_state.dart';
+import '../models/summary_style.dart';
 import '../services/ai_service.dart';
 import '../services/tts_service.dart';
 import 'models_provider.dart';
@@ -18,11 +19,6 @@ part 'summary_provider.g.dart';
 
 const _maxInputChars = 10000;
 const _maxFollowUps = 3;
-
-String _langSuffix(String language, String subject) {
-  if (language == 'English') return '';
-  return '\n\nIMPORTANT: $subject must be in $language.';
-}
 
 @Riverpod(keepAlive: true)
 class Summary extends _$Summary {
@@ -99,7 +95,7 @@ class Summary extends _$Summary {
         ? inputText.substring(0, _maxInputChars)
         : inputText;
 
-    final langSuffix = _langSuffix(settings.language, 'Summary');
+    final langSuffix = langSuffix(settings.language, 'Summary');
 
     final messages = [
       {
@@ -189,7 +185,7 @@ class Summary extends _$Summary {
       isSpeaking: false,
     );
 
-    final langSuffix = _langSuffix(settings.language, 'Your entire response');
+    final langSuffix = langSuffix(settings.language, 'Your entire response');
 
     final systemPrompt =
         'You are an AI assistant helping a user understand a document.\n'
@@ -217,7 +213,7 @@ class Summary extends _$Summary {
         return;
       }
       final base64Data = base64Encode(await file.readAsBytes());
-      final langSuffix2 = _langSuffix(settings.language, 'Summary');
+      final langSuffix2 = langSuffix(settings.language, 'Summary');
       contextMessage = {
         'role': 'user',
         'content': [
@@ -317,7 +313,7 @@ class Summary extends _$Summary {
     _stopBlink();
     await _tts.stop();
 
-    final langSuffix = _langSuffix(settings.language, 'Your entire response');
+    final langSuffix = langSuffix(settings.language, 'Your entire response');
     const factCheckSystemPrompt =
         'You are a critical investigative journalist. Verify the factual claims in the provided content with rigorous skepticism.';
     final factCheckInstruction =
@@ -571,7 +567,7 @@ class Summary extends _$Summary {
     );
 
     final uri = document.uri!;
-    final langSuffix = _langSuffix(settings.language, 'Summary');
+    final langSuffix = langSuffix(settings.language, 'Summary');
     final prompt = 'Provide a concise summary of this PDF document. '
         '$langSuffix\n\nPlease summarize the key points and main takeaways.';
 
@@ -700,7 +696,7 @@ class Summary extends _$Summary {
     final uri = document.uri!;
     // For content:// URIs, we'd need platform channel to read
     // For now, pass the URI string to the service
-    final langSuffix = _langSuffix(settings.language, 'Summary');
+    final langSuffix = langSuffix(settings.language, 'Summary');
     final prompt = 'Provide a concise summary of this PDF document. '
         '$langSuffix\n\nPlease summarize the key points and main takeaways.';
 
