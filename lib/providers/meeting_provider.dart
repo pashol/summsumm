@@ -1,3 +1,4 @@
+import 'dart:io' as io;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:summsumm/models/meeting.dart';
 import 'package:summsumm/providers/meeting_library_provider.dart';
@@ -95,24 +96,39 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
     ref.read(meetingLibraryProvider.notifier).refresh();
 
     try {
-      final summary = await aiService.streamCompletion(
-        model: settings.activeModel,
-        messages: [
-          {
-            'role': 'system',
-            'content': _meetingSummaryPrompt,
-          },
-          {
-            'role': 'user',
-            'content': meeting.transcript ?? '',
-          },
-        ],
-        apiKey: await ref.read(settingsProvider.notifier).getApiKey(settings.provider) ?? '',
-        provider: settings.provider,
-      ).toList();
+      String summary;
+
+      if (meeting.type == MeetingType.document) {
+        final file = io.File(meeting.audioPath);
+        final summaryStream = aiService.streamCompletionWithFile(
+          file: file,
+          model: settings.activeModel,
+          prompt: 'Summarize this document concisely.',
+          provider: settings.provider,
+          apiKey: await ref.read(settingsProvider.notifier).getApiKey(settings.provider) ?? '',
+        );
+        summary = (await summaryStream.toList()).join();
+      } else {
+        final summaryStream = aiService.streamCompletion(
+          model: settings.activeModel,
+          messages: [
+            {
+              'role': 'system',
+              'content': _meetingSummaryPrompt,
+            },
+            {
+              'role': 'user',
+              'content': meeting.transcript ?? '',
+            },
+          ],
+          apiKey: await ref.read(settingsProvider.notifier).getApiKey(settings.provider) ?? '',
+          provider: settings.provider,
+        );
+        summary = (await summaryStream.toList()).join();
+      }
 
       state = meeting.copyWith(
-        summary: summary.join(),
+        summary: summary,
         status: MeetingStatus.done,
         clearLastError: true,
       );

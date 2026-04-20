@@ -6,6 +6,9 @@ class Document {
   final String? name;
   final int? size;
   final String? error;
+  final String? type;
+  final String? path;
+  final int? durationMs;
 
   Document({
     required this.id,
@@ -15,8 +18,12 @@ class Document {
     this.name,
     this.size,
     this.error,
+    this.type,
+    this.path,
+    this.durationMs,
   });
 
-  bool get isPdf => uri != null && uri!.isNotEmpty;
+  bool get isAudio => type == 'audio' && path != null;
+  bool get isPdf => uri != null && uri!.isNotEmpty && type != 'audio';
   bool get hasError => error != null && error!.isNotEmpty;
 }

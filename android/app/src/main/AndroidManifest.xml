@@ -75,6 +75,20 @@
             <data android:mimeType="application/pdf" />
         </intent-filter>
 
+        <!-- Audio share (single) -->
+        <intent-filter>
+            <action android:name="android.intent.action.SEND" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <data android:mimeType="audio/*" />
+        </intent-filter>
+
+        <!-- Audio share (multiple) -->
+        <intent-filter>
+            <action android:name="android.intent.action.SEND_MULTIPLE" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <data android:mimeType="audio/*" />
+        </intent-filter>
+
         <!-- Settings shortcut -->
             <intent-filter>
                 <action android:name="app.summsumm.OPEN_SETTINGS" />

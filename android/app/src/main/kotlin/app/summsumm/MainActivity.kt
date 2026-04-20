@@ -23,7 +23,10 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 import android.content.ContentResolver
+import android.media.MediaMetadataRetriever
 import android.provider.OpenableColumns
+import java.io.File
+import java.util.UUID
 
 class MainActivity : FlutterActivity() {
     companion object {
@@ -209,23 +212,31 @@ class MainActivity : FlutterActivity() {
             val uri = intent.data
             uri?.let { addPdfDocument(it, documents) }
         } else if (Intent.ACTION_SEND == action) {
-            when (intent.type) {
-                "text/plain" -> {
+            when {
+                intent.type == "text/plain" -> {
                     val text = intent.getStringExtra(Intent.EXTRA_TEXT)
                     text?.let { documents.add(mapOf("text" to it)) }
                 }
-                "application/pdf" -> {
+                intent.type?.startsWith("audio/") == true -> {
+                    val uri = getParcelableExtraCompat(intent, Intent.EXTRA_STREAM)
+                    uri?.let { addAudioDocument(it, documents, intent.type!!) }
+                }
+                intent.type == "application/pdf" -> {
                     val uri = getParcelableExtraCompat(intent, Intent.EXTRA_STREAM)
                     uri?.let { addPdfDocument(it, documents) }
                 }
             }
         } else if (Intent.ACTION_SEND_MULTIPLE == action) {
-            when (intent.type) {
-                "text/plain" -> {
+            when {
+                intent.type == "text/plain" -> {
                     val texts = intent.getStringArrayListExtra(Intent.EXTRA_TEXT)
                     texts?.forEach { text -> documents.add(mapOf("text" to text)) }
                 }
-                "application/pdf" -> {
+                intent.type?.startsWith("audio/") == true -> {
+                    val uris = getParcelableArrayListExtraCompat(intent, Intent.EXTRA_STREAM)
+                    uris?.forEach { addAudioDocument(it, documents, intent.type!!) }
+                }
+                intent.type == "application/pdf" -> {
                     val uris = getParcelableArrayListExtraCompat(intent, Intent.EXTRA_STREAM)
                     uris?.forEach { uri -> addPdfDocument(uri, documents) }
                 }
@@ -259,6 +270,53 @@ class MainActivity : FlutterActivity() {
             "uri" to uri.toString(),
             "name" to fileName,
             "size" to fileSize
+        ))
+    }
+
+    private fun addAudioDocument(uri: Uri, documents: MutableList<Map<String, Any?>>, mimeType: String) {
+        val fileName = getFileName(uri)
+        val fileSize = getFileSize(uri)
+        var durationMs: Long? = null
+
+        try {
+            val retriever = MediaMetadataRetriever()
+            retriever.setDataSource(this, uri)
+            durationMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
+            retriever.release()
+        } catch (_: Exception) { }
+
+        val meetingsDir = File(filesDir, "meetings")
+        meetingsDir.mkdirs()
+        val id = UUID.randomUUID().toString()
+        val ext = when (mimeType.lowercase()) {
+            "audio/mpeg" -> "mp3"
+            "audio/mp4", "audio/x-m4a" -> "m4a"
+            "audio/wav", "audio/x-wav" -> "wav"
+            "audio/x-flac" -> "flac"
+            "audio/aac" -> "aac"
+            "audio/ogg", "audio/x-ogg" -> "ogg"
+            "audio/webm" -> "webm"
+            else -> "audio"
+        }
+        val destFile = File(meetingsDir, "$id.$ext")
+
+        try {
+            contentResolver.openInputStream(uri)?.use { input ->
+                destFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+        } catch (_: Exception) {
+            documents.add(mapOf("text" to "", "name" to fileName, "error" to "copy_failed"))
+            return
+        }
+
+        documents.add(mapOf(
+            "type" to "audio",
+            "path" to destFile.absolutePath,
+            "name" to fileName,
+            "size" to fileSize,
+            "durationMs" to durationMs
         ))
     }
 

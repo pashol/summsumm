@@ -27,38 +27,80 @@ void main() async {
   // Retrieve the intent data from the native layer before the UI builds.
   const channel = MethodChannel('app.summsumm/intent');
   Map<String, dynamic>? intentData;
+  String action = '';
   try {
     intentData =
         await channel.invokeMapMethod<String, dynamic>('getInitialIntent');
+    action = intentData?['action'] as String? ?? '';
   } catch (_) {
     // Running in a non-Android environment or in tests
   }
 
-  final action = intentData?['action'] as String? ?? '';
-  final documents =
-      (intentData?['documents'] as List<dynamic>? ?? []).map((doc) {
+  final audioDocs = <Document>[];
+  final otherDocs = <Document>[];
+
+  for (final rawDoc in (intentData?['documents'] as List<dynamic>? ?? [])) {
+    final doc = rawDoc as Map<String, dynamic>;
     final text = doc['text'] as String? ?? '';
     final uri = doc['uri'] as String?;
     final name = doc['name'] as String?;
     final size = doc['size'] as int?;
     final error = doc['error'] as String?;
+    final docType = doc['type'] as String?;
+    final path = doc['path'] as String?;
+    final durationMs = doc['durationMs'] as int?;
 
-    return Document(
-      id: (text.isNotEmpty ? text : uri ?? '').hashCode.toString(),
-      text: text,
-      title: name,
-      uri: uri,
-      name: name,
-      size: size,
-      error: error,
+    if (docType == 'audio' && path != null) {
+      audioDocs.add(Document(
+        id: path.hashCode.toString(),
+        text: '',
+        title: name,
+        name: name,
+        size: size,
+        type: 'audio',
+        path: path,
+        durationMs: durationMs,
+      ));
+    } else {
+      otherDocs.add(Document(
+        id: (text.isNotEmpty ? text : uri ?? '').hashCode.toString(),
+        text: text,
+        title: name,
+        uri: uri,
+        name: name,
+        size: size,
+        error: error,
+      ));
+    }
+  }
+
+  final repo = MeetingRepository();
+  for (final audio in audioDocs) {
+    final title = audio.name ?? 'Imported Audio';
+    final lastDot = title.lastIndexOf('.');
+    final cleanTitle = lastDot > 0 ? title.substring(0, lastDot) : title;
+    final meeting = Meeting(
+      id: const Uuid().v4(),
+      createdAt: DateTime.now(),
+      durationSec: (audio.durationMs ?? 0) ~/ 1000,
+      audioPath: audio.path!,
+      title: cleanTitle,
+      status: MeetingStatus.recorded,
+      type: MeetingType.meeting,
     );
-  }).toList();
+    await repo.save(meeting);
+  }
 
   final openSettings = action == 'app.summsumm.OPEN_SETTINGS';
+  final audioImported = audioDocs.isNotEmpty;
 
   runApp(
     ProviderScope(
-      child: SummsummApp(openSettings: openSettings, documents: documents),
+      child: SummsummApp(
+        openSettings: openSettings,
+        audioImported: audioImported,
+        documents: otherDocs,
+      ),
     ),
   );
 }
@@ -120,10 +162,12 @@ class SummsummApp extends ConsumerStatefulWidget {
   const SummsummApp({
     super.key,
     required this.openSettings,
+    required this.audioImported,
     required this.documents,
   });
 
   final bool openSettings;
+  final bool audioImported;
   final List<Document> documents;
 
   @override
@@ -146,27 +190,66 @@ class _SummsummAppState extends ConsumerState<SummsummApp> {
       if (call.method != 'onNewIntent') return;
       final rawData = call.arguments as Map<dynamic, dynamic>?;
       if (rawData == null) return;
-      final documents =
-          (rawData['documents'] as List<dynamic>? ?? []).map((doc) {
+
+      final audioDocs = <Document>[];
+      final otherDocs = <Document>[];
+
+      for (final rawDoc in (rawData['documents'] as List<dynamic>? ?? [])) {
+        final doc = rawDoc as Map<String, dynamic>;
         final text = (doc['text'] as String?) ?? '';
         final uri = doc['uri'] as String?;
         final name = doc['name'] as String?;
         final size = doc['size'] as int?;
         final error = doc['error'] as String?;
-        return Document(
-          id: (text.isNotEmpty ? text : uri ?? '').hashCode.toString(),
-          text: text,
-          title: name,
-          uri: uri,
-          name: name,
-          size: size,
-          error: error,
+        final docType = doc['type'] as String?;
+        final path = doc['path'] as String?;
+        final durationMs = doc['durationMs'] as int?;
+
+        if (docType == 'audio' && path != null) {
+          audioDocs.add(Document(
+            id: path.hashCode.toString(),
+            text: '',
+            title: name,
+            name: name,
+            size: size,
+            type: 'audio',
+            path: path,
+            durationMs: durationMs,
+          ));
+        } else {
+          otherDocs.add(Document(
+            id: (text.isNotEmpty ? text : uri ?? '').hashCode.toString(),
+            text: text,
+            title: name,
+            uri: uri,
+            name: name,
+            size: size,
+            error: error,
+          ));
+        }
+      }
+
+      final repo = MeetingRepository();
+      for (final audio in audioDocs) {
+        final title = audio.name ?? 'Imported Audio';
+        final lastDot = title.lastIndexOf('.');
+        final cleanTitle = lastDot > 0 ? title.substring(0, lastDot) : title;
+        final meeting = Meeting(
+          id: const Uuid().v4(),
+          createdAt: DateTime.now(),
+          durationSec: (audio.durationMs ?? 0) ~/ 1000,
+          audioPath: audio.path!,
+          title: cleanTitle,
+          status: MeetingStatus.recorded,
+          type: MeetingType.meeting,
         );
-      }).toList();
-      if (documents.isNotEmpty) {
+        await repo.save(meeting);
+      }
+
+      if (otherDocs.isNotEmpty) {
         _navigatorKey.currentState?.push(
           MaterialPageRoute<void>(
-            builder: (_) => _SummarySheetHost(documents: documents),
+            builder: (_) => _SummarySheetHost(documents: otherDocs),
           ),
         );
       }
@@ -182,11 +265,11 @@ class _SummsummAppState extends ConsumerState<SummsummApp> {
       theme: _buildTheme(Brightness.light),
       darkTheme: _buildTheme(Brightness.dark),
       themeMode: ThemeMode.system,
-   home: widget.openSettings
-           ? const SettingsScreen(isInitialSetup: true)
-           : widget.documents.isNotEmpty
-               ? _SummarySheetHost(documents: widget.documents)
-               : const MeetingLibraryScreen(),
+      home: widget.openSettings
+          ? const SettingsScreen(isInitialSetup: true)
+          : widget.documents.isNotEmpty
+              ? _SummarySheetHost(documents: widget.documents)
+              : const MeetingLibraryScreen(),
     );
   }
 }
