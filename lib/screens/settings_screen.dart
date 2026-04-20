@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/app_settings.dart';
 import '../models/ai_model.dart';
+import '../models/summary_style.dart';
 import '../providers/models_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/ai_service.dart';
@@ -322,6 +323,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             title: 'Summary',
             icon: Icons.summarize_outlined,
             children: [
+              DropdownButtonFormField<String>(
+                initialValue: settings.summaryStyle,
+                decoration: const InputDecoration(
+                  labelText: 'Style',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.format_list_bulleted_outlined),
+                ),
+                items: SummaryStyle.values
+                    .map((s) => DropdownMenuItem(value: s.name, child: Text(s.displayName)))
+                    .toList(),
+                onChanged: (v) {
+                  if (v != null) notifier.setSummaryStyle(v);
+                },
+              ),
+              const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: settings.language,
                 decoration: const InputDecoration(
