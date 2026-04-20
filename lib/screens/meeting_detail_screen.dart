@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
 import 'package:summsumm/models/meeting.dart';
+import 'package:summsumm/models/summary_style.dart';
+import 'package:summsumm/models/app_settings.dart';
 import 'package:summsumm/providers/meeting_chat_provider.dart';
 import 'package:summsumm/providers/meeting_library_provider.dart';
 import 'package:summsumm/providers/meeting_provider.dart';
@@ -21,6 +23,9 @@ class MeetingDetailScreen extends ConsumerStatefulWidget {
 class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
     with TickerProviderStateMixin {
   bool _diarize = false;
+  SummaryStyle? _selectedStyle;
+  String? _selectedLanguage;
+  bool _showAddControls = false;
   late final TabController _tabController;
   final TextEditingController _chatInputController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
@@ -150,11 +155,10 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
   }
 
   Widget _buildSummaryTab(Meeting meeting, MeetingNotifier provider) {
-    Widget content;
     switch (meeting.status) {
       case MeetingStatus.recorded:
         if (meeting.type == MeetingType.document) {
-          content = Center(
+          return Center(
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: ElevatedButton(
@@ -164,7 +168,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
             ),
           );
         } else {
-          content = const Center(
+          return const Center(
             child: Padding(
               padding: EdgeInsets.all(24),
               child: Text(
@@ -175,7 +179,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
           );
         }
       case MeetingStatus.transcribing:
-        content = const Center(
+        return const Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -186,70 +190,270 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
           ),
         );
       case MeetingStatus.transcribed:
-        content = Center(
+        return Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: ElevatedButton(
-              onPressed: provider.summarize,
+              onPressed: () => provider.summarize(),
               child: const Text('Summarize'),
             ),
           ),
         );
       case MeetingStatus.summarizing:
-        final partialSummary = meeting.summary;
-        content = Column(
+        return _buildSummarizingContent(meeting);
+      case MeetingStatus.done:
+        return _buildDoneContent(meeting, provider);
+      case MeetingStatus.failed:
+        return _buildFailedContent(meeting, provider);
+    }
+  }
+
+  Widget _buildSummarizingContent(Meeting meeting) {
+    final currentSummary = meeting.summaries.lastOrNull;
+    final content = currentSummary?.content ?? '';
+
+    if (content.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            if (partialSummary == null || partialSummary.isEmpty)
-              Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const CircularProgressIndicator(),
-                      const SizedBox(height: 12),
-                      const Text('Summarizing…'),
-                    ],
-                  ),
+            CircularProgressIndicator(),
+            SizedBox(height: 12),
+            Text('Summarizing…'),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        if (meeting.summaries.length > 1)
+          _buildChipRow(meeting, null),
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.primary),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Summarizing…',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
-              )
-            else ...[
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: MarkdownBody(data: content),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDoneContent(Meeting meeting, MeetingNotifier provider) {
+    return Column(
+      children: [
+        _buildChipRow(meeting, provider),
+        if (_showAddControls) _buildAddControls(meeting, provider),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: MarkdownBody(data: meeting.summary ?? ''),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFailedContent(Meeting meeting, MeetingNotifier provider) {
+    if (meeting.summaries.isNotEmpty) {
+      return Column(
+        children: [
+          _buildChipRow(meeting, provider),
+          Expanded(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.primary),
-                    ),
-                    const SizedBox(width: 8),
                     Text(
-                      'Summarizing…',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                      meeting.lastError ?? 'An error occurred',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: provider.retry,
+                      child: const Text('Retry'),
                     ),
                   ],
                 ),
               ),
+            ),
+          ),
+        ],
+      );
+    }
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: ElevatedButton(
+          onPressed: provider.retry,
+          child: const Text('Retry'),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChipRow(Meeting meeting, MeetingNotifier? provider) {
+    return SizedBox(
+      height: 44,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        itemCount: meeting.summaries.length + 1,
+        itemBuilder: (context, index) {
+          if (index == meeting.summaries.length) {
+            return Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: ChoiceChip(
+                label: const Icon(Icons.add, size: 18),
+                selected: _showAddControls,
+                onSelected: (_) => setState(() => _showAddControls = !_showAddControls),
+              ),
+            );
+          }
+
+          final summary = meeting.summaries[index];
+          final styleCount = meeting.summaries.where((s) => s.style == summary.style).toList();
+          final styleIndex = styleCount.indexOf(summary);
+          final chipLabel = styleCount.length > 1
+              ? '${summary.style.displayName} ${styleIndex + 1}'
+              : summary.style.displayName;
+
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: ChoiceChip(
+              label: Text(chipLabel),
+              selected: summary == meeting.summaries.first,
+              onSelected: (_) {},
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildAddControls(Meeting meeting, MeetingNotifier provider) {
+    final availableStyles = SummaryStyle.forType(meeting.type);
+
+    _selectedStyle ??= _resolveInitialStyle(ref.read(settingsProvider).summaryStyle, meeting.type);
+    _selectedLanguage ??= ref.read(settingsProvider).language;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          DropdownButtonFormField<SummaryStyle>(
+            value: _selectedStyle,
+            decoration: const InputDecoration(
+              labelText: 'Style',
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+            items: availableStyles
+                .map((s) => DropdownMenuItem(value: s, child: Text(s.displayName)))
+                .toList(),
+            onChanged: (v) {
+              if (v != null) setState(() => _selectedStyle = v);
+            },
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            value: _selectedLanguage,
+            decoration: const InputDecoration(
+              labelText: 'Language',
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+            items: kSupportedLanguages
+                .map((l) => DropdownMenuItem(value: l, child: Text(l)))
+                .toList(),
+            onChanged: (v) {
+              if (v != null) setState(() => _selectedLanguage = v);
+            },
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
               Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: MarkdownBody(data: partialSummary),
+                child: FilledButton(
+                  onPressed: () {
+                    final style = _selectedStyle!;
+                    final language = _selectedLanguage!;
+                    showDialog<void>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Generate Summary'),
+                        content: Text('Generate a new summary in $language with $style style?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            child: const Text('Cancel'),
+                          ),
+                          FilledButton(
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              setState(() {
+                                _showAddControls = false;
+                                _selectedStyle = null;
+                                _selectedLanguage = null;
+                              });
+                              provider.summarize(style: style, language: language);
+                            },
+                            child: const Text('Generate'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  child: const Text('Summarize'),
                 ),
               ),
+              const SizedBox(width: 8),
+              TextButton(
+                onPressed: () => setState(() {
+                  _showAddControls = false;
+                  _selectedStyle = null;
+                  _selectedLanguage = null;
+                }),
+                child: const Text('Cancel'),
+              ),
             ],
-          ],
-        );
-      case MeetingStatus.done:
-        content = SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: MarkdownBody(data: meeting.summary ?? ''),
-        );
-      case MeetingStatus.failed:
-        content = const SizedBox.shrink();
-    }
-    return content;
+          ),
+        ],
+      ),
+    );
+  }
+
+  SummaryStyle _resolveInitialStyle(String settingsStyle, MeetingType type) {
+    final parsed = SummaryStyle.values.firstWhere(
+      (s) => s.name == settingsStyle,
+      orElse: () => SummaryStyle.structured,
+    );
+    final available = SummaryStyle.forType(type);
+    if (available.contains(parsed)) return parsed;
+    return available.first;
   }
 
   Widget _buildTranscriptTab(Meeting meeting, MeetingNotifier provider) {
