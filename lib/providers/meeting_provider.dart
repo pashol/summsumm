@@ -1,5 +1,6 @@
 import 'dart:io' as io;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 import 'package:summsumm/models/meeting.dart';
 import 'package:summsumm/providers/meeting_library_provider.dart';
 import 'package:summsumm/providers/meeting_repository_provider.dart';
@@ -15,9 +16,10 @@ final meetingProvider = NotifierProvider.family<MeetingNotifier, Meeting, String
 );
 
 class MeetingNotifier extends FamilyNotifier<Meeting, String> {
+  DateTime? _lastSave;
+
   @override
   Meeting build(String meetingId) {
-    // Listen for changes and update state in-place without rebuilding
     ref.listen(meetingLibraryProvider, (prev, next) {
       final meeting = _findIn(next, meetingId);
       if (meeting != null) state = meeting;
@@ -27,7 +29,6 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
       if (meeting != null) state = meeting;
     });
 
-    // Get initial value without subscribing to rebuilds
     final library = ref.read(meetingLibraryProvider);
     final archived = ref.read(archivedMeetingsProvider);
     return _findIn(library, meetingId) ??
@@ -58,13 +59,50 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
 
   bool get _isPlaceholder => state.title.isEmpty && state.audioPath.isEmpty;
 
+  Future<bool> _hasConnectivity(String provider) async {
+    final url = provider == 'openai'
+        ? Uri.parse('https://api.openai.com')
+        : Uri.parse('https://openrouter.ai');
+    try {
+      final client = http.Client();
+      try {
+        final response = await client.head(url).timeout(const Duration(seconds: 5));
+        return response.statusCode < 500;
+      } finally {
+        client.close();
+      }
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void _throttledSave(Meeting meeting) {
+    final now = DateTime.now();
+    if (_lastSave == null || now.difference(_lastSave!).inMilliseconds > 500) {
+      _lastSave = now;
+      final repository = ref.read(meetingRepositoryProvider);
+      repository.save(meeting);
+      ref.read(meetingLibraryProvider.notifier).refresh();
+    }
+  }
+
   Future<void> transcribe({bool diarize = false}) async {
     final meeting = state;
     final settings = ref.read(settingsProvider);
     final voiceService = ref.read(voiceServiceProvider);
     final repository = ref.read(meetingRepositoryProvider);
 
-    state = meeting.copyWith(status: MeetingStatus.transcribing, clearLastError: true, transcriptionStatus: 'Initializing');
+    if (!await _hasConnectivity(settings.provider)) {
+      state = meeting.copyWith(
+        status: MeetingStatus.failed,
+        lastError: 'No internet connection. Please connect to a network and try again.',
+      );
+      await repository.save(state);
+      ref.read(meetingLibraryProvider.notifier).refresh();
+      return;
+    }
+
+    state = meeting.copyWith(status: MeetingStatus.transcribing, clearLastError: true, transcriptionStatus: 'Validating audio…', transcriptionProgress: null);
     await repository.save(state);
     ref.read(meetingLibraryProvider.notifier).refresh();
 
@@ -75,8 +113,13 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
         settings.provider,
         apiKey,
         diarize: diarize,
-        onProgress: (status, _) {
-          state = state.copyWith(transcriptionStatus: _summarizeStatus(status));
+        onProgress: (status, progress) {
+          final determinate = progress != null && progress >= 0.3;
+          state = state.copyWith(
+            transcriptionStatus: status,
+            transcriptionProgress: determinate ? progress : null,
+          );
+          _throttledSave(state);
         },
       );
 
@@ -86,6 +129,7 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
         provider: settings.provider,
         clearLastError: true,
         clearTranscriptionStatus: true,
+        clearTranscriptionProgress: true,
       );
       await repository.save(state);
       ref.read(meetingLibraryProvider.notifier).refresh();
@@ -93,7 +137,6 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
       state = state.copyWith(
         status: MeetingStatus.failed,
         lastError: e.toString(),
-        clearTranscriptionStatus: true,
       );
       await repository.save(state);
       ref.read(meetingLibraryProvider.notifier).refresh();
@@ -107,12 +150,22 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
     final aiService = ref.read(aiServiceProvider);
     final repository = ref.read(meetingRepositoryProvider);
 
+    if (!await _hasConnectivity(settings.provider)) {
+      state = meeting.copyWith(
+        status: MeetingStatus.failed,
+        lastError: 'No internet connection. Please connect to a network and try again.',
+      );
+      await repository.save(state);
+      ref.read(meetingLibraryProvider.notifier).refresh();
+      return;
+    }
+
     state = meeting.copyWith(status: MeetingStatus.summarizing, clearLastError: true);
     await repository.save(state);
     ref.read(meetingLibraryProvider.notifier).refresh();
 
     try {
-      String summary;
+      String summary = '';
 
       if (meeting.type == MeetingType.document) {
         final file = io.File(meeting.audioPath);
@@ -123,7 +176,10 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
           provider: settings.provider,
           apiKey: await ref.read(settingsProvider.notifier).getApiKey(settings.provider) ?? '',
         );
-        summary = (await summaryStream.toList()).join();
+        await for (final chunk in summaryStream) {
+          summary += chunk;
+          state = state.copyWith(summary: summary);
+        }
       } else {
         final summaryStream = aiService.streamCompletion(
           model: settings.activeModel,
@@ -140,11 +196,13 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
           apiKey: await ref.read(settingsProvider.notifier).getApiKey(settings.provider) ?? '',
           provider: settings.provider,
         );
-        summary = (await summaryStream.toList()).join();
+        await for (final chunk in summaryStream) {
+          summary += chunk;
+          state = state.copyWith(summary: summary);
+        }
       }
 
-      state = meeting.copyWith(
-        summary: summary,
+      state = state.copyWith(
         status: MeetingStatus.done,
         clearLastError: true,
       );
@@ -212,13 +270,3 @@ You are an expert meeting summarizer. Extract:
 
 Use markdown headers and bullet points. Do not wrap output in a code block. Be concise and factual.
 ''';
-
-String _summarizeStatus(String status) {
-  if (status.contains('Initializing')) return 'Initializing';
-  if (status.contains('Preprocessing')) return 'Preprocessing';
-  if (status.contains('Preparing')) return 'Preparing';
-  if (status.contains('Analyzing')) return 'Analyzing';
-  if (status.contains('Transcribing')) return 'Transcribing';
-  if (status.contains('Finalizing')) return 'Finalizing';
-  return 'Processing';
-}

@@ -196,15 +196,50 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
           ),
         );
       case MeetingStatus.summarizing:
-        content = const Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 12),
-              Text('Summarizing…'),
+        final partialSummary = meeting.summary;
+        content = Column(
+          children: [
+            if (partialSummary == null || partialSummary.isEmpty)
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 12),
+                      const Text('Summarizing…'),
+                    ],
+                  ),
+                ),
+              )
+            else ...[
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.primary),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Summarizing…',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: MarkdownBody(data: partialSummary),
+                ),
+              ),
             ],
-          ),
+          ],
         );
       case MeetingStatus.done:
         content = SingleChildScrollView(
@@ -268,7 +303,10 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
           ),
         );
       case MeetingStatus.transcribing:
-        return _TranscribingIndicator(status: meeting.transcriptionStatus);
+        return _TranscribingIndicator(
+          status: meeting.transcriptionStatus,
+          progress: meeting.transcriptionProgress,
+        );
       case MeetingStatus.transcribed:
       case MeetingStatus.summarizing:
       case MeetingStatus.done:
@@ -481,7 +519,8 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
 
 class _TranscribingIndicator extends StatefulWidget {
   final String? status;
-  const _TranscribingIndicator({this.status});
+  final double? progress;
+  const _TranscribingIndicator({this.status, this.progress});
 
   @override
   State<_TranscribingIndicator> createState() => _TranscribingIndicatorState();
@@ -489,76 +528,76 @@ class _TranscribingIndicator extends StatefulWidget {
 
 class _TranscribingIndicatorState extends State<_TranscribingIndicator>
     with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  int _wordIndex = 0;
-
-  static const _words = ['Initializing', 'Preprocessing', 'Preparing', 'Analyzing', 'Transcribing', 'Finalizing'];
+  late AnimationController _pulseController;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+    _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1800),
-    )..addStatusListener((status) {
-        if (status == AnimationStatus.completed) {
-          setState(() => _wordIndex = (_wordIndex + 1) % _words.length);
-          _controller.forward(from: 0);
-        }
-      });
-    _controller.forward();
-  }
-
-  @override
-  void didUpdateWidget(covariant _TranscribingIndicator oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final status = widget.status;
-    if (status != null) {
-      // Stop animation when we have real status updates from backend
-      _controller.stop();
-      final idx = _words.indexWhere((w) => w == status);
-      if (idx >= 0 && idx != _wordIndex) {
-        setState(() => _wordIndex = idx);
-      }
-    } else if (!_controller.isAnimating) {
-      // Resume animation when status is null
-      _controller.forward(from: 0);
-    }
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final word = widget.status ?? _words[_wordIndex];
+    final displayStatus = widget.status ?? 'Preparing…';
+    final determinate = widget.progress != null;
+    final progress = widget.progress ?? 0.0;
 
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: 32,
-            height: 32,
-            child: CircularProgressIndicator(strokeWidth: 3, color: cs.primary),
-          ),
-          const SizedBox(height: 16),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: Text(
-              word,
-              key: ValueKey(word),
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: cs.onSurfaceVariant,
-                fontWeight: FontWeight.w500,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FadeTransition(
+              opacity: _pulseController.drive(Tween(begin: 0.5, end: 1.0)),
+              child: SizedBox(
+                width: 36,
+                height: 36,
+                child: CircularProgressIndicator(strokeWidth: 3, color: cs.primary),
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 20),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: Text(
+                displayStatus,
+                key: ValueKey(displayStatus),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: cs.onSurfaceVariant,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 16),
+            LinearProgressIndicator(
+              value: determinate ? progress : null,
+              backgroundColor: cs.surfaceContainerHighest,
+              color: cs.primary,
+              borderRadius: BorderRadius.circular(4),
+              minHeight: 6,
+            ),
+            if (determinate) ...[
+              const SizedBox(height: 8),
+              Text(
+                '${(progress * 100).round()}%',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

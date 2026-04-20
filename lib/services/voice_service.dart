@@ -322,6 +322,7 @@ class VoiceService {
       }
 
       final fileSize = await file.length();
+      logger.progress('Validating audio...', 0.0);
       logger.info('File size: ${(fileSize / 1024 / 1024).toStringAsFixed(1)}MB');
 
       String processedPath = filePath;
@@ -349,12 +350,12 @@ class VoiceService {
       }
 
       // Detect silence / speech segments
-      logger.progress('Analyzing audio segments...', 0.1);
+      logger.progress('Analyzing audio segments...', 0.08);
       final segments = await _detectSilence(processedPath);
       logger.info('Found ${segments.length} speech segments');
 
       if (segments.isEmpty) {
-        logger.progress('Transcribing whole file...', 0.3);
+        logger.progress('Transcribing whole file…', 0.3);
         final String? transcript;
         if (provider == 'openai') {
           transcript = await _transcribeWithOpenAI(processedPath, apiKey);
@@ -381,8 +382,10 @@ class VoiceService {
       final chunkOffsets = <double>[];
 
       // Cut chunks
-      logger.progress('Preparing audio chunks...', 0.2);
+      logger.progress('Preparing audio chunks…', 0.2);
       for (var i = 0; i < chunks.length; i++) {
+        final chunkCutProgress = 0.2 + (0.1 * i / chunks.length);
+        logger.progress('Cutting chunk ${i + 1}/${chunks.length}…', chunkCutProgress);
         final chunk = chunks[i];
         final chunkPath = '${chunksDir.path}/chunk_$i.m4a';
         await _cutChunk(processedPath, chunk['start']!, chunk['end']!, chunkPath);
@@ -425,16 +428,18 @@ class VoiceService {
 
       // Cleanup temp files (unless debug mode)
       if (!_debugMode) {
+        logger.progress('Cleaning up…', 0.9);
         await _deleteDirectory(chunksDir.path);
         if (processedPath != filePath) {
           await _deleteFile(processedPath);
         }
       }
 
-      logger.progress('Finalizing...', 0.95);
+      logger.progress('Finalizing…', 0.95);
 
       String result;
       if (diarize && chunkPaths.length > 1) {
+        logger.progress('Identifying speakers…', 0.96);
         final joined = transcriptParts.join('\n\n');
         result = await _relabelSpeakers(joined, chunkOffsets, apiKey);
       } else {
