@@ -80,7 +80,7 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
         },
       );
 
-      state = meeting.copyWith(
+      state = state.copyWith(
         transcript: transcript,
         status: MeetingStatus.transcribed,
         provider: settings.provider,
@@ -90,7 +90,7 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
       await repository.save(state);
       ref.read(meetingLibraryProvider.notifier).refresh();
     } catch (e) {
-      state = meeting.copyWith(
+      state = state.copyWith(
         status: MeetingStatus.failed,
         lastError: e.toString(),
         clearTranscriptionStatus: true,
