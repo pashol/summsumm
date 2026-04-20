@@ -1,6 +1,62 @@
 import 'dart:convert';
+import 'summary_style.dart';
 
-enum MeetingType { meeting, document }
+export 'summary_style.dart' show MeetingType;
+
+class MeetingSummary {
+  final String id;
+  final SummaryStyle style;
+  final String language;
+  final String content;
+  final DateTime createdAt;
+
+  const MeetingSummary({
+    required this.id,
+    required this.style,
+    required this.language,
+    required this.content,
+    required this.createdAt,
+  });
+
+  MeetingSummary copyWith({
+    String? id,
+    SummaryStyle? style,
+    String? language,
+    String? content,
+    DateTime? createdAt,
+  }) {
+    return MeetingSummary(
+      id: id ?? this.id,
+      style: style ?? this.style,
+      language: language ?? this.language,
+      content: content ?? this.content,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'style': style.name,
+      'language': language,
+      'content': content,
+      'createdAt': createdAt.toIso8601String(),
+    };
+  }
+
+  factory MeetingSummary.fromJson(Map<String, dynamic> json) {
+    return MeetingSummary(
+      id: json['id'] as String,
+      style: SummaryStyle.values.firstWhere(
+        (e) => e.name == json['style'],
+        orElse: () => SummaryStyle.structured,
+      ),
+      language: json['language'] as String? ?? 'Same as input',
+      content: json['content'] as String? ?? '',
+      createdAt: DateTime.parse(json['createdAt'] as String),
+    );
+  }
+}
 
 class Meeting {
   final String id;
@@ -9,7 +65,6 @@ class Meeting {
   final String audioPath;
   final String title;
   final String? transcript;
-  final String? summary;
   final MeetingStatus status;
   final String? lastError;
   final String? provider;
@@ -18,6 +73,7 @@ class Meeting {
   final String? transcriptionLog;
   final String? transcriptionStatus;
   final double? transcriptionProgress;
+  final List<MeetingSummary> summaries;
 
   const Meeting({
     required this.id,
@@ -26,7 +82,6 @@ class Meeting {
     required this.audioPath,
     required this.title,
     this.transcript,
-    this.summary,
     required this.status,
     this.lastError,
     this.provider,
@@ -35,7 +90,12 @@ class Meeting {
     this.transcriptionLog,
     this.transcriptionStatus,
     this.transcriptionProgress,
+    this.summaries = const [],
   });
+
+  /// Convenience getter for backward compatibility.
+  /// Returns the content of the first summary, or null if none exist.
+  String? get summary => summaries.isEmpty ? null : summaries.first.content;
 
   Meeting copyWith({
     String? id,
@@ -44,7 +104,6 @@ class Meeting {
     String? audioPath,
     String? title,
     String? transcript,
-    String? summary,
     MeetingStatus? status,
     String? lastError,
     bool clearLastError = false,
@@ -56,6 +115,7 @@ class Meeting {
     String? transcriptionStatus,
     bool clearTranscriptionProgress = false,
     double? transcriptionProgress,
+    List<MeetingSummary>? summaries,
   }) {
     return Meeting(
       id: id ?? this.id,
@@ -64,7 +124,6 @@ class Meeting {
       audioPath: audioPath ?? this.audioPath,
       title: title ?? this.title,
       transcript: transcript ?? this.transcript,
-      summary: summary ?? this.summary,
       status: status ?? this.status,
       lastError: clearLastError ? null : (lastError ?? this.lastError),
       provider: provider ?? this.provider,
@@ -73,6 +132,7 @@ class Meeting {
       transcriptionLog: transcriptionLog ?? this.transcriptionLog,
       transcriptionStatus: clearTranscriptionStatus ? null : (transcriptionStatus ?? this.transcriptionStatus),
       transcriptionProgress: clearTranscriptionProgress ? null : (transcriptionProgress ?? this.transcriptionProgress),
+      summaries: summaries ?? this.summaries,
     );
   }
 
@@ -84,7 +144,6 @@ class Meeting {
       'audioPath': audioPath,
       'title': title,
       'transcript': transcript,
-      'summary': summary,
       'status': status.name,
       'lastError': lastError,
       'provider': provider,
@@ -93,10 +152,33 @@ class Meeting {
       'transcriptionLog': transcriptionLog,
       'transcriptionStatus': transcriptionStatus,
       'transcriptionProgress': transcriptionProgress,
+      'summaries': summaries.map((s) => s.toJson()).toList(),
     };
   }
 
   factory Meeting.fromJson(Map<String, dynamic> json) {
+    final summariesJson = json['summaries'];
+    List<MeetingSummary> summaries = [];
+    if (summariesJson is List) {
+      summaries = summariesJson
+          .map((s) => MeetingSummary.fromJson(s as Map<String, dynamic>))
+          .toList();
+    }
+
+    // Backward compatibility: migrate old summary field
+    final oldSummary = json['summary'] as String?;
+    if (oldSummary != null && oldSummary.isNotEmpty && summaries.isEmpty) {
+      summaries = [
+        MeetingSummary(
+          id: 'migrated_${json['id']}',
+          style: SummaryStyle.structured,
+          language: 'Same as input',
+          content: oldSummary,
+          createdAt: DateTime.parse(json['createdAt'] as String),
+        ),
+      ];
+    }
+
     return Meeting(
       id: json['id'] as String,
       createdAt: DateTime.parse(json['createdAt'] as String),
@@ -104,7 +186,6 @@ class Meeting {
       audioPath: json['audioPath'] as String,
       title: json['title'] as String,
       transcript: json['transcript'] as String?,
-      summary: json['summary'] as String?,
       status: MeetingStatus.values.firstWhere(
         (e) => e.name == json['status'],
         orElse: () => MeetingStatus.recorded,
@@ -119,8 +200,14 @@ class Meeting {
       transcriptionLog: json['transcriptionLog'] as String?,
       transcriptionStatus: json['transcriptionStatus'] as String?,
       transcriptionProgress: (json['transcriptionProgress'] as num?)?.toDouble(),
+      summaries: summaries,
     );
   }
+
+  String toJsonString() => jsonEncode(toJson());
+
+  factory Meeting.fromJsonString(String s) =>
+      Meeting.fromJson(jsonDecode(s) as Map<String, dynamic>);
 }
 
 enum MeetingStatus {
