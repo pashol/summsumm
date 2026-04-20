@@ -71,6 +71,12 @@ class Settings extends _$Settings {
     await _persist(next);
   }
 
+  Future<void> setSummaryStyle(String style) async {
+    final next = state.copyWith(summaryStyle: style);
+    state = next;
+    await _persist(next);
+  }
+
   void setTtsSpeed(double speed) {
     state = state.copyWith(ttsSpeed: speed);
   }
