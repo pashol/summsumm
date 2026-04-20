@@ -1,0 +1,639 @@
+{
+  "@@locale": "en",
+
+  "appTitle": "AI Text Summarizer",
+  "@appTitle": {
+    "description": "Application title shown in app bar"
+  },
+
+  "settingsTitle": "Settings",
+  "@settingsTitle": {
+    "description": "Settings screen title"
+  },
+
+  "settingsSetupHint": "Set your API key to get started.",
+  "@settingsSetupHint": {
+    "description": "Hint shown during initial setup"
+  },
+
+  "settingsModelSection": "Model",
+  "@settingsModelSection": {
+    "description": "Model settings section title"
+  },
+
+  "settingsProviderLabel": "Provider",
+  "@settingsProviderLabel": {
+    "description": "Label for AI provider dropdown"
+  },
+
+  "settingsOpenRouter": "OpenRouter",
+  "@settingsOpenRouter": {
+    "description": "OpenRouter provider name"
+  },
+
+  "settingsOpenAi": "OpenAI",
+  "@settingsOpenAi": {
+    "description": "OpenAI provider name"
+  },
+
+  "settingsMoreModels": "More models",
+  "@settingsMoreModels": {
+    "description": "Expandable section to search all OpenRouter models"
+  },
+
+  "settingsSearchAllModels": "Search all OpenRouter models",
+  "@settingsSearchAllModels": {
+    "description": "Subtitle for more models section"
+  },
+
+  "settingsEnterKeyFirst": "Enter your API key first to load models.",
+  "@settingsEnterKeyFirst": {
+    "description": "Message shown when API key is empty and user tries to browse models"
+  },
+
+  "settingsApiKeySection": "{provider} API Key",
+  "@settingsApiKeySection": {
+    "description": "API key section title with provider name",
+    "placeholders": {
+      "provider": { "type": "String" }
+    }
+  },
+
+  "settingsApiKeyLabel": "API Key",
+  "@settingsApiKeyLabel": {
+    "description": "Label for API key input field"
+  },
+
+  "settingsSaveKey": "Save Key",
+  "@settingsSaveKey": {
+    "description": "Button to save API key"
+  },
+
+  "settingsTestButton": "Test",
+  "@settingsTestButton": {
+    "description": "Button to test API connection"
+  },
+
+  "settingsConnectionSuccess": "Connection successful!",
+  "@settingsConnectionSuccess": {
+    "description": "Success message after connection test"
+  },
+
+  "settingsEnterApiKeyFirst": "Enter an API key first",
+  "@settingsEnterApiKeyFirst": {
+    "description": "Error when testing connection without API key"
+  },
+
+  "settingsSelectModelFirst": "Select a model first",
+  "@settingsSelectModelFirst": {
+    "description": "Error when testing connection without model selected"
+  },
+
+  "settingsSummarySection": "Summary",
+  "@settingsSummarySection": {
+    "description": "Summary settings section title"
+  },
+
+  "settingsStyleLabel": "Style",
+  "@settingsStyleLabel": {
+    "description": "Label for summary style dropdown"
+  },
+
+  "settingsLanguageLabel": "Language",
+  "@settingsLanguageLabel": {
+    "description": "Label for summary language dropdown"
+  },
+
+  "settingsTtsSection": "Text-to-Speech",
+  "@settingsTtsSection": {
+    "description": "TTS settings section title"
+  },
+
+  "settingsSearchModelsHint": "Search models...",
+  "@settingsSearchModelsHint": {
+    "description": "Placeholder text for advanced model search field"
+  },
+
+  "settingsFailedToLoadModels": "Failed to load models: {error}",
+  "@settingsFailedToLoadModels": {
+    "description": "Error message when model list fails to load",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+
+  "settingsAppLanguageLabel": "App Language",
+  "@settingsAppLanguageLabel": {
+    "description": "Label for UI language selector in settings"
+  },
+
+  "settingsSystemDefault": "System Default",
+  "@settingsSystemDefault": {
+    "description": "Option to use device system locale"
+  },
+
+  "libraryTitle": "Library",
+  "@libraryTitle": {
+    "description": "Library screen title"
+  },
+
+  "libraryImportFile": "Import file",
+  "@libraryImportFile": {
+    "description": "Tooltip for import file button"
+  },
+
+  "libraryArchived": "Archived",
+  "@libraryArchived": {
+    "description": "Tooltip for archived meetings button"
+  },
+
+  "librarySettings": "Settings",
+  "@librarySettings": {
+    "description": "Tooltip for settings button"
+  },
+
+  "libraryNoItems": "No items yet",
+  "@libraryNoItems": {
+    "description": "Empty state message in library"
+  },
+
+  "libraryError": "Error: {error}",
+  "@libraryError": {
+    "description": "Error message when loading library fails",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+
+  "libraryImportFailed": "Import failed: {error}",
+  "@libraryImportFailed": {
+    "description": "Snackbar message when file import fails",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+
+  "libraryShare": "Share",
+  "@libraryShare": {
+    "description": "Slidable action label for sharing a meeting"
+  },
+
+  "libraryRename": "Rename",
+  "@libraryRename": {
+    "description": "Slidable action label for renaming a meeting"
+  },
+
+  "libraryArchive": "Archive",
+  "@libraryArchive": {
+    "description": "Slidable action label for archiving a meeting"
+  },
+
+  "libraryDelete": "Delete",
+  "@libraryDelete": {
+    "description": "Button/action label for deleting"
+  },
+
+  "libraryDeleteDocument": "Delete Document?",
+  "@libraryDeleteDocument": {
+    "description": "Delete confirmation dialog title for documents"
+  },
+
+  "libraryDeleteMeeting": "Delete Meeting?",
+  "@libraryDeleteMeeting": {
+    "description": "Delete confirmation dialog title for meetings"
+  },
+
+  "libraryDeleteDocumentConfirm": "This will permanently delete this document summary.",
+  "@libraryDeleteDocumentConfirm": {
+    "description": "Delete confirmation dialog content for documents"
+  },
+
+  "libraryDeleteMeetingConfirm": "This will permanently delete the recording and all data.",
+  "@libraryDeleteMeetingConfirm": {
+    "description": "Delete confirmation dialog content for meetings"
+  },
+
+  "cancelButton": "Cancel",
+  "@cancelButton": {
+    "description": "Cancel button label used in dialogs"
+  },
+
+  "saveButton": "Save",
+  "@saveButton": {
+    "description": "Save button label used in dialogs"
+  },
+
+  "deleteButton": "Delete",
+  "@deleteButton": {
+    "description": "Delete button label in confirmation dialogs"
+  },
+
+  "libraryRenameMeeting": "Rename Meeting",
+  "@libraryRenameMeeting": {
+    "description": "Rename dialog title"
+  },
+
+  "summarizeButton": "Summarize",
+  "@summarizeButton": {
+    "description": "Button to start summarization"
+  },
+
+  "transcribeButton": "Transcribe",
+  "@transcribeButton": {
+    "description": "Button to start transcription"
+  },
+
+  "retryButton": "Retry",
+  "@retryButton": {
+    "description": "Button to retry a failed operation"
+  },
+
+  "libraryFailedDetails": "Failed — tap for details",
+  "@libraryFailedDetails": {
+    "description": "Error indicator text in meeting tiles"
+  },
+
+  "libraryArchivedSnackbar": "Meeting archived",
+  "@libraryArchivedSnackbar": {
+    "description": "Snackbar message after archiving a meeting"
+  },
+
+  "undoButton": "Undo",
+  "@undoButton": {
+    "description": "Undo action in snackbar"
+  },
+
+  "shareTitle": "Share",
+  "@shareTitle": {
+    "description": "Share sheet title"
+  },
+
+  "shareAudio": "Share Audio",
+  "@shareAudio": {
+    "description": "Share sheet option to share audio file"
+  },
+
+  "shareTranscript": "Share Transcript",
+  "@shareTranscript": {
+    "description": "Share sheet option to share transcript"
+  },
+
+  "shareSummary": "Share Summary",
+  "@shareSummary": {
+    "description": "Share sheet option to share summary"
+  },
+
+  "shareAudioNotFound": "Audio file not found",
+  "@shareAudioNotFound": {
+    "description": "Snackbar when audio file is missing"
+  },
+
+  "meetingDetailTabSummary": "Summary",
+  "@meetingDetailTabSummary": {
+    "description": "Tab label for summary view"
+  },
+
+  "meetingDetailTabTranscript": "Transcript",
+  "@meetingDetailTabTranscript": {
+    "description": "Tab label for transcript view"
+  },
+
+  "meetingDetailTabChat": "Chat",
+  "@meetingDetailTabChat": {
+    "description": "Tab label for chat view"
+  },
+
+  "meetingDetailDuration": "Duration",
+  "@meetingDetailDuration": {
+    "description": "Metadata row label for meeting duration"
+  },
+
+  "meetingDetailRecorded": "Recorded",
+  "@meetingDetailRecorded": {
+    "description": "Metadata row label for recording date"
+  },
+
+  "meetingDetailTranscribedBy": "Transcribed by",
+  "@meetingDetailTranscribedBy": {
+    "description": "Metadata row label for transcription provider"
+  },
+
+  "meetingDetailNoTranscript": "No transcript yet.\nGo to the Transcript tab to transcribe.",
+  "@meetingDetailNoTranscript": {
+    "description": "Message when meeting has no transcript yet"
+  },
+
+  "meetingDetailTranscribing": "Transcribing…",
+  "@meetingDetailTranscribing": {
+    "description": "Loading text during transcription"
+  },
+
+  "meetingDetailSummarizing": "Summarizing…",
+  "@meetingDetailSummarizing": {
+    "description": "Loading text during summarization"
+  },
+
+  "meetingDetailErrorOccurred": "An error occurred",
+  "@meetingDetailErrorOccurred": {
+    "description": "Fallback error text when no specific error available"
+  },
+
+  "meetingDetailGenerateSummary": "Generate Summary",
+  "@meetingDetailGenerateSummary": {
+    "description": "Dialog title for generating a new summary"
+  },
+
+  "meetingDetailGenerateConfirm": "Generate a new summary in {language} with {style} style?",
+  "@meetingDetailGenerateConfirm": {
+    "description": "Dialog content confirming summary generation parameters",
+    "placeholders": {
+      "language": { "type": "String" },
+      "style": { "type": "String" }
+    }
+  },
+
+  "meetingDetailGenerate": "Generate",
+  "@meetingDetailGenerate": {
+    "description": "Button to confirm summary generation"
+  },
+
+  "meetingDetailNotRecording": "This is a document, not a recording.\nGo to the Summary tab to process it.",
+  "@meetingDetailNotRecording": {
+    "description": "Message in transcript tab for document-type meetings"
+  },
+
+  "meetingDetailDiarizationRequires": "Diarization requires OpenRouter",
+  "@meetingDetailDiarizationRequires": {
+    "description": "Tooltip explaining diarization limitation"
+  },
+
+  "meetingDetailDiarizeSpeakers": "Diarize speakers",
+  "@meetingDetailDiarizeSpeakers": {
+    "description": "Switch label for speaker diarization"
+  },
+
+  "meetingDetailDocumentContent": "This is the imported document content, not a transcript.",
+  "@meetingDetailDocumentContent": {
+    "description": "Banner text in transcript tab for document-type meetings"
+  },
+
+  "meetingDetailDocumentNotReady": "Document content not available yet.\nGo to the Summary tab to process it.",
+  "@meetingDetailDocumentNotReady": {
+    "description": "Message in chat tab when document not yet processed"
+  },
+
+  "meetingDetailTranscribeFirst": "Transcribe the meeting first to start chatting.",
+  "@meetingDetailTranscribeFirst": {
+    "description": "Message in chat tab when no transcript exists"
+  },
+
+  "meetingDetailChatHint": "Ask about this meeting…",
+  "@meetingDetailChatHint": {
+    "description": "Placeholder text for chat input field"
+  },
+
+  "summarySheetFailedRecording": "Failed to start recording: {error}",
+  "@summarySheetFailedRecording": {
+    "description": "Snackbar when voice recording fails to start",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+
+  "summarySheetFailedVoice": "Failed to process voice input: {error}",
+  "@summarySheetFailedVoice": {
+    "description": "Snackbar when voice input processing fails",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+
+  "summarySheetNoApiKey": "No API key configured. Open Settings first.",
+  "@summarySheetNoApiKey": {
+    "description": "Snackbar when summary sheet starts without API key"
+  },
+
+  "summarySheetCopied": "Copied to clipboard",
+  "@summarySheetCopied": {
+    "description": "Snackbar after copying text"
+  },
+
+  "summarySheetFactCheck": "Fact Check",
+  "@summarySheetFactCheck": {
+    "description": "Header text and button label for fact check mode"
+  },
+
+  "summarySheetAiSummary": "AI Summary",
+  "@summarySheetAiSummary": {
+    "description": "Header text for normal summary mode"
+  },
+
+  "closeButton": "Close",
+  "@closeButton": {
+    "description": "Close button tooltip in summary sheet"
+  },
+
+  "summarySheetCopy": "Copy",
+  "@summarySheetCopy": {
+    "description": "Copy button label in summary sheet action bar"
+  },
+
+  "summarySheetReadAloud": "Read Aloud",
+  "@summarySheetReadAloud": {
+    "description": "TTS button label when not playing"
+  },
+
+  "summarySheetPause": "Pause",
+  "@summarySheetPause": {
+    "description": "TTS button label when playing"
+  },
+
+  "summarySheetResume": "Resume",
+  "@summarySheetResume": {
+    "description": "TTS button label when paused"
+  },
+
+  "summarySheetStop": "Stop",
+  "@summarySheetStop": {
+    "description": "Stop TTS button label"
+  },
+
+  "summarySheetLastFollowUp": "Last follow-up question...",
+  "@summarySheetLastFollowUp": {
+    "description": "Placeholder when only one follow-up turn remains"
+  },
+
+  "summarySheetFollowUpHint": "Ask a follow-up question...",
+  "@summarySheetFollowUpHint": {
+    "description": "Placeholder for follow-up question input"
+  },
+
+  "recordingTitle": "Record Meeting",
+  "@recordingTitle": {
+    "description": "Recording screen title"
+  },
+
+  "stopButton": "Stop",
+  "@stopButton": {
+    "description": "Button to stop recording or TTS"
+  },
+
+  "startButton": "Start",
+  "@startButton": {
+    "description": "Button to start recording"
+  },
+
+  "recordingMicPermission": "Microphone permission is required to record",
+  "@recordingMicPermission": {
+    "description": "Snackbar when microphone permission is denied"
+  },
+
+  "recordingFailedStart": "Failed to start recording: {error}",
+  "@recordingFailedStart": {
+    "description": "Snackbar when recording fails to start",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+
+  "archiveTitle": "Archived Meetings",
+  "@archiveTitle": {
+    "description": "Archived meetings screen title"
+  },
+
+  "archiveError": "Error: {error}",
+  "@archiveError": {
+    "description": "Error message when loading archived meetings fails",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+
+  "archiveNoMeetings": "No archived meetings",
+  "@archiveNoMeetings": {
+    "description": "Empty state in archived meetings screen"
+  },
+
+  "archiveRestore": "Restore",
+  "@archiveRestore": {
+    "description": "Slidable action to restore archived meeting"
+  },
+
+  "archiveRestored": "Meeting restored to library",
+  "@archiveRestored": {
+    "description": "Snackbar after restoring a meeting"
+  },
+
+  "carouselDocFallback": "Doc {index}",
+  "@carouselDocFallback": {
+    "description": "Fallback title for document carousel item without title",
+    "placeholders": {
+      "index": { "type": "int" }
+    }
+  },
+
+  "documentFallback": "Document",
+  "@documentFallback": {
+    "description": "Fallback document title in document_title.dart"
+  },
+
+  "styleConcise": "Concise",
+  "@styleConcise": {
+    "description": "Summary style display name"
+  },
+
+  "styleBrief": "Brief",
+  "@styleBrief": {
+    "description": "Summary style display name"
+  },
+
+  "styleDetailed": "Detailed",
+  "@styleDetailed": {
+    "description": "Summary style display name"
+  },
+
+  "styleStructured": "Structured",
+  "@styleStructured": {
+    "description": "Summary style display name"
+  },
+
+  "langSameAsInput": "Same as input",
+  "@langSameAsInput": {
+    "description": "Summary language option"
+  },
+
+  "langEnglish": "English",
+  "@langEnglish": {
+    "description": "Language display name"
+  },
+
+  "langGerman": "German",
+  "@langGerman": {
+    "description": "Language display name"
+  },
+
+  "langFrench": "French",
+  "@langFrench": {
+    "description": "Language display name"
+  },
+
+  "langSpanish": "Spanish",
+  "@langSpanish": {
+    "description": "Language display name"
+  },
+
+  "langItalian": "Italian",
+  "@langItalian": {
+    "description": "Language display name"
+  },
+
+  "langPortuguese": "Portuguese",
+  "@langPortuguese": {
+    "description": "Language display name"
+  },
+
+  "langRussian": "Russian",
+  "@langRussian": {
+    "description": "Language display name"
+  },
+
+  "langChinese": "Chinese",
+  "@langChinese": {
+    "description": "Language display name"
+  },
+
+  "langJapanese": "Japanese",
+  "@langJapanese": {
+    "description": "Language display name"
+  },
+
+  "langKorean": "Korean",
+  "@langKorean": {
+    "description": "Language display name"
+  },
+
+  "langArabic": "Arabic",
+  "@langArabic": {
+    "description": "Language display name"
+  },
+
+  "langHindi": "Hindi",
+  "@langHindi": {
+    "description": "Language display name"
+  },
+
+  "langDutch": "Dutch",
+  "@langDutch": {
+    "description": "Language display name"
+  },
+
+  "langPolish": "Polish",
+  "@langPolish": {
+    "description": "Language display name"
+  },
+
+  "langTurkish": "Turkish",
+  "@langTurkish": {
+    "description": "Language display name"
+  }
+}
