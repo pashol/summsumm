@@ -75,6 +75,12 @@ class Settings extends _$Settings {
     state = state.copyWith(ttsSpeed: speed);
   }
 
+  Future<void> setDebugMode(bool enabled) async {
+    final next = state.copyWith(debugMode: enabled);
+    state = next;
+    await _persist(next);
+  }
+
   Future<void> persistSettings() async {
     await _persist(state);
   }

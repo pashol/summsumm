@@ -153,15 +153,27 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
     Widget content;
     switch (meeting.status) {
       case MeetingStatus.recorded:
-        content = const Center(
-          child: Padding(
-            padding: EdgeInsets.all(24),
-            child: Text(
-              'No transcript yet.\nGo to the Transcript tab to transcribe.',
-              textAlign: TextAlign.center,
+        if (meeting.type == MeetingType.document) {
+          content = Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: ElevatedButton(
+                onPressed: () => provider.summarize(),
+                child: const Text('Summarize'),
+              ),
             ),
-          ),
-        );
+          );
+        } else {
+          content = const Center(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Text(
+                'No transcript yet.\nGo to the Transcript tab to transcribe.',
+                textAlign: TextAlign.center,
+              ),
+            ),
+          );
+        }
       case MeetingStatus.transcribing:
         content = const Center(
           child: Column(
@@ -208,6 +220,17 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
   Widget _buildTranscriptTab(Meeting meeting, MeetingNotifier provider) {
     switch (meeting.status) {
       case MeetingStatus.recorded:
+        if (meeting.type == MeetingType.document) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                'This is a document, not a recording.\nGo to the Summary tab to process it.',
+                textAlign: TextAlign.center,
+              ),
+            ),
+          );
+        }
         final settings = ref.watch(settingsProvider);
         final isOpenRouter = settings.provider == 'openrouter';
         return Padding(
@@ -245,22 +268,25 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
           ),
         );
       case MeetingStatus.transcribing:
-        return const Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 12),
-              Text('Transcribing…'),
-            ],
-          ),
-        );
+        return _TranscribingIndicator(status: meeting.transcriptionStatus);
       case MeetingStatus.transcribed:
       case MeetingStatus.summarizing:
       case MeetingStatus.done:
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Text(meeting.transcript ?? ''),
+        return Column(
+          children: [
+            if (meeting.type == MeetingType.document)
+              MaterialBanner(
+                content: const Text('This is the imported document content, not a transcript.'),
+                actions: [const SizedBox.shrink()],
+                backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+              ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Text(meeting.transcript ?? ''),
+              ),
+            ),
+          ],
         );
       case MeetingStatus.failed:
         if (meeting.type == MeetingType.document) return const SizedBox.shrink();
@@ -278,11 +304,14 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
 
   Widget _buildChatTab(Meeting meeting) {
     if (meeting.transcript == null) {
-      return const Center(
+      final isDocument = meeting.type == MeetingType.document;
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24),
+          padding: const EdgeInsets.all(24),
           child: Text(
-            'Transcribe the meeting first to start chatting.',
+            isDocument
+                ? 'Document content not available yet.\nGo to the Summary tab to process it.'
+                : 'Transcribe the meeting first to start chatting.',
             textAlign: TextAlign.center,
           ),
         ),
@@ -337,38 +366,38 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
         SafeArea(
           top: false,
           child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _chatInputController,
-                  decoration: const InputDecoration(
-                    hintText: 'Ask about this meeting…',
-                    border: OutlineInputBorder(),
-                    isDense: true,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _chatInputController,
+                    decoration: const InputDecoration(
+                      hintText: 'Ask about this meeting…',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: chatState.isStreaming
+                        ? null
+                        : (_) => _sendChatMessage(meeting, chatNotifier),
                   ),
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: chatState.isStreaming
-                      ? null
-                      : (_) => _sendChatMessage(meeting, chatNotifier),
                 ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: chatState.isStreaming
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2,),)
-                    : const Icon(Icons.send),
-                onPressed: chatState.isStreaming
-                    ? null
-                    : () => _sendChatMessage(meeting, chatNotifier),
-              ),
-            ],
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: chatState.isStreaming
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2,),)
+                      : const Icon(Icons.send),
+                  onPressed: chatState.isStreaming
+                      ? null
+                      : () => _sendChatMessage(meeting, chatNotifier),
+                ),
+              ],
+            ),
           ),
-        ),
         ),
       ],
     );
@@ -443,6 +472,84 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
               Navigator.pop(context);
             },
             child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TranscribingIndicator extends StatefulWidget {
+  final String? status;
+  const _TranscribingIndicator({this.status});
+
+  @override
+  State<_TranscribingIndicator> createState() => _TranscribingIndicatorState();
+}
+
+class _TranscribingIndicatorState extends State<_TranscribingIndicator>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  int _wordIndex = 0;
+
+  static const _words = ['Preparing', 'Analyzing', 'Preprocessing', 'Transcribing', 'Finalizing'];
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          setState(() => _wordIndex = (_wordIndex + 1) % _words.length);
+          _controller.forward(from: 0);
+        }
+      });
+    _controller.forward();
+  }
+
+  @override
+  void didUpdateWidget(covariant _TranscribingIndicator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final status = widget.status;
+    if (status != null) {
+      final idx = _words.indexWhere((w) => w == status);
+      if (idx >= 0) _wordIndex = idx;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final word = widget.status ?? _words[_wordIndex];
+
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 32,
+            height: 32,
+            child: CircularProgressIndicator(strokeWidth: 3, color: cs.primary),
+          ),
+          const SizedBox(height: 16),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: Text(
+              word,
+              key: ValueKey(word),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: cs.onSurfaceVariant,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
         ],
       ),

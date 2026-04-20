@@ -17,8 +17,19 @@ final meetingProvider = NotifierProvider.family<MeetingNotifier, Meeting, String
 class MeetingNotifier extends FamilyNotifier<Meeting, String> {
   @override
   Meeting build(String meetingId) {
-    final library = ref.watch(meetingLibraryProvider);
-    final archived = ref.watch(archivedMeetingsProvider);
+    // Listen for changes and update state in-place without rebuilding
+    ref.listen(meetingLibraryProvider, (prev, next) {
+      final meeting = _findIn(next, meetingId);
+      if (meeting != null) state = meeting;
+    });
+    ref.listen(archivedMeetingsProvider, (prev, next) {
+      final meeting = _findIn(next, meetingId);
+      if (meeting != null) state = meeting;
+    });
+
+    // Get initial value without subscribing to rebuilds
+    final library = ref.read(meetingLibraryProvider);
+    final archived = ref.read(archivedMeetingsProvider);
     return _findIn(library, meetingId) ??
         _findIn(archived, meetingId) ??
         _placeholder(meetingId);
@@ -53,7 +64,7 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
     final voiceService = ref.read(voiceServiceProvider);
     final repository = ref.read(meetingRepositoryProvider);
 
-    state = meeting.copyWith(status: MeetingStatus.transcribing, clearLastError: true);
+    state = meeting.copyWith(status: MeetingStatus.transcribing, clearLastError: true, transcriptionStatus: 'Initializing');
     await repository.save(state);
     ref.read(meetingLibraryProvider.notifier).refresh();
 
@@ -64,6 +75,9 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
         settings.provider,
         apiKey,
         diarize: diarize,
+        onProgress: (status, _) {
+          state = state.copyWith(transcriptionStatus: _summarizeStatus(status));
+        },
       );
 
       state = meeting.copyWith(
@@ -71,6 +85,7 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
         status: MeetingStatus.transcribed,
         provider: settings.provider,
         clearLastError: true,
+        clearTranscriptionStatus: true,
       );
       await repository.save(state);
       ref.read(meetingLibraryProvider.notifier).refresh();
@@ -78,6 +93,7 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
       state = meeting.copyWith(
         status: MeetingStatus.failed,
         lastError: e.toString(),
+        clearTranscriptionStatus: true,
       );
       await repository.save(state);
       ref.read(meetingLibraryProvider.notifier).refresh();
@@ -196,3 +212,12 @@ You are an expert meeting summarizer. Extract:
 
 Use markdown headers and bullet points. Do not wrap output in a code block. Be concise and factual.
 ''';
+
+String _summarizeStatus(String status) {
+  if (status.contains('Preprocessing')) return 'Preprocessing';
+  if (status.contains('Analyzing')) return 'Analyzing';
+  if (status.contains('Preparing')) return 'Preparing';
+  if (status.contains('Transcribing')) return 'Transcribing';
+  if (status.contains('Finalizing')) return 'Finalizing';
+  return 'Processing';
+}

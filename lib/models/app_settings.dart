@@ -8,6 +8,7 @@ class AppSettings {
   final double ttsSpeed;
   final String openaiKey;
   final String openrouterKey;
+  final bool debugMode;
 
   const AppSettings({
     required this.provider,
@@ -17,6 +18,7 @@ class AppSettings {
     required this.ttsSpeed,
     required this.openaiKey,
     required this.openrouterKey,
+    this.debugMode = false,
   });
 
   factory AppSettings.defaults() => const AppSettings(
@@ -26,7 +28,8 @@ class AppSettings {
         language: 'English',
         ttsSpeed: 1.0,
         openaiKey: '',
-        openrouterKey: ''
+        openrouterKey: '',
+        debugMode: false,
       );
 
   AppSettings copyWith({
@@ -37,15 +40,17 @@ class AppSettings {
     double? ttsSpeed,
     String? openaiKey,
     String? openrouterKey,
+    bool? debugMode,
   }) =>
       AppSettings(
         provider: provider ?? this.provider,
-    openrouterModel: openrouterModel ?? this.openrouterModel,
-    openaiModel: openaiModel ?? this.openaiModel,
-    language: language ?? this.language,
-    ttsSpeed: ttsSpeed ?? this.ttsSpeed,
-    openaiKey: openaiKey ?? this.openaiKey,
-    openrouterKey: openrouterKey ?? this.openrouterKey,
+        openrouterModel: openrouterModel ?? this.openrouterModel,
+        openaiModel: openaiModel ?? this.openaiModel,
+        language: language ?? this.language,
+        ttsSpeed: ttsSpeed ?? this.ttsSpeed,
+        openaiKey: openaiKey ?? this.openaiKey,
+        openrouterKey: openrouterKey ?? this.openrouterKey,
+        debugMode: debugMode ?? this.debugMode,
       );
 
   Map<String, dynamic> toJson() => {
@@ -56,6 +61,7 @@ class AppSettings {
         'ttsSpeed': ttsSpeed,
         'openaiKey': openaiKey,
         'openrouterKey': openrouterKey,
+        'debugMode': debugMode,
       };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
@@ -65,7 +71,8 @@ class AppSettings {
         language: json['language'] as String? ?? 'English',
         ttsSpeed: (json['ttsSpeed'] as num?)?.toDouble() ?? 1.0,
         openaiKey: json['openaiKey'] as String? ?? '',
-        openrouterKey: json['openrouterKey'] as String? ?? ''
+        openrouterKey: json['openrouterKey'] as String? ?? '',
+        debugMode: json['debugMode'] as bool? ?? false,
       );
 
   String get activeModel =>
@@ -86,7 +93,8 @@ class AppSettings {
         other.language == language &&
         other.ttsSpeed == ttsSpeed &&
         other.openaiKey == openaiKey &&
-        other.openrouterKey == openrouterKey;
+        other.openrouterKey == openrouterKey &&
+        other.debugMode == debugMode;
   }
 
   @override
@@ -98,6 +106,7 @@ class AppSettings {
         ttsSpeed,
         openaiKey,
         openrouterKey,
+        debugMode,
       );
 }
 

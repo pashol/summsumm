@@ -15,6 +15,8 @@ class Meeting {
   final String? provider;
   final bool archived;
   final MeetingType type;
+  final String? transcriptionLog;
+  final String? transcriptionStatus;
 
   const Meeting({
     required this.id,
@@ -29,6 +31,8 @@ class Meeting {
     this.provider,
     this.archived = false,
     this.type = MeetingType.meeting,
+    this.transcriptionLog,
+    this.transcriptionStatus,
   });
 
   Meeting copyWith({
@@ -45,6 +49,9 @@ class Meeting {
     String? provider,
     bool? archived,
     MeetingType? type,
+    String? transcriptionLog,
+    bool clearTranscriptionStatus = false,
+    String? transcriptionStatus,
   }) {
     return Meeting(
       id: id ?? this.id,
@@ -59,6 +66,8 @@ class Meeting {
       provider: provider ?? this.provider,
       archived: archived ?? this.archived,
       type: type ?? this.type,
+      transcriptionLog: transcriptionLog ?? this.transcriptionLog,
+      transcriptionStatus: clearTranscriptionStatus ? null : (transcriptionStatus ?? this.transcriptionStatus),
     );
   }
 
@@ -76,6 +85,8 @@ class Meeting {
       'provider': provider,
       'archived': archived,
       'type': type.name,
+      'transcriptionLog': transcriptionLog,
+      'transcriptionStatus': transcriptionStatus,
     };
   }
 
@@ -99,6 +110,8 @@ class Meeting {
         (e) => e.name == json['type'],
         orElse: () => MeetingType.meeting,
       ),
+      transcriptionLog: json['transcriptionLog'] as String?,
+      transcriptionStatus: json['transcriptionStatus'] as String?,
     );
   }
 }

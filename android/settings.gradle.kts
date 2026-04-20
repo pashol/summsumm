@@ -14,6 +14,7 @@ pluginManagement {
         google()
         mavenCentral()
         gradlePluginPortal()
+        maven { url = uri("https://github.com/nicologhielmetti/ffmpeg-kit-android-maven/raw/master") }
     }
 }
 
