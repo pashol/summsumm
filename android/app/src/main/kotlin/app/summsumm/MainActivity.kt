@@ -112,6 +112,15 @@ class MainActivity : FlutterActivity() {
                             result.error("INVALID_URI", "URI is null", null)
                         }
                     }
+                    "getAudioDuration" -> {
+                        val filePath = call.argument<String>("path")
+                        if (filePath != null) {
+                            val durationMs = getAudioDurationMs(filePath)
+                            result.success(durationMs)
+                        } else {
+                            result.error("INVALID_PATH", "Path is null", null)
+                        }
+                    }
                     else -> result.notImplemented()
                 }
             }
@@ -377,6 +386,20 @@ class MainActivity : FlutterActivity() {
             val result = intent.getParcelableArrayListExtra<android.os.Parcelable>(extra)
             @Suppress("UNCHECKED_CAST")
             result?.filterIsInstance<Uri>()
+        }
+    }
+
+    /// Returns audio duration in milliseconds using MediaMetadataRetriever.
+    /// Returns 0 if duration cannot be determined.
+    private fun getAudioDurationMs(filePath: String): Int {
+        return try {
+            val retriever = MediaMetadataRetriever()
+            retriever.setDataSource(filePath)
+            val durationMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
+            retriever.release()
+            (durationMs / 1000).toInt() // Convert to seconds
+        } catch (_: Exception) {
+            0
         }
     }
 }

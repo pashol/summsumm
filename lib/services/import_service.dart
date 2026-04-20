@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter_sound/flutter_sound.dart';
+import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:summsumm/models/meeting.dart';
@@ -10,6 +10,7 @@ import 'package:uuid/uuid.dart';
 class ImportService {
   final MeetingRepository _repository;
   final Future<Directory> Function()? _getMeetingsDir;
+  static const MethodChannel _channel = MethodChannel('app.summsumm/intent');
 
   ImportService(this._repository, {Future<Directory> Function()? getMeetingsDir})
       : _getMeetingsDir = getMeetingsDir;
@@ -36,7 +37,7 @@ class ImportService {
 
     final title = p.basenameWithoutExtension(sourcePath);
 
-    // Read duration for audio files using fast metadata helper
+    // Read duration for audio files using fast native metadata retrieval
     int durationSec = 0;
     if (type == MeetingType.meeting) {
       durationSec = await _getAudioDuration(destPath);
@@ -65,13 +66,12 @@ class ImportService {
     return dir;
   }
 
-  /// Extracts audio duration in seconds using flutter_sound_helper.
+  /// Returns audio duration in seconds using MediaMetadataRetriever (Android).
   /// This reads metadata only - much faster than decoding the file.
-  Future<int> _getAudioDuration(String inputPath) async {
+  Future<int> _getAudioDuration(String filePath) async {
     try {
-      final helper = FlutterSoundHelper();
-      final duration = await helper.duration(inputPath);
-      return (duration?.inSeconds ?? 0);
+      final result = await _channel.invokeMethod<int>('getAudioDuration', {'path': filePath});
+      return result ?? 0;
     } catch (_) {
       return 0;
     }
