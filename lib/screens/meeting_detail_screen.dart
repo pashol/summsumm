@@ -26,6 +26,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
   SummaryStyle? _selectedStyle;
   String? _selectedLanguage;
   bool _showAddControls = false;
+  int _activeSummaryIndex = 0;
   late final TabController _tabController;
   final TextEditingController _chatInputController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
@@ -209,8 +210,10 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
   }
 
   Widget _buildSummarizingContent(Meeting meeting) {
-    final currentSummary = meeting.summaries.lastOrNull;
-    final content = currentSummary?.content ?? '';
+    final activeSummary = meeting.summaries.isNotEmpty && _activeSummaryIndex < meeting.summaries.length
+        ? meeting.summaries[_activeSummaryIndex]
+        : null;
+    final content = activeSummary?.content ?? '';
 
     if (content.isEmpty) {
       return const Center(
@@ -259,6 +262,9 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
   }
 
   Widget _buildDoneContent(Meeting meeting, MeetingNotifier provider) {
+    final activeSummary = meeting.summaries.isNotEmpty && _activeSummaryIndex < meeting.summaries.length
+        ? meeting.summaries[_activeSummaryIndex].content
+        : '';
     return Column(
       children: [
         _buildChipRow(meeting, provider),
@@ -266,7 +272,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
-            child: MarkdownBody(data: meeting.summary ?? ''),
+            child: MarkdownBody(data: activeSummary),
           ),
         ),
       ],
@@ -344,8 +350,10 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
             padding: const EdgeInsets.only(right: 8),
             child: ChoiceChip(
               label: Text(chipLabel),
-              selected: summary == meeting.summaries.first,
-              onSelected: (_) {},
+              selected: index == _activeSummaryIndex,
+              onSelected: (_) {
+                setState(() => _activeSummaryIndex = index);
+              },
             ),
           );
         },
@@ -405,7 +413,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                       context: context,
                       builder: (ctx) => AlertDialog(
                         title: const Text('Generate Summary'),
-                        content: Text('Generate a new summary in $language with $style style?'),
+                        content: Text('Generate a new summary in $language with ${style.displayName} style?'),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(ctx),
@@ -545,15 +553,13 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
   }
 
   Widget _buildChatTab(Meeting meeting) {
-    if (meeting.transcript == null) {
-      final isDocument = meeting.type == MeetingType.document;
+    final isDocument = meeting.type == MeetingType.document;
+    if (!isDocument && meeting.transcript == null) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Text(
-            isDocument
-                ? 'Document content not available yet.\nGo to the Summary tab to process it.'
-                : 'Transcribe the meeting first to start chatting.',
+            'Transcribe the meeting first to start chatting.',
             textAlign: TextAlign.center,
           ),
         ),
@@ -614,9 +620,11 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                 Expanded(
                   child: TextField(
                     controller: _chatInputController,
-                    decoration: const InputDecoration(
-                      hintText: 'Ask about this meeting…',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      hintText: isDocument
+                          ? 'Ask about this document…'
+                          : 'Ask about this meeting…',
+                      border: const OutlineInputBorder(),
                       isDense: true,
                     ),
                     textInputAction: TextInputAction.send,
@@ -649,11 +657,18 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
     final text = _chatInputController.text.trim();
     if (text.isEmpty) return;
     _chatInputController.clear();
-    notifier.sendMessage(
-      text,
-      transcript: meeting.transcript!,
-      summary: meeting.summary,
-    );
+    if (meeting.type == MeetingType.document) {
+      notifier.sendDocumentMessage(
+        text,
+        audioPath: meeting.audioPath,
+      );
+    } else {
+      notifier.sendMessage(
+        text,
+        transcript: meeting.transcript!,
+        summary: meeting.summary,
+      );
+    }
   }
 
    String _formatDuration(int seconds) {

@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io' as io;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -122,6 +124,102 @@ class MeetingChatNotifier extends StateNotifier<MeetingChatState> {
     _mounted = false;
     _streamSub?.cancel();
     super.dispose();
+  }
+
+  Future<void> sendDocumentMessage(
+    String question, {
+    required String audioPath,
+  }) async {
+    if (state.isStreaming || question.trim().isEmpty) return;
+
+    final userMsg = ChatMessage(role: 'user', content: question.trim());
+    const assistantMsg = ChatMessage(role: 'assistant', content: '');
+    state = state.copyWith(
+      messages: [...state.messages, userMsg, assistantMsg],
+      isStreaming: true,
+      clearError: true,
+    );
+
+    final settings = _ref.read(settingsProvider);
+    final apiKey =
+        await _ref.read(settingsProvider.notifier).getApiKey(settings.provider) ?? '';
+    final aiService = _ref.read(aiServiceProvider);
+
+    final file = io.File(audioPath);
+    final bytes = await file.readAsBytes();
+    final base64Data = base64Encode(bytes);
+
+    final fileContent = [
+      {
+        'type': 'file',
+        'file': {
+          'filename': 'document.pdf',
+          'file_data': 'data:application/pdf;base64,$base64Data',
+        },
+      },
+      {
+        'type': 'text',
+        'text': question.trim(),
+      },
+    ];
+
+    final history = state.messages
+        .take(state.messages.length - 1)
+        .map((m) => m.toApiMap())
+        .toList();
+
+    final isFirstMessage = state.messages.length == 2;
+
+    final apiMessages = <Map<String, dynamic>>[
+      {'role': 'system', 'content': 'You are a helpful assistant that answers questions about the provided document.'},
+      if (isFirstMessage)
+        {'role': 'user', 'content': fileContent}
+      else
+        ...history,
+    ];
+
+    try {
+      final stream = aiService.streamCompletion(
+        apiKey: apiKey,
+        model: settings.activeModel,
+        messages: apiMessages,
+        provider: settings.provider,
+      );
+
+      String accumulated = '';
+      _streamSub = stream.listen(
+        (delta) {
+          if (!_mounted) return;
+          accumulated += delta;
+          final updated = List<ChatMessage>.from(state.messages);
+          updated[updated.length - 1] =
+              ChatMessage(role: 'assistant', content: accumulated);
+          state = state.copyWith(messages: updated);
+        },
+        onError: (Object e) {
+          if (!_mounted) return;
+          final msgs = List<ChatMessage>.from(state.messages)
+            ..removeLast();
+          state = state.copyWith(
+            messages: msgs,
+            isStreaming: false,
+            error: e is AiException ? e.message : e.toString(),
+          );
+        },
+        onDone: () {
+          if (!_mounted) return;
+          state = state.copyWith(isStreaming: false);
+        },
+        cancelOnError: true,
+      );
+    } catch (e) {
+      final msgs = List<ChatMessage>.from(state.messages)..removeLast();
+      state = state.copyWith(
+        messages: msgs,
+        isStreaming: false,
+        error: e is AiException ? e.message : e.toString(),
+      );
+    }
   }
 }
 

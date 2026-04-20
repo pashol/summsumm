@@ -5,6 +5,12 @@
 -keep class io.flutter.view.** { *; }
 -keep class io.flutter.** { *; }
 -keep class io.flutter.plugins.** { *; }
+-keep class io.flutter.embedding.engine.FlutterEngine
+-keep class io.flutter.embedding.engine.plugins.** { *; }
+
+# Generated plugin registrant
+-keep class io.flutter.plugins.GeneratedPluginRegistrant { *; }
+-keep class io.flutter.embedding.engine.plugins.util.GeneratedPluginRegister { *; }
 
 # AndroidX
 -keep class androidx.** { *; }
