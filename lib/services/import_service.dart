@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter_sound/flutter_sound.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:summsumm/models/meeting.dart';
@@ -34,10 +35,17 @@ class ImportService {
     await File(sourcePath).copy(destPath);
 
     final title = p.basenameWithoutExtension(sourcePath);
+
+    // Read duration for audio files using fast metadata helper
+    int durationSec = 0;
+    if (type == MeetingType.meeting) {
+      durationSec = await _getAudioDuration(destPath);
+    }
+
     final meeting = Meeting(
       id: id,
       createdAt: DateTime.now(),
-      durationSec: 0,
+      durationSec: durationSec,
       audioPath: destPath,
       title: title,
       status: MeetingStatus.recorded,
@@ -55,5 +63,17 @@ class ImportService {
     final dir = Directory(p.join(docsDir.path, 'meetings'));
     await dir.create(recursive: true);
     return dir;
+  }
+
+  /// Extracts audio duration in seconds using flutter_sound_helper.
+  /// This reads metadata only - much faster than decoding the file.
+  Future<int> _getAudioDuration(String inputPath) async {
+    try {
+      final helper = FlutterSoundHelper();
+      final duration = await helper.duration(inputPath);
+      return (duration?.inSeconds ?? 0);
+    } catch (_) {
+      return 0;
+    }
   }
 }

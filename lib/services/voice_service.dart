@@ -6,6 +6,7 @@ import 'package:flutter_sound/flutter_sound.dart';
 import 'package:ffmpeg_kit_flutter_new_min/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new_min/ffmpeg_kit_config.dart';
 import 'package:ffmpeg_kit_flutter_new_min/return_code.dart';
+import 'package:ffmpeg_kit_flutter_new_min/statistics.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
@@ -68,6 +69,7 @@ class VoiceService {
   Future<void>? _initializing;
   String? _tempFilePath;
   bool _debugMode = false;
+  double _inputDurationSec = 0;
 
   VoiceService({http.Client? httpClient}) : _http = httpClient ?? http.Client();
 
@@ -146,7 +148,7 @@ class VoiceService {
 
   // --- FFmpeg static helpers (can run in isolate) ---
 
-  Future<String> _preprocessAudio(String inputPath, String outputPath) async {
+  Future<String> _preprocessAudio(String inputPath, String outputPath, {void Function(double)? onProgress}) async {
     final completer = Completer<String>();
     final cmd = '-y -i "$inputPath" -vn -ac 1 -ar 16000 '
         '-af "highpass=f=80,lowpass=f=7600,loudnorm=I=-16:TP=-1.5:LRA=11" '
@@ -159,11 +161,16 @@ class VoiceService {
         final logs = await session.getAllLogsAsString();
         completer.completeError(VoiceTranscriptionException('Preprocessing failed: $logs'));
       }
+    }, null, (Statistics stats) {
+      if (onProgress != null && stats.getTime() > 0 && _inputDurationSec > 0) {
+        final progress = (stats.getTime() / 1000.0 / _inputDurationSec).clamp(0.0, 0.99);
+        onProgress(progress);
+      }
     });
     return completer.future;
   }
 
-  Future<List<Map<String, double>>> _detectSilence(String inputPath) async {
+  Future<List<Map<String, double>>> _detectSilence(String inputPath, {void Function(double)? onProgress}) async {
     final logs = StringBuffer();
 
     await FFmpegKit.executeAsync(
@@ -172,7 +179,11 @@ class VoiceService {
       (log) {
         logs.writeln(log.getMessage());
       },
-      (stats) {},
+      (stats) {
+        if (onProgress != null && stats.getTime() > 0 && _inputDurationSec > 0) {
+          onProgress((stats.getTime() / 1000.0 / _inputDurationSec).clamp(0.0, 0.99));
+        }
+      },
     );
 
     final silenceStarts = <double>[];
@@ -260,7 +271,8 @@ class VoiceService {
     return chunks;
   }
 
-  Future<String> _cutChunk(String inputPath, double start, double end, String outputPath) async {
+  Future<String> _cutChunk(String inputPath, double start, double end, String outputPath, {void Function(double)? onProgress}) async {
+    final chunkDuration = end - start;
     final completer = Completer<String>();
     final cmd = '-y -i "$inputPath" -ss $start -to $end -c:a aac -b:a 64k "$outputPath"';
     await FFmpegKit.executeAsync(cmd, (session) async {
@@ -276,6 +288,10 @@ class VoiceService {
       }
       final logs = await session.getAllLogsAsString();
       completer.completeError(VoiceTranscriptionException('Failed to cut chunk: ${logs ?? "unknown error"}'));
+    }, null, (Statistics stats) {
+      if (onProgress != null && stats.getTime() > 0 && chunkDuration > 0) {
+        onProgress((stats.getTime() / 1000.0 / chunkDuration).clamp(0.0, 0.99));
+      }
     });
     return completer.future;
   }
@@ -322,8 +338,11 @@ class VoiceService {
       }
 
       final fileSize = await file.length();
-      logger.progress('Validating audio...', 0.0);
+      logger.progress('Validating audio…', null);
       logger.info('File size: ${(fileSize / 1024 / 1024).toStringAsFixed(1)}MB');
+
+      _inputDurationSec = await _getAudioDuration(filePath);
+      logger.info('Audio duration: ${_inputDurationSec.toStringAsFixed(1)}s');
 
       String processedPath = filePath;
       final tempDir = await getTemporaryDirectory();
@@ -337,10 +356,12 @@ class VoiceService {
 
       // Only preprocess if > 10MB
       if (fileSize > 10 * 1024 * 1024) {
-        logger.progress('Preprocessing audio...', 0.05);
+        logger.progress('Preprocessing audio…', null);
         final processedFile = File('${tempDir.path}/processed_${DateTime.now().millisecondsSinceEpoch}.m4a');
 
-        processedPath = await _preprocessAudio(filePath, processedFile.path);
+        processedPath = await _preprocessAudio(filePath, processedFile.path, onProgress: (p) {
+          logger.progress('Preprocessing audio ${(_inputDurationSec > 0 ? '${(p * 100).round()}%' : '…')}', 0.01 + p * 0.09);
+        });
 
         if (debugDir != null && await processedFile.exists()) {
           await processedFile.copy('$debugDir/processed.flac');
@@ -350,8 +371,10 @@ class VoiceService {
       }
 
       // Detect silence / speech segments
-      logger.progress('Analyzing audio segments...', 0.08);
-      final segments = await _detectSilence(processedPath);
+      logger.progress('Analyzing audio segments…', null);
+      final segments = await _detectSilence(processedPath, onProgress: (p) {
+        logger.progress('Analyzing audio ${(_inputDurationSec > 0 ? '${(p * 100).round()}%' : '…')}', 0.1 + p * 0.1);
+      });
       logger.info('Found ${segments.length} speech segments');
 
       if (segments.isEmpty) {
