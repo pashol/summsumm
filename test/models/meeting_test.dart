@@ -152,5 +152,127 @@ void main() {
       expect(updated.summaries, hasLength(1));
       expect(updated.status, MeetingStatus.summarizing);
     });
+
+    test('full round-trip preserves all fields', () {
+      final original = Meeting(
+        id: 'm1',
+        createdAt: DateTime.utc(2026, 4, 20, 14, 30, 0),
+        durationSec: 300,
+        audioPath: '/path/to/audio.m4a',
+        title: 'Sprint Review',
+        transcript: 'Full transcript here',
+        status: MeetingStatus.done,
+        lastError: null,
+        provider: 'openai',
+        archived: false,
+        type: MeetingType.meeting,
+        transcriptionLog: 'log data',
+        transcriptionStatus: 'complete',
+        transcriptionProgress: 1.0,
+        summaries: [
+          MeetingSummary(
+            id: 's1',
+            style: SummaryStyle.detailed,
+            language: 'German',
+            content: 'Detailed content',
+            createdAt: DateTime.utc(2026, 4, 20, 14, 35, 0),
+          ),
+        ],
+      );
+
+      final restored = Meeting.fromJson(original.toJson());
+
+      expect(restored.id, original.id);
+      expect(restored.createdAt, original.createdAt);
+      expect(restored.durationSec, original.durationSec);
+      expect(restored.audioPath, original.audioPath);
+      expect(restored.title, original.title);
+      expect(restored.transcript, original.transcript);
+      expect(restored.status, original.status);
+      expect(restored.lastError, original.lastError);
+      expect(restored.provider, original.provider);
+      expect(restored.archived, original.archived);
+      expect(restored.type, original.type);
+      expect(restored.transcriptionLog, original.transcriptionLog);
+      expect(restored.transcriptionStatus, original.transcriptionStatus);
+      expect(restored.transcriptionProgress, original.transcriptionProgress);
+      expect(restored.summaries, hasLength(1));
+      expect(restored.summaries[0].id, original.summaries[0].id);
+      expect(restored.summaries[0].style, original.summaries[0].style);
+      expect(restored.summaries[0].language, original.summaries[0].language);
+      expect(restored.summaries[0].content, original.summaries[0].content);
+      expect(restored.summaries[0].createdAt, original.summaries[0].createdAt);
+    });
+
+    test('fromJson handles durationSec as double', () {
+      final json = {
+        'id': 'm1',
+        'createdAt': '2026-04-20T10:00:00.000Z',
+        'durationSec': 300.0,
+        'audioPath': '/path',
+        'title': 'Test',
+        'status': 'done',
+      };
+
+      final meeting = Meeting.fromJson(json);
+      expect(meeting.durationSec, 300);
+    });
+
+    test('fromJson uses fallbacks for missing required fields', () {
+      final json = {
+        'createdAt': '2026-04-20T10:00:00.000Z',
+        'durationSec': 300,
+        'status': 'done',
+      };
+
+      final meeting = Meeting.fromJson(json);
+      expect(meeting.id, 'unknown');
+      expect(meeting.audioPath, '');
+      expect(meeting.title, 'Untitled');
+    });
+
+    test('fromJsonString and toJsonString round-trip', () {
+      final original = Meeting(
+        id: 'm1',
+        createdAt: DateTime.utc(2026, 4, 20, 14, 30, 0),
+        durationSec: 300,
+        audioPath: '/path',
+        title: 'Test',
+        status: MeetingStatus.done,
+        summaries: [
+          MeetingSummary(
+            id: 's1',
+            style: SummaryStyle.concise,
+            language: 'English',
+            content: 'Content',
+            createdAt: DateTime.utc(2026, 4, 20, 14, 30, 0),
+          ),
+        ],
+      );
+
+      final restored = Meeting.fromJsonString(original.toJsonString());
+      expect(restored.id, original.id);
+      expect(restored.createdAt, original.createdAt);
+      expect(restored.durationSec, original.durationSec);
+      expect(restored.summaries, hasLength(1));
+    });
+
+    test('createdAt is stored and restored in UTC', () {
+      final original = Meeting(
+        id: 'm1',
+        createdAt: DateTime.utc(2026, 4, 20, 14, 30, 0),
+        durationSec: 300,
+        audioPath: '/path',
+        title: 'Test',
+        status: MeetingStatus.done,
+      );
+
+      final json = original.toJson();
+      expect(json['createdAt'], endsWith('Z'));
+
+      final restored = Meeting.fromJson(json);
+      expect(restored.createdAt.isUtc, isTrue);
+      expect(restored.createdAt, original.createdAt);
+    });
   });
 }

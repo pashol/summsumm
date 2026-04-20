@@ -40,13 +40,13 @@ class MeetingSummary {
       'style': style.name,
       'language': language,
       'content': content,
-      'createdAt': createdAt.toIso8601String(),
+      'createdAt': createdAt.toUtc().toIso8601String(),
     };
   }
 
   factory MeetingSummary.fromJson(Map<String, dynamic> json) {
     return MeetingSummary(
-      id: json['id'] as String,
+      id: json['id'] as String? ?? 'unknown',
       style: SummaryStyle.values.firstWhere(
         (e) => e.name == json['style'],
         orElse: () => SummaryStyle.structured,
@@ -139,7 +139,7 @@ class Meeting {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'createdAt': createdAt.toIso8601String(),
+      'createdAt': createdAt.toUtc().toIso8601String(),
       'durationSec': durationSec,
       'audioPath': audioPath,
       'title': title,
@@ -174,17 +174,17 @@ class Meeting {
           style: SummaryStyle.structured,
           language: 'Same as input',
           content: oldSummary,
-          createdAt: DateTime.parse(json['createdAt'] as String),
+      createdAt: DateTime.parse(json['createdAt'] as String).toUtc(),
         ),
       ];
     }
 
     return Meeting(
-      id: json['id'] as String,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      durationSec: json['durationSec'] as int,
-      audioPath: json['audioPath'] as String,
-      title: json['title'] as String,
+      id: json['id'] as String? ?? 'unknown',
+      createdAt: DateTime.parse(json['createdAt'] as String).toUtc(),
+      durationSec: (json['durationSec'] as num).toInt(),
+      audioPath: json['audioPath'] as String? ?? '',
+      title: json['title'] as String? ?? 'Untitled',
       transcript: json['transcript'] as String?,
       status: MeetingStatus.values.firstWhere(
         (e) => e.name == json['status'],
