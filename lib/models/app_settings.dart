@@ -10,6 +10,7 @@ class AppSettings {
   final String openaiKey;
   final String openrouterKey;
   final bool debugMode;
+  final String? localeOverride;
 
   const AppSettings({
     required this.provider,
@@ -21,6 +22,7 @@ class AppSettings {
     required this.openaiKey,
     required this.openrouterKey,
     this.debugMode = false,
+    this.localeOverride,
   });
 
   factory AppSettings.defaults() => const AppSettings(
@@ -33,6 +35,7 @@ class AppSettings {
         openaiKey: '',
         openrouterKey: '',
         debugMode: false,
+        localeOverride: null,
       );
 
   AppSettings copyWith({
@@ -45,6 +48,7 @@ class AppSettings {
     String? openaiKey,
     String? openrouterKey,
     bool? debugMode,
+    String? localeOverride,
   }) =>
       AppSettings(
         provider: provider ?? this.provider,
@@ -56,6 +60,7 @@ class AppSettings {
         openaiKey: openaiKey ?? this.openaiKey,
         openrouterKey: openrouterKey ?? this.openrouterKey,
         debugMode: debugMode ?? this.debugMode,
+        localeOverride: localeOverride ?? this.localeOverride,
       );
 
   Map<String, dynamic> toJson() => {
@@ -68,6 +73,7 @@ class AppSettings {
         'openaiKey': openaiKey,
         'openrouterKey': openrouterKey,
         'debugMode': debugMode,
+        'localeOverride': localeOverride,
       };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
@@ -80,6 +86,7 @@ class AppSettings {
         openaiKey: json['openaiKey'] as String? ?? '',
         openrouterKey: json['openrouterKey'] as String? ?? '',
         debugMode: json['debugMode'] as bool? ?? false,
+        localeOverride: json['localeOverride'] as String?,
       );
 
   String get activeModel =>
@@ -102,7 +109,8 @@ class AppSettings {
         other.ttsSpeed == ttsSpeed &&
         other.openaiKey == openaiKey &&
         other.openrouterKey == openrouterKey &&
-        other.debugMode == debugMode;
+        other.debugMode == debugMode &&
+        other.localeOverride == localeOverride;
   }
 
   @override
@@ -116,6 +124,7 @@ class AppSettings {
         openaiKey,
         openrouterKey,
         debugMode,
+        localeOverride,
       );
 }
 

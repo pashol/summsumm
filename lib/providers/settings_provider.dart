@@ -9,6 +9,7 @@ part 'settings_provider.g.dart';
 
 const _prefsKey = 'app_settings_json';
 const _validProviders = {'openrouter', 'openai'};
+const kSupportedLocaleCodes = ['en', 'de'];
 
 @Riverpod(keepAlive: true)
 SecureStorageService secureStorage(SecureStorageRef ref) =>
@@ -89,6 +90,21 @@ class Settings extends _$Settings {
 
   Future<void> persistSettings() async {
     await _persist(state);
+  }
+
+  Future<void> persistSettingsDirect(AppSettings s) async {
+    state = s;
+    await _persist(s);
+  }
+
+  Future<void> setLocaleOverride(String? languageCode) async {
+    if (languageCode != null && !kSupportedLocaleCodes.contains(languageCode)) {
+      debugPrint('Settings.setLocaleOverride rejected unsupported locale: $languageCode');
+      return;
+    }
+    final next = state.copyWith(localeOverride: languageCode);
+    state = next;
+    await _persist(next);
   }
 
   Future<String?> getApiKey(String provider) =>
