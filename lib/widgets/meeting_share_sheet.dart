@@ -35,7 +35,7 @@ class MeetingShareSheet extends StatelessWidget {
               title: const Text('Share Transcript'),
               onTap: () => _shareText(context, meeting.transcript!),
             ),
-          if (meeting.summary != null)
+          if (meeting.summaries.isNotEmpty)
             ListTile(
               leading: const Icon(Icons.summarize_outlined),
               title: const Text('Share Summary'),
