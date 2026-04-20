@@ -95,7 +95,7 @@ class Summary extends _$Summary {
         ? inputText.substring(0, _maxInputChars)
         : inputText;
 
-    final langSuffix = langSuffix(settings.language, 'Summary');
+    final langSuffixText = langSuffix(settings.language, 'Summary');
 
     final messages = [
       {
@@ -107,7 +107,7 @@ class Summary extends _$Summary {
         'role': 'user',
         'content':
             'Concise plain text summary (no markdown) of the following text. '
-                '$langSuffix\n\nText:\n$trimmed',
+                '$langSuffixText\n\nText:\n$trimmed',
       },
     ];
 
@@ -185,7 +185,7 @@ class Summary extends _$Summary {
       isSpeaking: false,
     );
 
-    final langSuffix = langSuffix(settings.language, 'Your entire response');
+    final langSuffixText = langSuffix(settings.language, 'Your entire response');
 
     final systemPrompt =
         'You are an AI assistant helping a user understand a document.\n'
@@ -198,7 +198,7 @@ class Summary extends _$Summary {
         'If the answer is in the document, refer to it specifically. '
         'If it is not, answer from your general knowledge and note that '
         'the document does not cover this.'
-        '$langSuffix';
+        '$langSuffixText';
 
     final isPdf = document != null && document.isPdf && !document.hasError;
     Map<String, dynamic> contextMessage;
@@ -213,7 +213,7 @@ class Summary extends _$Summary {
         return;
       }
       final base64Data = base64Encode(await file.readAsBytes());
-      final langSuffix2 = langSuffix(settings.language, 'Summary');
+      final langSuffixText2 = langSuffix(settings.language, 'Summary');
       contextMessage = {
         'role': 'user',
         'content': [
@@ -227,7 +227,7 @@ class Summary extends _$Summary {
           {
             'type': 'text',
             'text': 'Provide a concise summary of this PDF document. '
-                '$langSuffix2\n\nPlease summarize the key points and main takeaways.',
+                '$langSuffixText2\n\nPlease summarize the key points and main takeaways.',
           },
         ],
       };
@@ -313,7 +313,7 @@ class Summary extends _$Summary {
     _stopBlink();
     await _tts.stop();
 
-    final langSuffix = langSuffix(settings.language, 'Your entire response');
+    final langSuffixText = langSuffix(settings.language, 'Your entire response');
     const factCheckSystemPrompt =
         'You are a critical investigative journalist. Verify the factual claims in the provided content with rigorous skepticism.';
     final factCheckInstruction =
@@ -330,7 +330,7 @@ class Summary extends _$Summary {
         '\n'
         'Use the exact emoji prefixes shown. Number each claim sequentially across all categories. '
         'Do not include external links or URLs.'
-        '$langSuffix';
+        '$langSuffixText';
 
     final isPdf = document != null && document.isPdf && !document.hasError;
 
@@ -567,9 +567,9 @@ class Summary extends _$Summary {
     );
 
     final uri = document.uri!;
-    final langSuffix = langSuffix(settings.language, 'Summary');
+    final langSuffixText = langSuffix(settings.language, 'Summary');
     final prompt = 'Provide a concise summary of this PDF document. '
-        '$langSuffix\n\nPlease summarize the key points and main takeaways.';
+        '$langSuffixText\n\nPlease summarize the key points and main takeaways.';
 
     _startBlink();
     state = state.copyWith(status: SummaryStatus.streaming);
@@ -696,9 +696,9 @@ class Summary extends _$Summary {
     final uri = document.uri!;
     // For content:// URIs, we'd need platform channel to read
     // For now, pass the URI string to the service
-    final langSuffix = langSuffix(settings.language, 'Summary');
+    final langSuffixText = langSuffix(settings.language, 'Summary');
     final prompt = 'Provide a concise summary of this PDF document. '
-        '$langSuffix\n\nPlease summarize the key points and main takeaways.';
+        '$langSuffixText\n\nPlease summarize the key points and main takeaways.';
 
     _startBlink();
     state = state.copyWith(

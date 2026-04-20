@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 
 import 'models/document.dart';
 import 'models/meeting.dart';
+import 'models/summary_style.dart';
 import 'providers/settings_provider.dart';
 import 'screens/settings_screen.dart';
 import 'screens/summary_sheet.dart';
@@ -320,7 +321,15 @@ class _SummarySheetHostState extends State<_SummarySheetHost>
         initialIndex: 0,
         onSummarized: (summary) async {
           await repo.save(entry.copyWith(
-            summary: summary,
+            summaries: [
+              MeetingSummary(
+                id: 'sum_${DateTime.now().millisecondsSinceEpoch}',
+                style: SummaryStyle.structured,
+                language: 'Same as input',
+                content: summary,
+                createdAt: DateTime.now(),
+              ),
+            ],
             status: MeetingStatus.done,
           ),);
         },
@@ -443,7 +452,15 @@ class _DocumentSheetHostState extends State<_DocumentSheetHost> {
                 onClose: _closeSheet,
                 onSummarized: (summary) async {
                   await _repo.save(_entry.copyWith(
-                    summary: summary,
+                    summaries: [
+                      MeetingSummary(
+                        id: 'sum_${DateTime.now().millisecondsSinceEpoch}',
+                        style: SummaryStyle.structured,
+                        language: 'Same as input',
+                        content: summary,
+                        createdAt: DateTime.now(),
+                      ),
+                    ],
                     status: MeetingStatus.done,
                   ),);
                 },
