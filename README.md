@@ -53,6 +53,18 @@ Ever wanted to quickly summarize articles, emails, or lengthy texts without leav
 3. Stop via notification or in-app button
 4. Transcribe and summarize when online
 
+#### Transcription Statuses
+When transcribing a meeting, you'll see these status indicators:
+
+| Status | Description |
+|--------|-------------|
+| **Initializing** | Setting up the transcription pipeline and preparing audio file |
+| **Preprocessing** | Running FFmpeg audio enhancement (noise reduction, normalization) for files >10MB |
+| **Preparing** | Cutting audio into chunks based on silence detection for efficient processing |
+| **Analyzing** | Detecting speech segments and splitting audio at natural pauses |
+| **Transcribing** | Sending audio chunks to AI for speech-to-text conversion |
+| **Finalizing** | Merging chunk transcripts, fixing timestamps, and ensuring consistent speaker labels |
+
 ## Building from Source
 
 Requirements:
