@@ -378,6 +378,7 @@ class VoiceService {
       final chunksDir = Directory('${tempDir.path}/chunks_${DateTime.now().millisecondsSinceEpoch}');
       await chunksDir.create();
       final chunkPaths = <String>[];
+      final chunkOffsets = <double>[];
 
       // Cut chunks
       logger.progress('Preparing audio chunks...', 0.2);
@@ -386,6 +387,7 @@ class VoiceService {
         final chunkPath = '${chunksDir.path}/chunk_$i.m4a';
         await _cutChunk(processedPath, chunk['start']!, chunk['end']!, chunkPath);
         chunkPaths.add(chunkPath);
+        chunkOffsets.add(chunk['start']!);
 
         if (debugDir != null) {
           final chunkFile = File(chunkPath);
@@ -430,7 +432,14 @@ class VoiceService {
       }
 
       logger.progress('Finalizing...', 0.95);
-      final result = transcriptParts.join('\n\n');
+
+      String result;
+      if (diarize && chunkPaths.length > 1) {
+        final joined = transcriptParts.join('\n\n');
+        result = await _relabelSpeakers(joined, chunkOffsets, apiKey);
+      } else {
+        result = transcriptParts.join('\n\n');
+      }
 
       logger.info('Transcription complete', data: {
         'chunks': chunkPaths.length,
@@ -573,6 +582,71 @@ class VoiceService {
     );
   }
 
+  static const _relabelingModel = 'google/gemini-3-flash-preview';
+
+  Future<String> _relabelSpeakers(String transcript, List<double> offsets, String apiKey) async {
+    if (offsets.length <= 1) return transcript;
+
+    // Build chunk boundary metadata
+    final boundaries = offsets.asMap().entries.map((e) {
+      final nextOffset = e.key < offsets.length - 1
+          ? offsets[e.key + 1]
+          : offsets[e.key] + 300.0; // Approximate last chunk duration
+      return 'Chunk ${e.key + 1}: ${e.value.toStringAsFixed(1)}s - ${nextOffset.toStringAsFixed(1)}s';
+    }).join('\n');
+
+    final prompt = '''You are given a meeting transcript that was transcribed in separate audio chunks. 
+Speaker labels may reset between chunks and be inconsistent (e.g., "Speaker 1" in chunk 2 might be the same person as "Speaker 2" in chunk 1).
+
+CHUNK BOUNDARIES:
+$boundaries
+
+TRANSCRIPT:
+$transcript
+
+TASK:
+1. Assign CONSISTENT global speaker labels (Speaker 1, Speaker 2, etc.) throughout the entire transcript
+2. When the same speaker continues across a chunk boundary, keep the SAME label
+3. Timestamps in the format [MM:SS] or [HH:MM:SS] may be relative to each chunk. Make timestamps ABSOLUTE based on chunk offsets (e.g., if chunk 2 starts at 298s, [00:00] becomes [04:58])
+4. Preserve all speech content verbatim - only fix speaker labels and timestamps
+5. Maintain the format: [HH:MM:SS] Speaker X: <text>
+
+Output only the corrected transcript, no explanations or markdown code blocks.'''
+;
+
+    final response = await _http.post(
+      Uri.parse('https://openrouter.ai/api/v1/chat/completions'),
+      headers: {
+        'Authorization': 'Bearer $apiKey',
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://github.com/pashol/summsumm',
+        'X-Title': 'AI Text Summarizer',
+      },
+      body: jsonEncode({
+        'model': _relabelingModel,
+        'messages': [
+          {
+            'role': 'user',
+            'content': prompt,
+          },
+        ],
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      final choices = json['choices'] as List?;
+      if (choices == null || choices.isEmpty) return transcript;
+      final message = choices.first['message'] as Map<String, dynamic>?;
+      final content = message?['content'];
+      if (content is String) {
+        return content.trim();
+      }
+    }
+
+    // If relabeling fails, return original transcript
+    return transcript;
+  }
 
   Future<String?> transcribeLocally(String filePath) async {
     final file = File(filePath);
