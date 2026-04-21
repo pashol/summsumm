@@ -11,6 +11,7 @@ import '../providers/import_service_provider.dart';
 import '../providers/meeting_library_provider.dart';
 import '../providers/meeting_provider.dart';
 import '../widgets/meeting_share_sheet.dart';
+import '../widgets/spring_page_route.dart';
 import 'archived_meetings_screen.dart';
 import 'meeting_detail_screen.dart';
 import 'recording_screen.dart';
@@ -37,12 +38,7 @@ class MeetingLibraryScreen extends ConsumerWidget {
             tooltip: l10n.libraryArchived,
             onPressed: () {
               HapticFeedback.lightImpact();
-              Navigator.push<void>(
-                context,
-                MaterialPageRoute<void>(
-                  builder: (_) => const ArchivedMeetingsScreen(),
-                ),
-              );
+              Navigator.push<void>(context, SpringPageRoute(builder: (_) => const ArchivedMeetingsScreen()));
             },
           ),
           IconButton(
@@ -50,10 +46,7 @@ class MeetingLibraryScreen extends ConsumerWidget {
             tooltip: l10n.librarySettings,
             onPressed: () {
               HapticFeedback.lightImpact();
-              Navigator.push<void>(
-                context,
-                MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
-              );
+              Navigator.push<void>(context, SpringPageRoute(builder: (_) => const SettingsScreen()));
             },
           ),
         ],
@@ -88,7 +81,20 @@ class MeetingLibraryScreen extends ConsumerWidget {
     return SlidableAutoCloseBehavior(
       child: ListView.builder(
         itemCount: meetings.length,
-        itemBuilder: (ctx, i) => _MeetingTile(meeting: meetings[i]),
+        itemBuilder: (ctx, i) {
+          return TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: 1.0),
+            duration: Duration(milliseconds: 400 + (i * 50)),
+            curve: Curves.elasticOut,
+            builder: (context, value, child) {
+              return Transform.translate(
+                offset: Offset(0, 30 * (1 - value)),
+                child: Opacity(opacity: value, child: child),
+              );
+            },
+            child: _MeetingTile(meeting: meetings[i]),
+          );
+        },
       ),
     );
   }
@@ -118,10 +124,7 @@ class MeetingLibraryScreen extends ConsumerWidget {
 
   Future<void> _startRecording(BuildContext context, WidgetRef ref) async {
     HapticFeedback.lightImpact();
-    await Navigator.push<void>(
-      context,
-      MaterialPageRoute<void>(builder: (_) => const RecordingScreen()),
-    );
+    await Navigator.push<void>(context, SpringPageRoute(builder: (_) => const RecordingScreen()));
     ref.read(meetingLibraryProvider.notifier).refresh();
   }
 }
@@ -215,12 +218,7 @@ class _MeetingTile extends ConsumerWidget {
         trailing: _ActionButton(meeting: meeting, notifier: notifier),
         onTap: () async {
           HapticFeedback.lightImpact();
-          await Navigator.push<void>(
-            context,
-            MaterialPageRoute<void>(
-              builder: (_) => MeetingDetailScreen(meetingId: meeting.id),
-            ),
-          );
+          await Navigator.push<void>(context, SpringPageRoute(builder: (_) => MeetingDetailScreen(meetingId: meeting.id)));
           ref.read(meetingLibraryProvider.notifier).refresh();
         },
       ),
