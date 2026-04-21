@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:summsumm/l10n/app_localizations.dart';
 
 import '../models/app_settings.dart';
 import '../models/ai_model.dart';
@@ -8,8 +9,8 @@ import '../models/summary_style.dart';
 import '../providers/models_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/ai_service.dart';
+import '../utils/localized_strings.dart';
 import '../widgets/glass_card.dart';
-import '../widgets/neumorphic_button.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key, this.isInitialSetup = false});
@@ -66,7 +67,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     if (apiKey.isEmpty) {
       setState(() {
-        _connectionResult = 'Enter an API key first';
+        _connectionResult = AppLocalizations.of(context)!.settingsEnterApiKeyFirst;
         _connectionError = true;
       });
       return;
@@ -76,7 +77,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     if (model.isEmpty) {
       setState(() {
-        _connectionResult = 'Select a model first';
+        _connectionResult = AppLocalizations.of(context)!.settingsSelectModelFirst;
         _connectionError = true;
       });
       return;
@@ -94,7 +95,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           );
       if (mounted) {
         setState(() {
-          _connectionResult = 'Connection successful!';
+          _connectionResult = AppLocalizations.of(context)!.settingsConnectionSuccess;
           _connectionError = false;
         });
       }
@@ -125,17 +126,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final settings = ref.watch(settingsProvider);
     final notifier = ref.read(settingsProvider.notifier);
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
     final isProviderOpenAi = settings.provider == 'openai';
-    final providerLabel = isProviderOpenAi ? 'OpenAI' : 'OpenRouter';
+    final providerLabel = isProviderOpenAi ? l10n.settingsOpenAi : l10n.settingsOpenRouter;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings'),
+        title: Text(l10n.settingsTitle),
         leading: widget.isInitialSetup ? null : const BackButton(),
         automaticallyImplyLeading: !widget.isInitialSetup,
       ),
@@ -153,7 +155,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Set your API key to get started.',
+                        l10n.settingsSetupHint,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: cs.onPrimaryContainer,
                         ),
@@ -166,20 +168,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             const SizedBox(height: 16),
           ],
           _SectionCard(
-            title: 'Model',
+            title: l10n.settingsModelSection,
             icon: Icons.smart_toy_outlined,
             children: [
               DropdownButtonFormField<String>(
                 initialValue: settings.provider,
-                decoration: const InputDecoration(
-                  labelText: 'Provider',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.dns_outlined),
+                decoration: InputDecoration(
+                  labelText: l10n.settingsProviderLabel,
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.dns_outlined),
                 ),
-                items: const [
-                  DropdownMenuItem(
-                      value: 'openrouter', child: Text('OpenRouter')),
-                  DropdownMenuItem(value: 'openai', child: Text('OpenAI')),
+                items: [
+                   DropdownMenuItem(
+                       value: 'openrouter', child: Text(l10n.settingsOpenRouter),),
+                  DropdownMenuItem(value: 'openai', child: Text(l10n.settingsOpenAi)),
                 ],
                 onChanged: (v) async {
                   if (v != null && v != settings.provider) {
@@ -194,16 +196,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   initialValue: settings.openaiModel.isEmpty
                       ? kOpenAiModels.first.id
                       : settings.openaiModel,
-                  decoration: const InputDecoration(
-                    labelText: 'Model',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.psychology_outlined),
+                  decoration: InputDecoration(
+                    labelText: l10n.settingsModelSection,
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.psychology_outlined),
                   ),
                   items: kOpenAiModels
                       .map((m) => DropdownMenuItem(
                             value: m.id,
                             child: Text(m.name),
-                          ))
+                          ),)
                       .toList(),
                   onChanged: (v) {
                     if (v != null) notifier.setOpenAiModel(v);
@@ -214,16 +216,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   initialValue: settings.openrouterModel.isEmpty
                       ? null
                       : settings.openrouterModel,
-                  decoration: const InputDecoration(
-                    labelText: 'Model',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.psychology_outlined),
+                  decoration: InputDecoration(
+                    labelText: l10n.settingsModelSection,
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.psychology_outlined),
                   ),
                   items: kCuratedModels
                       .map((m) => DropdownMenuItem(
                             value: m.id,
                             child: Text(m.name),
-                          ))
+                          ),)
                       .toList(),
                   onChanged: (v) {
                     if (v != null) notifier.setOpenRouterModel(v);
@@ -234,19 +236,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   leading: Icon(
                     _showAdvanced ? Icons.expand_less : Icons.expand_more,
                   ),
-                  title: const Text('More models'),
-                  subtitle: const Text('Search all OpenRouter models'),
+                  title: Text(l10n.settingsMoreModels),
+                  subtitle: Text(l10n.settingsSearchAllModels),
                   contentPadding: EdgeInsets.zero,
                   dense: true,
                   onTap: () => setState(() => _showAdvanced = !_showAdvanced),
                 ),
                 if (_showAdvanced) ...[
                   if (_apiKeyCtrl.text.trim().isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 8),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
                       child: Text(
-                        'Enter your API key first to load models.',
-                        style: TextStyle(fontStyle: FontStyle.italic),
+                        l10n.settingsEnterKeyFirst,
+                        style: const TextStyle(fontStyle: FontStyle.italic),
                       ),
                     )
                   else
@@ -261,18 +263,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const SizedBox(height: 16),
           _SectionCard(
-            title: '$providerLabel API Key',
+            title: l10n.settingsApiKeySection(providerLabel),
             icon: Icons.key_outlined,
             children: [
               TextField(
                 controller: _apiKeyCtrl,
                 obscureText: !_showKey,
                 decoration: InputDecoration(
-                  labelText: 'API Key',
+                  labelText: l10n.settingsApiKeyLabel,
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
                     icon: Icon(
-                        _showKey ? Icons.visibility_off : Icons.visibility),
+                        _showKey ? Icons.visibility_off : Icons.visibility,),
                     onPressed: () => setState(() => _showKey = !_showKey),
                   ),
                 ),
@@ -284,7 +286,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   Expanded(
                     child: FilledButton.tonal(
                       onPressed: _saveKey,
-                      child: const Text('Save Key'),
+                      child: Text(l10n.settingsSaveKey),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -301,7 +303,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               ),
                             )
                           : const Icon(Icons.wifi_tethering),
-                      label: const Text('Test'),
+                      label: Text(l10n.settingsTestButton),
                     ),
                   ),
                 ],
@@ -320,18 +322,50 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const SizedBox(height: 16),
           _SectionCard(
-            title: 'Summary',
+            title: l10n.settingsAppLanguageLabel,
+            icon: Icons.translate_outlined,
+            children: [
+              DropdownButtonFormField<String?>(
+                initialValue: settings.localeOverride,
+                decoration: InputDecoration(
+                  labelText: l10n.settingsAppLanguageLabel,
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.language_outlined),
+                ),
+                items: [
+                  DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text(l10n.settingsSystemDefault),
+                  ),
+                  DropdownMenuItem<String?>(
+                    value: 'en',
+                    child: Text(l10n.langEnglish),
+                  ),
+                  DropdownMenuItem<String?>(
+                    value: 'de',
+                    child: Text(l10n.langGerman),
+                  ),
+                ],
+                onChanged: (v) {
+                  ref.read(settingsProvider.notifier).setLocaleOverride(v);
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _SectionCard(
+            title: l10n.settingsSummarySection,
             icon: Icons.summarize_outlined,
             children: [
               DropdownButtonFormField<String>(
                 initialValue: settings.summaryStyle,
-                decoration: const InputDecoration(
-                  labelText: 'Style',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.format_list_bulleted_outlined),
+                decoration: InputDecoration(
+                  labelText: l10n.settingsStyleLabel,
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.format_list_bulleted_outlined),
                 ),
                 items: SummaryStyle.values
-                    .map((s) => DropdownMenuItem(value: s.name, child: Text(s.displayName)))
+                    .map((s) => DropdownMenuItem(value: s.name, child: Text(s.localizedTitle(context))))
                     .toList(),
                 onChanged: (v) {
                   if (v != null) notifier.setSummaryStyle(v);
@@ -340,13 +374,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: settings.language,
-                decoration: const InputDecoration(
-                  labelText: 'Language',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.language),
+                decoration: InputDecoration(
+                  labelText: l10n.settingsLanguageLabel,
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.language),
                 ),
                 items: kSupportedLanguages
-                    .map((l) => DropdownMenuItem(value: l, child: Text(l)))
+                    .map((l) => DropdownMenuItem(value: l, child: Text(localizedLanguageName(context, l))))
                     .toList(),
                 onChanged: (l) {
                   if (l != null) notifier.setLanguage(l);
@@ -356,7 +390,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const SizedBox(height: 16),
           _SectionCard(
-            title: 'Text-to-Speech',
+            title: l10n.settingsTtsSection,
             icon: Icons.record_voice_over_outlined,
             children: [
               Slider(
@@ -477,7 +511,7 @@ class _AdvancedModelPickerState extends ConsumerState<_AdvancedModelPicker> {
       error: (e, _) => Padding(
         padding: const EdgeInsets.only(top: 8),
         child: Text(
-          'Failed to load models: $e',
+          AppLocalizations.of(context)!.settingsFailedToLoadModels(e.toString()),
           style: TextStyle(color: cs.error),
         ),
       ),
@@ -507,10 +541,10 @@ class _AdvancedModelPickerState extends ConsumerState<_AdvancedModelPicker> {
                 Expanded(
                   child: TextField(
                     controller: _searchCtrl,
-                    decoration: const InputDecoration(
-                      hintText: 'Search models...',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.search),
+                    decoration: InputDecoration(
+                      hintText: AppLocalizations.of(context)!.settingsSearchModelsHint,
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.search),
                       isDense: true,
                     ),
                     onChanged: (v) => setState(() => _searchQuery = v),
