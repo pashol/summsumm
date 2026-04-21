@@ -1,3 +1,6 @@
+import 'package:flutter/widgets.dart';
+import 'package:summsumm/l10n/app_localizations.dart';
+
 enum MeetingType { meeting, document }
 
 enum SummaryStyle {
@@ -25,6 +28,22 @@ enum SummaryStyle {
         return [concise, detailed, structured];
       case MeetingType.document:
         return [concise, brief, detailed];
+    }
+  }
+}
+
+extension SummaryStyleLocalization on SummaryStyle {
+  String localizedTitle(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (this) {
+      case SummaryStyle.concise:
+        return l10n.styleConcise;
+      case SummaryStyle.brief:
+        return l10n.styleBrief;
+      case SummaryStyle.detailed:
+        return l10n.styleDetailed;
+      case SummaryStyle.structured:
+        return l10n.styleStructured;
     }
   }
 }
