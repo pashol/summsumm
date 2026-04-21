@@ -312,11 +312,22 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      meeting.lastError ?? l10n.meetingDetailErrorOccurred,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0.0, end: 1.0),
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.elasticOut,
+                      builder: (context, value, child) {
+                        return Transform.scale(
+                          scale: 0.9 + (0.1 * value),
+                          child: Opacity(opacity: value, child: child),
+                        );
+                      },
+                      child: Text(
+                        meeting.lastError ?? l10n.meetingDetailErrorOccurred,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -444,14 +455,8 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                           l10n.meetingDetailGenerateConfirm(language, styleTitle),
                         ),
                         actions: _buildDialogActions(ctx, [
-                          DialogAction(
-                            label: l10n.cancelButton,
-                            onPressed: () => Navigator.pop(ctx),
-                            isDefault: false,
-                          ),
-                          DialogAction(
-                            label: l10n.meetingDetailGenerate,
-                            onPressed: () {
+                          (label: l10n.cancelButton, onPressed: () => Navigator.pop(ctx), isDefault: false),
+                          (label: l10n.meetingDetailGenerate, onPressed: () {
                               Navigator.pop(ctx);
                               setState(() {
                                 _showAddControls = false;
@@ -462,9 +467,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                                 style: style,
                                 language: language,
                               );
-                            },
-                            isDefault: true,
-                          ),
+                            }, isDefault: true),
                         ]),
                       ),
                     );
@@ -847,7 +850,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
 
   List<Widget> _buildDialogActions(
     BuildContext context,
-    List<DialogAction> actions,
+    List<({String label, VoidCallback onPressed, bool isDefault})> actions,
   ) {
     final ordered =
         Platform.isWindows ? actions.reversed.toList() : actions;
@@ -864,18 +867,6 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
       );
     }).toList();
   }
-}
-
-class DialogAction {
-  final String label;
-  final VoidCallback onPressed;
-  final bool isDefault;
-
-  const DialogAction({
-    required this.label,
-    required this.onPressed,
-    this.isDefault = false,
-  });
 }
 
 class _MetadataRow extends StatelessWidget {
@@ -935,6 +926,7 @@ class _TranscribingIndicator extends StatefulWidget {
 class _TranscribingIndicatorState extends State<_TranscribingIndicator>
     with SingleTickerProviderStateMixin {
   late AnimationController _pulseController;
+  late Animation<double> _breathAnimation;
 
   @override
   void initState() {
@@ -943,6 +935,13 @@ class _TranscribingIndicatorState extends State<_TranscribingIndicator>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
+
+    _breathAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
+      CurvedAnimation(
+        parent: _pulseController,
+        curve: Curves.easeInOut,
+      ),
+    );
   }
 
   @override
@@ -964,9 +963,8 @@ class _TranscribingIndicatorState extends State<_TranscribingIndicator>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            FadeTransition(
-              opacity:
-                  _pulseController.drive(Tween(begin: 0.5, end: 1.0)),
+            ScaleTransition(
+              scale: _breathAnimation,
               child: SizedBox(
                 width: 36,
                 height: 36,

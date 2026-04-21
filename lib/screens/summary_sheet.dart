@@ -494,9 +494,20 @@ class _SheetBody extends StatelessWidget {
 
                     // Error message (shown briefly before auto-close)
                     if (isError)
-                      Text(
-                        summaryState.error,
-                        style: TextStyle(color: cs.error),
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0.0, end: 1.0),
+                        duration: const Duration(milliseconds: 400),
+                        curve: Curves.elasticOut,
+                        builder: (context, value, child) {
+                          return Transform.scale(
+                            scale: 0.9 + (0.1 * value),
+                            child: Opacity(opacity: value, child: child),
+                          );
+                        },
+                        child: Text(
+                          summaryState.error,
+                          style: TextStyle(color: cs.error),
+                        ),
                       ),
 
                      // Chat history
