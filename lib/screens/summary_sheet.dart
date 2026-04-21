@@ -13,6 +13,7 @@ import '../providers/summary_provider.dart';
 import 'package:summsumm/providers/voice_service_provider.dart';
 import '../widgets/document_carousel.dart';
 import '../widgets/glass_card.dart';
+import 'package:summsumm/l10n/app_localizations.dart';
 import 'settings_screen.dart';
 
 class SummarySheet extends ConsumerStatefulWidget {
@@ -49,8 +50,9 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
     } catch (e) {
       setState(() => _isRecording = false);
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to start recording: ${e.toString()}')),
+          SnackBar(content: Text(l10n.summarySheetFailedRecording(e.toString()))),
         );
       }
     }
@@ -75,8 +77,9 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
           );
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to process voice input: ${e.toString()}')),
+          SnackBar(content: Text(l10n.summarySheetFailedVoice(e.toString()))),
         );
       }
     }
@@ -125,10 +128,11 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
 
     if (apiKey.isEmpty) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              'No API key configured. Open Settings first.',
+              l10n.summarySheetNoApiKey,
             ),
           ),
         );
@@ -182,8 +186,9 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
 
   void _copyToClipboard(String text) {
     Clipboard.setData(ClipboardData(text: text));
+    final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Copied to clipboard')),
+      SnackBar(content: Text(l10n.summarySheetCopied)),
     );
   }
 
@@ -194,9 +199,10 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
 
     if (apiKey.isEmpty) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No API key configured. Open Settings first.'),
+          SnackBar(
+            content: Text(l10n.summarySheetNoApiKey),
           ),
         );
       }
@@ -388,6 +394,7 @@ class _SheetBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final isStreaming = summaryState.status == SummaryStatus.streaming;
@@ -433,14 +440,14 @@ class _SheetBody extends StatelessWidget {
                   children: [
                     IconButton(
                       icon: const Icon(Icons.settings_outlined),
-                      tooltip: 'Settings',
+                      tooltip: l10n.librarySettings,
                       onPressed: onSettings,
                     ),
                     Expanded(
                       child: Text(
                         summaryState.isFactChecking
-                            ? 'Fact Check'
-                            : 'AI Summary',
+                            ? l10n.summarySheetFactCheck
+                            : l10n.summarySheetAiSummary,
                         textAlign: TextAlign.center,
                         style: theme.textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.w600),
@@ -448,7 +455,7 @@ class _SheetBody extends StatelessWidget {
                     ),
                     IconButton(
                       icon: const Icon(Icons.close),
-                      tooltip: 'Close',
+                      tooltip: l10n.closeButton,
                       onPressed: onClose,
                     ),
                   ],
@@ -536,7 +543,7 @@ class _SheetBody extends StatelessWidget {
                       if (summaryState.source == 'pdf')
                         TextButton(
                           onPressed: onRetryPdf,
-                          child: const Text('Retry'),
+                          child: Text(l10n.retryButton),
                         ),
                     ],
                   ),
@@ -795,6 +802,7 @@ class _ActionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     final IconData ttsIcon;
     final String ttsLabel;
@@ -803,15 +811,15 @@ class _ActionBar extends StatelessWidget {
     switch (ttsState) {
       case TtsState.stopped:
         ttsIcon = Icons.volume_up_outlined;
-        ttsLabel = 'Read Aloud';
+        ttsLabel = l10n.summarySheetReadAloud;
         ttsTap = onReadAloud;
       case TtsState.playing:
         ttsIcon = Icons.pause_circle_outline;
-        ttsLabel = 'Pause';
+        ttsLabel = l10n.summarySheetPause;
         ttsTap = onPauseSpeaking;
       case TtsState.paused:
         ttsIcon = Icons.play_circle_outline;
-        ttsLabel = 'Resume';
+        ttsLabel = l10n.summarySheetResume;
         ttsTap = onResumeSpeaking;
     }
 
@@ -824,7 +832,7 @@ class _ActionBar extends StatelessWidget {
         children: [
           _ActionButton(
             icon: Icons.copy_outlined,
-            label: 'Copy',
+            label: l10n.summarySheetCopy,
             onTap: onCopy,
           ),
           _ActionButton(
@@ -836,12 +844,12 @@ class _ActionBar extends StatelessWidget {
           if (ttsState != TtsState.stopped)
             _ActionButton(
               icon: Icons.stop_circle_outlined,
-              label: 'Stop',
+              label: l10n.summarySheetStop,
               onTap: onStopSpeaking,
             ),
           _ActionButton(
             icon: Icons.fact_check_outlined,
-            label: 'Fact Check',
+            label: l10n.summarySheetFactCheck,
             onTap: onFactCheck,
           ),
         ],
@@ -1044,6 +1052,7 @@ class _FollowUpInputState extends State<_FollowUpInput>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final mq = MediaQuery.of(context);
     final bottom = 8.0 + mq.viewInsets.bottom + mq.padding.bottom;
 
@@ -1061,8 +1070,8 @@ class _FollowUpInputState extends State<_FollowUpInput>
                     onSubmitted: (_) => widget.onSend(),
                     decoration: InputDecoration(
                       hintText: widget.remainingTurns == 1
-                          ? 'Last follow-up question...'
-                          : 'Ask a follow-up question...',
+                          ? l10n.summarySheetLastFollowUp
+                          : l10n.summarySheetFollowUpHint,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
                       ),
