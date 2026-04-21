@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
+import 'package:summsumm/l10n/app_localizations.dart';
 import 'package:summsumm/models/meeting.dart';
 import 'package:summsumm/models/summary_style.dart';
 import 'package:summsumm/models/app_settings.dart';
@@ -9,6 +12,7 @@ import 'package:summsumm/providers/meeting_chat_provider.dart';
 import 'package:summsumm/providers/meeting_library_provider.dart';
 import 'package:summsumm/providers/meeting_provider.dart';
 import 'package:summsumm/providers/settings_provider.dart';
+import 'package:summsumm/utils/localized_strings.dart';
 import 'package:summsumm/widgets/meeting_share_sheet.dart';
 
 class MeetingDetailScreen extends ConsumerStatefulWidget {
@@ -30,6 +34,9 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
   late final TabController _tabController;
   final TextEditingController _chatInputController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
+
+  static bool get _isDesktop =>
+      Platform.isWindows || Platform.isMacOS || Platform.isLinux;
 
   @override
   void initState() {
@@ -62,6 +69,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final meeting = ref.watch(meetingProvider(widget.meetingId));
     final provider = ref.watch(meetingProvider(widget.meetingId).notifier);
     ref.listen(meetingChatProvider(widget.meetingId), (_, __) {
@@ -73,7 +81,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
         actions: [
           IconButton(
             icon: const Icon(Icons.share_outlined),
-            tooltip: 'Share',
+            tooltip: l10n.libraryShare,
             onPressed: () => showMeetingShareSheet(context, meeting),
           ),
           IconButton(
@@ -91,23 +99,23 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-            child: _buildMetadata(meeting),
+            child: _buildMetadata(meeting, l10n),
           ),
           TabBar(
             controller: _tabController,
-            tabs: const [
-              Tab(text: 'Summary'),
-              Tab(text: 'Transcript'),
-              Tab(text: 'Chat'),
+            tabs: [
+              Tab(text: l10n.meetingDetailTabSummary),
+              Tab(text: l10n.meetingDetailTabTranscript),
+              Tab(text: l10n.meetingDetailTabChat),
             ],
           ),
           Expanded(
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildSummaryTab(meeting, provider),
-                _buildTranscriptTab(meeting, provider),
-                _buildChatTab(meeting),
+                _buildSummaryTab(meeting, provider, l10n),
+                _buildTranscriptTab(meeting, provider, l10n),
+                _buildChatTab(meeting, l10n),
               ],
             ),
           ),
@@ -116,77 +124,81 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
     );
   }
 
-   Widget _buildMetadata(Meeting meeting) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (meeting.type == MeetingType.meeting)
-          Text('Duration: ${_formatDuration(meeting.durationSec)}'),
-        Text('Recorded: ${_formatDateTime(context, meeting.createdAt)}'),
-        if (meeting.provider != null) Text('Transcribed by: ${meeting.provider}'),
-        if (meeting.lastError != null) ...[
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.errorContainer,
-              borderRadius: BorderRadius.circular(8),
+  Widget _buildMetadata(Meeting meeting, AppLocalizations l10n) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (meeting.type == MeetingType.meeting)
+              _MetadataRow(
+                icon: Icons.timer_outlined,
+                label: l10n.meetingDetailDuration,
+                value: _formatDuration(meeting.durationSec),
+              ),
+            _MetadataRow(
+              icon: Icons.calendar_today,
+              label: l10n.meetingDetailRecorded,
+              value: _formatDateTime(context, meeting.createdAt),
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.error_outline,
-                    color: Theme.of(context).colorScheme.onErrorContainer,
-                    size: 18,),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    meeting.lastError!,
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.onErrorContainer,
-                        fontSize: 13,),
-                  ),
+            if (meeting.provider != null)
+              _MetadataRow(
+                icon: Icons.transcribe,
+                label: l10n.meetingDetailTranscribedBy,
+                value: meeting.provider!,
+              ),
+            if (meeting.lastError != null) ...[
+              const SizedBox(height: 8),
+              MaterialBanner(
+                content: Text(meeting.lastError!),
+                leading: Icon(
+                  Icons.error_outline,
+                  color: Theme.of(context).colorScheme.onErrorContainer,
                 ),
-              ],
-            ),
-          ),
-        ],
-      ],
+                backgroundColor:
+                    Theme.of(context).colorScheme.errorContainer,
+                actions: const [SizedBox.shrink()],
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildSummaryTab(Meeting meeting, MeetingNotifier provider) {
+  Widget _buildSummaryTab(Meeting meeting, MeetingNotifier provider, AppLocalizations l10n) {
     switch (meeting.status) {
       case MeetingStatus.recorded:
         if (meeting.type == MeetingType.document) {
           return Center(
             child: Padding(
               padding: const EdgeInsets.all(24),
-              child: ElevatedButton(
+              child: FilledButton(
                 onPressed: () => provider.summarize(),
-                child: const Text('Summarize'),
+                child: Text(l10n.summarizeButton),
               ),
             ),
           );
         } else {
-          return const Center(
+          return Center(
             child: Padding(
-              padding: EdgeInsets.all(24),
+              padding: const EdgeInsets.all(24),
               child: Text(
-                'No transcript yet.\nGo to the Transcript tab to transcribe.',
+                l10n.meetingDetailNoTranscript,
                 textAlign: TextAlign.center,
               ),
             ),
           );
         }
       case MeetingStatus.transcribing:
-        return const Center(
+        return Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 12),
-              Text('Transcribing…'),
+              const CircularProgressIndicator(),
+              const SizedBox(height: 12),
+              Text(l10n.meetingDetailTranscribing),
             ],
           ),
         );
@@ -194,35 +206,33 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
         return Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: ElevatedButton(
+            child: FilledButton(
               onPressed: () => provider.summarize(),
-              child: const Text('Summarize'),
+              child: Text(l10n.summarizeButton),
             ),
           ),
         );
       case MeetingStatus.summarizing:
-        return _buildSummarizingContent(meeting);
+        return _buildSummarizingContent(meeting, l10n);
       case MeetingStatus.done:
         return _buildDoneContent(meeting, provider);
       case MeetingStatus.failed:
-        return _buildFailedContent(meeting, provider);
+        return _buildFailedContent(meeting, provider, l10n);
     }
   }
 
-  Widget _buildSummarizingContent(Meeting meeting) {
-    final activeSummary = meeting.summaries.isNotEmpty && _activeSummaryIndex < meeting.summaries.length
-        ? meeting.summaries[_activeSummaryIndex]
-        : null;
-    final content = activeSummary?.content ?? '';
+  Widget _buildSummarizingContent(Meeting meeting, AppLocalizations l10n) {
+    final currentSummary = meeting.summaries.lastOrNull;
+    final content = currentSummary?.content ?? '';
 
     if (content.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 12),
-            Text('Summarizing…'),
+            const CircularProgressIndicator(),
+            const SizedBox(height: 12),
+            Text(l10n.meetingDetailSummarizing),
           ],
         ),
       );
@@ -230,8 +240,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
 
     return Column(
       children: [
-        if (meeting.summaries.length > 1)
-          _buildChipRow(meeting, null),
+        if (meeting.summaries.length > 1) _buildChipRow(meeting, null, l10n),
         Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -239,22 +248,29 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
               SizedBox(
                 width: 16,
                 height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.primary),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
               ),
               const SizedBox(width: 8),
               Text(
-                'Summarizing…',
+                l10n.meetingDetailSummarizing,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+                      color:
+                          Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
               ),
             ],
           ),
         ),
         Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: MarkdownBody(data: content),
+          child: Scrollbar(
+            thumbVisibility: _isDesktop,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: MarkdownBody(data: content),
+            ),
           ),
         ),
       ],
@@ -262,28 +278,32 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
   }
 
   Widget _buildDoneContent(Meeting meeting, MeetingNotifier provider) {
-    final activeSummary = meeting.summaries.isNotEmpty && _activeSummaryIndex < meeting.summaries.length
+    final activeContent = meeting.summaries.isNotEmpty
         ? meeting.summaries[_activeSummaryIndex].content
         : '';
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
-        _buildChipRow(meeting, provider),
-        if (_showAddControls) _buildAddControls(meeting, provider),
+        _buildChipRow(meeting, provider, l10n),
+        if (_showAddControls) _buildAddControls(meeting, provider, l10n),
         Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: MarkdownBody(data: activeSummary),
+          child: Scrollbar(
+            thumbVisibility: _isDesktop,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: MarkdownBody(data: activeContent),
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildFailedContent(Meeting meeting, MeetingNotifier provider) {
+  Widget _buildFailedContent(Meeting meeting, MeetingNotifier provider, AppLocalizations l10n) {
     if (meeting.summaries.isNotEmpty) {
       return Column(
         children: [
-          _buildChipRow(meeting, provider),
+          _buildChipRow(meeting, provider, l10n),
           Expanded(
             child: Center(
               child: Padding(
@@ -292,14 +312,16 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      meeting.lastError ?? 'An error occurred',
+                      meeting.lastError ?? l10n.meetingDetailErrorOccurred,
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
                     ),
                     const SizedBox(height: 16),
-                    ElevatedButton(
+                    FilledButton(
                       onPressed: provider.retry,
-                      child: const Text('Retry'),
+                      child: Text(l10n.retryButton),
                     ),
                   ],
                 ),
@@ -312,59 +334,58 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
-        child: ElevatedButton(
+        child: FilledButton(
           onPressed: provider.retry,
-          child: const Text('Retry'),
+          child: Text(l10n.retryButton),
         ),
       ),
     );
   }
 
-  Widget _buildChipRow(Meeting meeting, MeetingNotifier? provider) {
-    return SizedBox(
-      height: 44,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        itemCount: meeting.summaries.length + 1,
-        itemBuilder: (context, index) {
-          if (index == meeting.summaries.length) {
-            return Padding(
-              padding: const EdgeInsets.only(left: 8),
-              child: ChoiceChip(
-                label: const Icon(Icons.add, size: 18),
-                selected: _showAddControls,
-                onSelected: (_) => setState(() => _showAddControls = !_showAddControls),
-              ),
-            );
-          }
+  Widget _buildChipRow(Meeting meeting, MeetingNotifier? provider, AppLocalizations l10n) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 4,
+        children: [
+          ...List.generate(meeting.summaries.length, (index) {
+            final summary = meeting.summaries[index];
+            final styleCount = meeting.summaries
+                .where((s) => s.style == summary.style)
+                .toList();
+            final styleIndex = styleCount.indexOf(summary);
+            final styleTitle = summary.style.localizedTitle(context);
+            final chipLabel = styleCount.length > 1
+                ? '$styleTitle ${styleIndex + 1}'
+                : styleTitle;
 
-          final summary = meeting.summaries[index];
-          final styleCount = meeting.summaries.where((s) => s.style == summary.style).toList();
-          final styleIndex = styleCount.indexOf(summary);
-          final chipLabel = styleCount.length > 1
-              ? '${summary.style.displayName} ${styleIndex + 1}'
-              : summary.style.displayName;
-
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ChoiceChip(
+            return ChoiceChip(
               label: Text(chipLabel),
               selected: index == _activeSummaryIndex,
               onSelected: (_) {
                 setState(() => _activeSummaryIndex = index);
               },
-            ),
-          );
-        },
+            );
+          }),
+          ChoiceChip(
+            label: const Icon(Icons.add, size: 18),
+            selected: _showAddControls,
+            onSelected: (_) =>
+                setState(() => _showAddControls = !_showAddControls),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildAddControls(Meeting meeting, MeetingNotifier provider) {
+  Widget _buildAddControls(Meeting meeting, MeetingNotifier provider, AppLocalizations l10n) {
     final availableStyles = SummaryStyle.forType(meeting.type);
 
-    _selectedStyle ??= _resolveInitialStyle(ref.read(settingsProvider).summaryStyle, meeting.type);
+    _selectedStyle ??= _resolveInitialStyle(
+      ref.read(settingsProvider).summaryStyle,
+      meeting.type,
+    );
     _selectedLanguage ??= ref.read(settingsProvider).language;
 
     return Padding(
@@ -373,14 +394,15 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           DropdownButtonFormField<SummaryStyle>(
-            value: _selectedStyle,
-            decoration: const InputDecoration(
-              labelText: 'Style',
-              border: OutlineInputBorder(),
+            initialValue: _selectedStyle,
+            decoration: InputDecoration(
+              labelText: l10n.settingsStyleLabel,
+              border: const OutlineInputBorder(),
               isDense: true,
             ),
             items: availableStyles
-                .map((s) => DropdownMenuItem(value: s, child: Text(s.displayName)))
+                .map((s) =>
+                    DropdownMenuItem(value: s, child: Text(s.localizedTitle(context))),)
                 .toList(),
             onChanged: (v) {
               if (v != null) setState(() => _selectedStyle = v);
@@ -388,14 +410,14 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
-            value: _selectedLanguage,
-            decoration: const InputDecoration(
-              labelText: 'Language',
-              border: OutlineInputBorder(),
+            initialValue: _selectedLanguage,
+            decoration: InputDecoration(
+              labelText: l10n.settingsLanguageLabel,
+              border: const OutlineInputBorder(),
               isDense: true,
             ),
             items: kSupportedLanguages
-                .map((l) => DropdownMenuItem(value: l, child: Text(l)))
+                .map((l) => DropdownMenuItem(value: l, child: Text(localizedLanguageName(context, l))))
                 .toList(),
             onChanged: (v) {
               if (v != null) setState(() => _selectedLanguage = v);
@@ -409,17 +431,22 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                   onPressed: () {
                     final style = _selectedStyle!;
                     final language = _selectedLanguage!;
+                    final styleTitle = style.localizedTitle(context);
                     showDialog<void>(
                       context: context,
                       builder: (ctx) => AlertDialog(
-                        title: const Text('Generate Summary'),
-                        content: Text('Generate a new summary in $language with ${style.displayName} style?'),
-                        actions: [
-                          TextButton(
+                        title: Text(l10n.meetingDetailGenerateSummary),
+                        content: Text(
+                          l10n.meetingDetailGenerateConfirm(language, styleTitle),
+                        ),
+                        actions: _buildDialogActions(ctx, [
+                          DialogAction(
+                            label: l10n.cancelButton,
                             onPressed: () => Navigator.pop(ctx),
-                            child: const Text('Cancel'),
+                            isDefault: false,
                           ),
-                          FilledButton(
+                          DialogAction(
+                            label: l10n.meetingDetailGenerate,
                             onPressed: () {
                               Navigator.pop(ctx);
                               setState(() {
@@ -427,15 +454,18 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                                 _selectedStyle = null;
                                 _selectedLanguage = null;
                               });
-                              provider.summarize(style: style, language: language);
+                              provider.summarize(
+                                style: style,
+                                language: language,
+                              );
                             },
-                            child: const Text('Generate'),
+                            isDefault: true,
                           ),
-                        ],
+                        ]),
                       ),
                     );
                   },
-                  child: const Text('Summarize'),
+                  child: Text(l10n.summarizeButton),
                 ),
               ),
               const SizedBox(width: 8),
@@ -445,7 +475,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                   _selectedStyle = null;
                   _selectedLanguage = null;
                 }),
-                child: const Text('Cancel'),
+                child: Text(l10n.cancelButton),
               ),
             ],
           ),
@@ -464,7 +494,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
     return available.first;
   }
 
-  Widget _buildTranscriptTab(Meeting meeting, MeetingNotifier provider) {
+  Widget _buildTranscriptTab(Meeting meeting, MeetingNotifier provider, AppLocalizations l10n) {
     switch (meeting.status) {
       case MeetingStatus.recorded:
         if (meeting.type == MeetingType.document) {
@@ -472,7 +502,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: Text(
-                'This is a document, not a recording.\nGo to the Summary tab to process it.',
+                l10n.meetingDetailNotRecording,
                 textAlign: TextAlign.center,
               ),
             ),
@@ -486,7 +516,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Tooltip(
-                message: isOpenRouter ? '' : 'Diarization requires OpenRouter',
+                message: isOpenRouter ? '' : l10n.meetingDetailDiarizationRequires,
                 child: Row(
                   children: [
                     Switch(
@@ -497,19 +527,20 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Diarize speakers',
+                      l10n.meetingDetailDiarizeSpeakers,
                       style: TextStyle(
-                        color:
-                            isOpenRouter ? null : Theme.of(context).disabledColor,
+                        color: isOpenRouter
+                            ? null
+                            : Theme.of(context).disabledColor,
                       ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 8),
-              ElevatedButton(
+              FilledButton(
                 onPressed: () => provider.transcribe(diarize: _diarize),
-                child: const Text('Transcribe'),
+                child: Text(l10n.transcribeButton),
               ),
             ],
           ),
@@ -526,14 +557,18 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
           children: [
             if (meeting.type == MeetingType.document)
               MaterialBanner(
-                content: const Text('This is the imported document content, not a transcript.'),
-                actions: [const SizedBox.shrink()],
-                backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                content: Text(l10n.meetingDetailDocumentContent),
+                actions: const [SizedBox.shrink()],
+                backgroundColor:
+                    Theme.of(context).colorScheme.surfaceContainerHighest,
               ),
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Text(meeting.transcript ?? ''),
+              child: Scrollbar(
+                thumbVisibility: _isDesktop,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: MarkdownBody(data: meeting.transcript ?? ''),
+                ),
               ),
             ),
           ],
@@ -543,23 +578,35 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
         return Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: ElevatedButton(
+            child: FilledButton(
               onPressed: provider.retry,
-              child: const Text('Retry'),
+              child: Text(l10n.retryButton),
             ),
           ),
         );
     }
   }
 
-  Widget _buildChatTab(Meeting meeting) {
+  Widget _buildChatTab(Meeting meeting, AppLocalizations l10n) {
     final isDocument = meeting.type == MeetingType.document;
     if (!isDocument && meeting.transcript == null) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Text(
-            'Transcribe the meeting first to start chatting.',
+            l10n.meetingDetailTranscribeFirst,
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    if (isDocument && meeting.audioPath.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            l10n.meetingDetailDocumentNotReady,
             textAlign: TextAlign.center,
           ),
         ),
@@ -568,47 +615,73 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
 
     final meetingId = meeting.id;
     final chatState = ref.watch(meetingChatProvider(meetingId));
-    final chatNotifier = ref.read(meetingChatProvider(meetingId).notifier);
+    final chatNotifier =
+        ref.read(meetingChatProvider(meetingId).notifier);
 
     return Column(
       children: [
         Expanded(
-          child: ListView.builder(
+          child: Scrollbar(
+            thumbVisibility: _isDesktop,
             controller: _chatScrollController,
-            padding: const EdgeInsets.all(16),
-            itemCount: chatState.messages.length,
-            itemBuilder: (context, index) {
-              final msg = chatState.messages[index];
-              final isUser = msg.role == 'user';
-              return Align(
-                alignment:
-                    isUser ? Alignment.centerRight : Alignment.centerLeft,
-                child: Container(
-                  margin: const EdgeInsets.symmetric(vertical: 4),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 8,),
-                  constraints: BoxConstraints(
-                    maxWidth: MediaQuery.of(context).size.width * 0.75,
+            child: ListView.builder(
+              controller: _chatScrollController,
+              padding: const EdgeInsets.all(16),
+              itemCount: chatState.messages.length,
+              itemBuilder: (context, index) {
+                final msg = chatState.messages[index];
+                final isUser = msg.role == 'user';
+                return Align(
+                  alignment: isUser
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    constraints: BoxConstraints(
+                      maxWidth: MediaQuery.of(context).size.width * 0.75,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isUser
+                          ? Theme.of(context).colorScheme.primaryContainer
+                          : Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: MarkdownBody(
+                      data: msg.content,
+                      styleSheet: MarkdownStyleSheet(
+                        p: TextStyle(
+                          color: isUser
+                              ? Theme.of(context)
+                                  .colorScheme
+                                  .onPrimaryContainer
+                              : Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                        ),
+                      ),
+                    ),
                   ),
-                  decoration: BoxDecoration(
-                    color: isUser
-                        ? Theme.of(context).colorScheme.primaryContainer
-                        : Theme.of(context).colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(msg.content),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
         if (chatState.error != null)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: Text(
               chatState.error!,
               style: TextStyle(
-                  color: Theme.of(context).colorScheme.error, fontSize: 12,),
+                color: Theme.of(context).colorScheme.error,
+                fontSize: 12,
+              ),
             ),
           ),
         SafeArea(
@@ -621,16 +694,15 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                   child: TextField(
                     controller: _chatInputController,
                     decoration: InputDecoration(
-                      hintText: isDocument
-                          ? 'Ask about this document…'
-                          : 'Ask about this meeting…',
+                      hintText: l10n.meetingDetailChatHint,
                       border: const OutlineInputBorder(),
                       isDense: true,
                     ),
                     textInputAction: TextInputAction.send,
                     onSubmitted: chatState.isStreaming
                         ? null
-                        : (_) => _sendChatMessage(meeting, chatNotifier),
+                        : (_) =>
+                            _sendChatMessage(meeting, chatNotifier),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -639,7 +711,10 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2,),)
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                          ),
+                        )
                       : const Icon(Icons.send),
                   onPressed: chatState.isStreaming
                       ? null
@@ -658,10 +733,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
     if (text.isEmpty) return;
     _chatInputController.clear();
     if (meeting.type == MeetingType.document) {
-      notifier.sendDocumentMessage(
-        text,
-        audioPath: meeting.audioPath,
-      );
+      notifier.sendDocumentMessage(text, audioPath: meeting.audioPath);
     } else {
       notifier.sendMessage(
         text,
@@ -671,64 +743,159 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
     }
   }
 
-   String _formatDuration(int seconds) {
+  String _formatDuration(int seconds) {
     final mins = seconds ~/ 60;
     final secs = seconds % 60;
     return '${mins}m ${secs}s';
   }
 
-   String _formatDateTime(BuildContext context, DateTime dateTime) {
-    // Get the system locale and format accordingly
+  String _formatDateTime(BuildContext context, DateTime dateTime) {
     final locale = Localizations.localeOf(context);
-    return DateFormat.yMMMd(locale.languageCode).add_jm().format(dateTime.toLocal());
+    return DateFormat.yMMMd(locale.languageCode)
+        .add_jm()
+        .format(dateTime.toLocal());
   }
 
-  void _renameMeeting(BuildContext context, String initialTitle, MeetingNotifier provider) {
+  void _renameMeeting(
+    BuildContext context,
+    String initialTitle,
+    MeetingNotifier provider,
+  ) {
+    final l10n = AppLocalizations.of(context)!;
     final controller = TextEditingController(text: initialTitle);
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Rename Meeting'),
+        title: Text(l10n.libraryRenameMeeting),
         content: TextField(controller: controller),
-        actions: [
-          TextButton(
+        actions: _buildDialogActions(ctx, [
+          DialogAction(
+            label: l10n.cancelButton,
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            isDefault: false,
           ),
-          TextButton(
+          DialogAction(
+            label: l10n.saveButton,
             onPressed: () {
               provider.rename(controller.text);
               Navigator.pop(ctx);
             },
-            child: const Text('Save'),
+            isDefault: true,
           ),
-        ],
+        ]),
       ),
     );
   }
 
-  void _deleteMeeting(BuildContext context, Meeting meeting, MeetingNotifier provider) {
+  void _deleteMeeting(
+    BuildContext context,
+    Meeting meeting,
+    MeetingNotifier provider,
+  ) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(meeting.type == MeetingType.document
-            ? 'Delete Document?'
-            : 'Delete Meeting?',),
-        content: Text(meeting.type == MeetingType.document
-            ? 'This will permanently delete this document summary.'
-            : 'This will permanently delete the recording and all data.',),
-        actions: [
-          TextButton(
+        title: Text(
+          meeting.type == MeetingType.document
+              ? l10n.libraryDeleteDocument
+              : l10n.libraryDeleteMeeting,
+        ),
+        content: Text(
+          meeting.type == MeetingType.document
+              ? l10n.libraryDeleteDocumentConfirm
+              : l10n.libraryDeleteMeetingConfirm,
+        ),
+        actions: _buildDialogActions(ctx, [
+          DialogAction(
+            label: l10n.cancelButton,
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            isDefault: false,
           ),
-          TextButton(
+          DialogAction(
+            label: l10n.deleteButton,
             onPressed: () {
               provider.delete();
               Navigator.pop(ctx);
               Navigator.pop(context);
             },
-            child: const Text('Delete'),
+            isDefault: true,
+          ),
+        ]),
+      ),
+    );
+  }
+
+  List<Widget> _buildDialogActions(
+    BuildContext context,
+    List<DialogAction> actions,
+  ) {
+    final ordered =
+        Platform.isWindows ? actions.reversed.toList() : actions;
+    return ordered.map((action) {
+      if (action.isDefault) {
+        return FilledButton(
+          onPressed: action.onPressed,
+          child: Text(action.label),
+        );
+      }
+      return TextButton(
+        onPressed: action.onPressed,
+        child: Text(action.label),
+      );
+    }).toList();
+  }
+}
+
+class DialogAction {
+  final String label;
+  final VoidCallback onPressed;
+  final bool isDefault;
+
+  const DialogAction({
+    required this.label,
+    required this.onPressed,
+    this.isDefault = false,
+  });
+}
+
+class _MetadataRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _MetadataRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            icon,
+            size: 18,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
+                Text(value, style: Theme.of(context).textTheme.bodyMedium),
+              ],
+            ),
           ),
         ],
       ),
@@ -742,7 +909,8 @@ class _TranscribingIndicator extends StatefulWidget {
   const _TranscribingIndicator({this.status, this.progress});
 
   @override
-  State<_TranscribingIndicator> createState() => _TranscribingIndicatorState();
+  State<_TranscribingIndicator> createState() =>
+      _TranscribingIndicatorState();
 }
 
 class _TranscribingIndicatorState extends State<_TranscribingIndicator>
@@ -778,11 +946,15 @@ class _TranscribingIndicatorState extends State<_TranscribingIndicator>
           mainAxisSize: MainAxisSize.min,
           children: [
             FadeTransition(
-              opacity: _pulseController.drive(Tween(begin: 0.5, end: 1.0)),
+              opacity:
+                  _pulseController.drive(Tween(begin: 0.5, end: 1.0)),
               child: SizedBox(
                 width: 36,
                 height: 36,
-                child: CircularProgressIndicator(strokeWidth: 3, color: cs.primary),
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  color: cs.primary,
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -792,9 +964,9 @@ class _TranscribingIndicatorState extends State<_TranscribingIndicator>
                 displayStatus,
                 key: ValueKey(displayStatus),
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: cs.onSurfaceVariant,
-                  fontWeight: FontWeight.w500,
-                ),
+                      color: cs.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
+                    ),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -811,8 +983,8 @@ class _TranscribingIndicatorState extends State<_TranscribingIndicator>
               Text(
                 '${(progress * 100).round()}%',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: cs.onSurfaceVariant,
-                ),
+                      color: cs.onSurfaceVariant,
+                    ),
               ),
             ],
           ],
