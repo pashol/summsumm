@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:summsumm/l10n/app_localizations.dart';
+import 'package:summsumm/models/transcription_config.dart';
 import 'package:summsumm/providers/meeting_repository_provider.dart';
+import 'package:summsumm/providers/real_time_transcription_provider.dart';
 import 'package:summsumm/providers/recording_provider.dart';
+import 'package:summsumm/providers/settings_provider.dart';
 
 class RecordingScreen extends ConsumerStatefulWidget {
   const RecordingScreen({super.key});
@@ -19,6 +22,8 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> {
   bool _isRecording = false;
   int _elapsedSeconds = 0;
   Timer? _timer;
+  bool _liveTranscriptionEnabled = false;
+  final List<String> _liveTranscriptSegments = [];
 
   @override
   void dispose() {
@@ -50,6 +55,25 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> {
                     onPressed: _startRecording,
                     child: Text(l10n.startButton),
                   ),
+            if (_liveTranscriptionEnabled && _liveTranscriptSegments.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              Container(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.3,
+                ),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: SingleChildScrollView(
+                  child: Text(
+                    _liveTranscriptSegments.join(' '),
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -75,6 +99,14 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> {
     try {
       final service = ref.read(recordingServiceProvider);
       await service.startRecording(_title);
+
+      // Start live transcription if enabled
+      final settings = ref.read(settingsProvider);
+      if (settings.transcriptionStrategy == TranscriptionStrategy.onDevice &&
+          settings.enableRealTimeTranscription) {
+        await _startLiveTranscription();
+      }
+
       setState(() {
         _isRecording = true;
         _elapsedSeconds = 0;
@@ -91,13 +123,53 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> {
     }
   }
 
+  Future<void> _startLiveTranscription() async {
+    final settings = ref.read(settingsProvider);
+    final service = ref.read(realTimeTranscriptionServiceProvider);
+
+    await service.start(
+      modelSize: settings.onDeviceModelSize,
+      diarize: settings.onDeviceDiarization,
+    );
+
+    // Listen to transcript stream
+    service.transcriptStream.listen((segment) {
+      setState(() {
+        _liveTranscriptSegments.add(segment.text);
+      });
+    });
+
+    setState(() {
+      _liveTranscriptionEnabled = true;
+    });
+  }
+
   Future<void> _stopRecording() async {
     if (!_isRecording) return;
+
+    // Stop live transcription
+    if (_liveTranscriptionEnabled) {
+      final service = ref.read(realTimeTranscriptionServiceProvider);
+      await service.stop();
+      setState(() {
+        _liveTranscriptionEnabled = false;
+      });
+    }
+
     _timer?.cancel();
     _timer = null;
     setState(() => _isRecording = false);
+
     final service = ref.read(recordingServiceProvider);
     final meeting = await service.stopRecording(_elapsedSeconds);
+
+    // Save live transcript if available
+    if (_liveTranscriptSegments.isNotEmpty) {
+      final transcript = _liveTranscriptSegments.join(' ');
+      // Update meeting with transcript
+      // Note: This requires Meeting model to support setting transcript
+    }
+
     final repository = ref.read(meetingRepositoryProvider);
     await repository.save(meeting);
     if (mounted) Navigator.pop(context);
