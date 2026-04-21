@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:intl/intl.dart';
@@ -364,6 +365,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
               label: Text(chipLabel),
               selected: index == _activeSummaryIndex,
               onSelected: (_) {
+                HapticFeedback.lightImpact();
                 setState(() => _activeSummaryIndex = index);
               },
             );
@@ -371,8 +373,10 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
           ChoiceChip(
             label: const Icon(Icons.add, size: 18),
             selected: _showAddControls,
-            onSelected: (_) =>
-                setState(() => _showAddControls = !_showAddControls),
+            onSelected: (_) {
+                HapticFeedback.lightImpact();
+                setState(() => _showAddControls = !_showAddControls);
+              },
           ),
         ],
       ),

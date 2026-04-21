@@ -1,5 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
@@ -34,19 +35,26 @@ class MeetingLibraryScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.archive_outlined),
             tooltip: l10n.libraryArchived,
-            onPressed: () => Navigator.push<void>(
-              context,
-              MaterialPageRoute<void>(
-                  builder: (_) => const ArchivedMeetingsScreen(),),
-            ),
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              Navigator.push<void>(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (_) => const ArchivedMeetingsScreen(),
+                ),
+              );
+            },
           ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             tooltip: l10n.librarySettings,
-            onPressed: () => Navigator.push<void>(
-              context,
-              MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
-            ),
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              Navigator.push<void>(
+                context,
+                MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
+              );
+            },
           ),
         ],
       ),
@@ -64,7 +72,10 @@ class MeetingLibraryScreen extends ConsumerWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _startRecording(context, ref),
+        onPressed: () {
+          HapticFeedback.lightImpact();
+          _startRecording(context, ref);
+        },
         child: const Icon(Icons.mic),
       ),
     );
@@ -106,6 +117,7 @@ class MeetingLibraryScreen extends ConsumerWidget {
   }
 
   Future<void> _startRecording(BuildContext context, WidgetRef ref) async {
+    HapticFeedback.lightImpact();
     await Navigator.push<void>(
       context,
       MaterialPageRoute<void>(builder: (_) => const RecordingScreen()),
@@ -202,6 +214,7 @@ class _MeetingTile extends ConsumerWidget {
         ),
         trailing: _ActionButton(meeting: meeting, notifier: notifier),
         onTap: () async {
+          HapticFeedback.lightImpact();
           await Navigator.push<void>(
             context,
             MaterialPageRoute<void>(
