@@ -50,6 +50,7 @@ class _ArchivedMeetingTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
     final notifier = ref.watch(meetingProvider(meeting.id).notifier);
 
     return Slidable(
@@ -60,15 +61,15 @@ class _ArchivedMeetingTile extends ConsumerWidget {
         children: [
           SlidableAction(
             onPressed: (_) => showMeetingShareSheet(context, meeting),
-            backgroundColor: Colors.teal,
-            foregroundColor: Colors.white,
+            backgroundColor: cs.primary,
+            foregroundColor: cs.onPrimary,
             icon: Icons.share,
             label: l10n.libraryShare,
           ),
           SlidableAction(
             onPressed: (_) => _unarchive(context, notifier),
-            backgroundColor: Colors.blue,
-            foregroundColor: Colors.white,
+            backgroundColor: cs.secondary,
+            foregroundColor: cs.onSecondary,
             icon: Icons.unarchive,
             label: l10n.archiveRestore,
           ),
@@ -80,8 +81,8 @@ class _ArchivedMeetingTile extends ConsumerWidget {
         children: [
           SlidableAction(
             onPressed: (_) => _confirmDelete(context, notifier),
-            backgroundColor: Colors.red,
-            foregroundColor: Colors.white,
+            backgroundColor: cs.error,
+            foregroundColor: cs.onError,
             icon: Icons.delete,
             label: l10n.libraryDelete,
           ),
@@ -120,7 +121,7 @@ class _ArchivedMeetingTile extends ConsumerWidget {
             ],
           ],
         ),
-        trailing: const Icon(Icons.check_circle, color: Colors.green),
+        trailing: Icon(Icons.check_circle, color: cs.primary),
         onTap: () => Navigator.push<void>(
           context,
           MaterialPageRoute<void>(
