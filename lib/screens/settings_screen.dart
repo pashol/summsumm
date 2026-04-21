@@ -6,7 +6,9 @@ import 'package:summsumm/l10n/app_localizations.dart';
 import '../models/app_settings.dart';
 import '../models/ai_model.dart';
 import '../models/summary_style.dart';
+import '../models/transcription_config.dart';
 import '../providers/models_provider.dart';
+import '../providers/model_download_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/ai_service.dart';
 import '../utils/localized_strings.dart';
@@ -415,7 +417,99 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ],
           ),
-           const SizedBox(height: 32),
+          const SizedBox(height: 16),
+          _SectionCard(
+            title: 'On-Device Transcription',
+            icon: Icons.phone_android_outlined,
+            children: [
+              // Enable on-device transcription
+              SwitchListTile(
+                title: const Text('Use on-device transcription'),
+                subtitle: const Text('Transcribe offline without internet'),
+                value: settings.transcriptionStrategy == TranscriptionStrategy.onDevice,
+                onChanged: (v) async {
+                  await notifier.setTranscriptionStrategy(
+                    v ? TranscriptionStrategy.onDevice : TranscriptionStrategy.cloud,
+                  );
+                  if (v) {
+                    // Trigger base model download
+                    final manager = ref.read(modelDownloadManagerProvider);
+                    if (!await manager.isModelAvailable(ModelSize.base)) {
+                      manager.downloadModel(ModelSize.base);
+                    }
+                  }
+                },
+              ),
+              
+              // Model size selector (only when on-device enabled)
+              if (settings.transcriptionStrategy == TranscriptionStrategy.onDevice) ...[
+                const SizedBox(height: 8),
+                DropdownButtonFormField<ModelSize>(
+                  value: settings.onDeviceModelSize,
+                  decoration: const InputDecoration(
+                    labelText: 'Model size',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.memory_outlined),
+                  ),
+                  items: ModelSize.values.map((size) {
+                    final label = switch (size) {
+                      ModelSize.base => 'Base (~150MB)',
+                      ModelSize.small => 'Small (~500MB)',
+                      ModelSize.medium => 'Medium (~1.5GB)',
+                    };
+                    return DropdownMenuItem(
+                      value: size,
+                      child: Text(label),
+                    );
+                  }).toList(),
+                  onChanged: (v) {
+                    if (v != null) notifier.setOnDeviceModelSize(v);
+                  },
+                ),
+                
+                // Download progress
+                Consumer(
+                  builder: (context, ref, child) {
+                    final progressAsync = ref.watch(modelDownloadProgressProvider);
+                    return progressAsync.when(
+                      data: (progress) {
+                        if (progress.status == DownloadStatus.downloading) {
+                          return Column(
+                            children: [
+                              const SizedBox(height: 8),
+                              LinearProgressIndicator(value: progress.fraction),
+                              const SizedBox(height: 4),
+                              Text('Downloading ${progress.size.name} model...'),
+                            ],
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, __) => const SizedBox.shrink(),
+                    );
+                  },
+                ),
+                
+                // Live transcription toggle
+                SwitchListTile(
+                  title: const Text('Live transcription'),
+                  subtitle: const Text('Transcribe while recording'),
+                  value: settings.enableRealTimeTranscription,
+                  onChanged: (v) => notifier.setEnableRealTimeTranscription(v),
+                ),
+                
+                // Diarization toggle
+                SwitchListTile(
+                  title: const Text('Speaker diarization'),
+                  subtitle: const Text('Identify different speakers'),
+                  value: settings.onDeviceDiarization,
+                  onChanged: (v) => notifier.setOnDeviceDiarization(v),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 32),
         ],
       ),
     );
