@@ -23,7 +23,7 @@ class M3Tokens {
   static final BorderRadius cornerMedium = BorderRadius.circular(12);
   static final BorderRadius cornerLarge = BorderRadius.circular(16);
   static final BorderRadius cornerXLarge = BorderRadius.circular(28);
-  static final BorderRadius pillShape = StadiumBorder();
+  static final BorderRadius pillShape = BorderRadius.circular(999);
 
   // Custom squircle (continuous corners)
   static final BorderRadius squircle = BorderRadius.circular(20);

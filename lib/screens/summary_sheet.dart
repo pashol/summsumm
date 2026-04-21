@@ -14,6 +14,8 @@ import 'package:summsumm/providers/voice_service_provider.dart';
 import '../widgets/document_carousel.dart';
 import '../widgets/glass_card.dart';
 import 'package:summsumm/l10n/app_localizations.dart';
+import '../theme/reduced_motion.dart';
+import '../theme/m3_tokens.dart';
 import 'settings_screen.dart';
 
 class SummarySheet extends ConsumerStatefulWidget {
@@ -98,7 +100,7 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
     super.initState();
     _activeIndex = widget.initialIndex;
     _entryController = AnimationController(
-      duration: const Duration(milliseconds: 400),
+      duration: animDuration(context, M3Tokens.durationSpring),
       vsync: this,
     );
     _slideAnimation = Tween<Offset>(
@@ -106,13 +108,13 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _entryController,
-      curve: Curves.easeOutCubic,
+      curve: M3Tokens.spatialSpring,
     ),
     );
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _entryController,
-        curve: Curves.easeOut,
+        curve: M3Tokens.effectsSpring,
       ),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -179,8 +181,8 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
     if (_scrollCtrl?.hasClients ?? false) {
       _scrollCtrl?.animateTo(
         _scrollCtrl!.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
+        duration: M3Tokens.durationStandard,
+        curve: M3Tokens.effectsSpring,
       );
     }
   }
@@ -493,9 +495,20 @@ class _SheetBody extends StatelessWidget {
 
                     // Error message (shown briefly before auto-close)
                     if (isError)
-                      Text(
-                        summaryState.error,
-                        style: TextStyle(color: cs.error),
+                      TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0.0, end: 1.0),
+                        duration: const Duration(milliseconds: 400),
+                        curve: Curves.elasticOut,
+                        builder: (context, value, child) {
+                          return Transform.scale(
+                            scale: 0.9 + (0.1 * value),
+                            child: Opacity(opacity: value, child: child),
+                          );
+                        },
+                        child: Text(
+                          summaryState.error,
+                          style: TextStyle(color: cs.error),
+                        ),
                       ),
 
                      // Chat history
@@ -662,40 +675,44 @@ class _ShimmerLoadingState extends State<_ShimmerLoading>
     final baseColor = cs.surfaceContainerHighest;
     final highlightColor = cs.surfaceContainerHigh;
 
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _ShimmerLine(
-              width: double.infinity,
-              baseColor: baseColor,
-              highlightColor: highlightColor,
-              animation: _controller,
-            ),
-            const SizedBox(height: 8),
-            _ShimmerLine(
-              width: MediaQuery.of(context).size.width * 0.85,
-              baseColor: baseColor,
-              highlightColor: highlightColor,
-              animation: _controller,
-            ),
-            const SizedBox(height: 8),
-            _ShimmerLine(
-              width: MediaQuery.of(context).size.width * 0.7,
-              baseColor: baseColor,
-              highlightColor: highlightColor,
-              animation: _controller,
-            ),
-            const SizedBox(height: 8),
-            _ShimmerLine(
-              width: MediaQuery.of(context).size.width * 0.6,
-              baseColor: baseColor,
-              highlightColor: highlightColor,
-              animation: _controller,
-            ),
-          ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _ShimmerLine(
+                  width: double.infinity,
+                  baseColor: baseColor,
+                  highlightColor: highlightColor,
+                  animation: _controller,
+                ),
+                const SizedBox(height: 8),
+                _ShimmerLine(
+                  width: constraints.maxWidth * 0.85,
+                  baseColor: baseColor,
+                  highlightColor: highlightColor,
+                  animation: _controller,
+                ),
+                const SizedBox(height: 8),
+                _ShimmerLine(
+                  width: constraints.maxWidth * 0.7,
+                  baseColor: baseColor,
+                  highlightColor: highlightColor,
+                  animation: _controller,
+                ),
+                const SizedBox(height: 8),
+                _ShimmerLine(
+                  width: constraints.maxWidth * 0.6,
+                  baseColor: baseColor,
+                  highlightColor: highlightColor,
+                  animation: _controller,
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -752,21 +769,38 @@ class _ChatBubble extends StatelessWidget {
     final displayContent =
         streamingContent != null && isCursorVisible ? '$content▋' : content;
 
-     return Container(
-       margin: const EdgeInsets.symmetric(vertical: 8),
+return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
       child: Align(
         alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-        child: GlassCard(
-          color: isUser
-               ? cs.primaryContainer.withValues(alpha: 0.76)
-               : cs.secondaryContainer.withValues(alpha: 0.76),
-             child: Container(
-               padding: const EdgeInsets.symmetric(
-                 horizontal: 12,
-                 vertical: 8,
-               ),
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.8, end: 1.0),
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.elasticOut,
+          builder: (context, scale, child) {
+            return Opacity(
+              opacity: scale,
+              child: Transform.scale(scale: scale, child: child),
+            );
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              color: isUser
+                  ? cs.primaryContainer.withValues(alpha: 0.76)
+                  : cs.secondaryContainer.withValues(alpha: 0.76),
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(20),
+                topRight: const Radius.circular(20),
+                bottomLeft: isUser ? const Radius.circular(20) : const Radius.circular(4),
+                bottomRight: isUser ? const Radius.circular(4) : const Radius.circular(20),
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 8,
+            ),
             constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.78,
+              maxWidth: MediaQuery.sizeOf(context).width * 0.78,
             ),
             child: streamingContent != null || msg?.role == 'assistant'
                 ? MarkdownBody(
@@ -890,12 +924,12 @@ class _ActionButtonState extends State<_ActionButton>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: animDuration(context, M3Tokens.durationStandard),
     );
     _scaleAnimation = Tween<double>(begin: 1.0, end: 0.9).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: Curves.easeOutBack,
+        curve: M3Tokens.buttonPressCurve,
       ),
     );
   }
@@ -922,7 +956,7 @@ class _ActionButtonState extends State<_ActionButton>
         onHighlightChanged: (h) {
           if (!h) _controller.reverse();
         },
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: const BorderRadius.all(Radius.circular(12)),
         child: AnimatedBuilder(
           animation: _scaleAnimation,
           builder: (context, child) {
@@ -984,7 +1018,7 @@ class _FollowUpInputState extends State<_FollowUpInput>
     super.initState();
     _pulseCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: animDuration(context, const Duration(milliseconds: 800)),
     );
     _scaleAnim = Tween<double>(begin: 1.0, end: 1.5).animate(
       CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeOut),
@@ -1012,9 +1046,8 @@ class _FollowUpInputState extends State<_FollowUpInput>
   }
 
   Widget _buildButton(BuildContext context) {
-    final color = widget.isRecording
-        ? Colors.red.shade700
-        : Theme.of(context).colorScheme.primary;
+    final cs = Theme.of(context).colorScheme;
+    final color = widget.isRecording ? cs.error : cs.primary;
     return GestureDetector(
       onTap: widget.isRecording ? null : widget.onSend,
       onLongPressStart: widget.onLongPressStart,
@@ -1034,7 +1067,7 @@ class _FollowUpInputState extends State<_FollowUpInput>
                     height: 48,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.red, width: 2),
+                      border: Border.all(color: cs.error, width: 2),
                     ),
                   ),
                 ),
@@ -1046,7 +1079,7 @@ class _FollowUpInputState extends State<_FollowUpInput>
             decoration: BoxDecoration(shape: BoxShape.circle, color: color),
             child: Icon(
               widget.isRecording ? Icons.mic : Icons.send,
-              color: Colors.white,
+              color: cs.onPrimary,
               size: 22,
             ),
           ),
@@ -1078,7 +1111,7 @@ class _FollowUpInputState extends State<_FollowUpInput>
                           ? l10n.summarySheetLastFollowUp
                           : l10n.summarySheetFollowUpHint,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
+                        borderRadius: const BorderRadius.all(Radius.circular(24)),
                       ),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -1107,7 +1140,7 @@ class _SlideUpRoute<T> extends PageRouteBuilder<T> {
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             const begin = Offset(0.0, 1.0);
             const end = Offset.zero;
-            const curve = Curves.easeOutCubic;
+            const curve = Curves.elasticOut;
 
             final tween = Tween(begin: begin, end: end).chain(
               CurveTween(curve: curve),
@@ -1119,6 +1152,6 @@ class _SlideUpRoute<T> extends PageRouteBuilder<T> {
               child: child,
             );
           },
-          transitionDuration: const Duration(milliseconds: 400),
+          transitionDuration: M3Tokens.durationPage,
         );
 }

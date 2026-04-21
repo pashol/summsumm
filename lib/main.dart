@@ -3,11 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:summsumm/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dynamic_color/dynamic_color.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:uuid/uuid.dart';
 
 import 'models/document.dart';
+import 'theme/m3_tokens.dart';
 import 'models/meeting.dart';
 import 'models/summary_style.dart';
 import 'providers/locale_provider.dart';
@@ -111,55 +113,38 @@ void main() async {
   );
 }
 
-ThemeData _buildTheme(Brightness brightness) {
-  final colorScheme = ColorScheme.fromSeed(
-    seedColor: const Color(0xFF6750A4),
-    brightness: brightness,
-  );
-  final base = ThemeData(colorScheme: colorScheme, useMaterial3: true);
-
+TextTheme _buildTextTheme(ColorScheme colorScheme) {
+  final base = GoogleFonts.interTextTheme();
   return base.copyWith(
-    scaffoldBackgroundColor: colorScheme.surface,
-    textTheme: GoogleFonts.interTextTheme(base.textTheme),
-    appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
-    cardTheme: CardThemeData(
-      elevation: 0,
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      color: colorScheme.surfaceContainerLow,
+    displayLarge: GoogleFonts.fraunces(
+      fontSize: 57,
+      fontWeight: FontWeight.w700,
+      color: colorScheme.onSurface,
     ),
-    inputDecorationTheme: InputDecorationThemeData(
-      filled: true,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide.none,
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide.none,
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: colorScheme.primary, width: 1.5),
-      ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    displayMedium: GoogleFonts.fraunces(
+      fontSize: 45,
+      fontWeight: FontWeight.w600,
+      color: colorScheme.onSurface,
     ),
-    sliderTheme: const SliderThemeData(
-      showValueIndicator: ShowValueIndicator.onDrag,
+    displaySmall: GoogleFonts.fraunces(
+      fontSize: 36,
+      fontWeight: FontWeight.w600,
+      color: colorScheme.onSurface,
     ),
-    dividerTheme: DividerThemeData(
-      space: 1,
-      thickness: 0.5,
-      color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+    headlineLarge: GoogleFonts.fraunces(
+      fontSize: 32,
+      fontWeight: FontWeight.w600,
+      color: colorScheme.onSurface,
     ),
-    bottomSheetTheme: const BottomSheetThemeData(
-      backgroundColor: Colors.transparent,
-      surfaceTintColor: Colors.transparent,
-      modalBackgroundColor: Colors.transparent,
-      modalBarrierColor: Colors.transparent,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
+    headlineMedium: GoogleFonts.fraunces(
+      fontSize: 28,
+      fontWeight: FontWeight.w600,
+      color: colorScheme.onSurface,
+    ),
+    headlineSmall: GoogleFonts.fraunces(
+      fontSize: 24,
+      fontWeight: FontWeight.w600,
+      color: colorScheme.onSurface,
     ),
   );
 }
@@ -269,29 +254,49 @@ class _SummsummAppState extends ConsumerState<SummsummApp> {
     return Consumer(
       builder: (context, ref, child) {
         final locale = ref.watch(localeProvider);
-        return MaterialApp(
-          navigatorKey: _navigatorKey,
-          title: 'AI Text Summarizer',
-          debugShowCheckedModeBanner: false,
-          locale: locale,
-          localizationsDelegates: const [
-            AppLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: const [
-            Locale('en'),
-            Locale('de'),
-          ],
-          theme: _buildTheme(Brightness.light),
-          darkTheme: _buildTheme(Brightness.dark),
-          themeMode: ThemeMode.system,
-          home: widget.openSettings
-              ? const SettingsScreen(isInitialSetup: true)
-              : widget.documents.isNotEmpty
-                  ? _SummarySheetHost(documents: widget.documents)
-                  : const MeetingLibraryScreen(),
+        return DynamicColorBuilder(
+          builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
+            final lightScheme = lightDynamic ?? ColorScheme.fromSeed(
+              seedColor: M3Tokens.seedColor,
+              brightness: Brightness.light,
+            );
+            final darkScheme = darkDynamic ?? ColorScheme.fromSeed(
+              seedColor: M3Tokens.seedColor,
+              brightness: Brightness.dark,
+            );
+            return MaterialApp(
+              navigatorKey: _navigatorKey,
+              title: 'AI Text Summarizer',
+              debugShowCheckedModeBanner: false,
+              locale: locale,
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: const [
+                Locale('en'),
+                Locale('de'),
+              ],
+              theme: ThemeData(
+                useMaterial3: true,
+                colorScheme: lightScheme,
+                textTheme: _buildTextTheme(lightScheme),
+              ),
+              darkTheme: ThemeData(
+                useMaterial3: true,
+                colorScheme: darkScheme,
+                textTheme: _buildTextTheme(darkScheme),
+              ),
+              themeMode: ThemeMode.system,
+              home: widget.openSettings
+                  ? const SettingsScreen(isInitialSetup: true)
+                  : widget.documents.isNotEmpty
+                      ? _SummarySheetHost(documents: widget.documents)
+                      : const MeetingLibraryScreen(),
+            );
+          },
         );
       },
     );

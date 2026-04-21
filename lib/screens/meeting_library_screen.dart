@@ -1,5 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
@@ -9,7 +10,9 @@ import '../models/meeting.dart';
 import '../providers/import_service_provider.dart';
 import '../providers/meeting_library_provider.dart';
 import '../providers/meeting_provider.dart';
+import '../theme/reduced_motion.dart';
 import '../widgets/meeting_share_sheet.dart';
+import '../widgets/spring_page_route.dart';
 import 'archived_meetings_screen.dart';
 import 'meeting_detail_screen.dart';
 import 'recording_screen.dart';
@@ -34,19 +37,18 @@ class MeetingLibraryScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.archive_outlined),
             tooltip: l10n.libraryArchived,
-            onPressed: () => Navigator.push<void>(
-              context,
-              MaterialPageRoute<void>(
-                  builder: (_) => const ArchivedMeetingsScreen(),),
-            ),
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              Navigator.push<void>(context, SpringPageRoute(builder: (_) => const ArchivedMeetingsScreen()));
+            },
           ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             tooltip: l10n.librarySettings,
-            onPressed: () => Navigator.push<void>(
-              context,
-              MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
-            ),
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              Navigator.push<void>(context, SpringPageRoute(builder: (_) => const SettingsScreen()));
+            },
           ),
         ],
       ),
@@ -64,7 +66,10 @@ class MeetingLibraryScreen extends ConsumerWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _startRecording(context, ref),
+        onPressed: () {
+          HapticFeedback.lightImpact();
+          _startRecording(context, ref);
+        },
         child: const Icon(Icons.mic),
       ),
     );
@@ -77,7 +82,20 @@ class MeetingLibraryScreen extends ConsumerWidget {
     return SlidableAutoCloseBehavior(
       child: ListView.builder(
         itemCount: meetings.length,
-        itemBuilder: (ctx, i) => _MeetingTile(meeting: meetings[i]),
+        itemBuilder: (ctx, i) {
+          return TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: 1.0),
+            duration: animDuration(ctx, Duration(milliseconds: 400 + (i * 50))),
+            curve: Curves.elasticOut,
+            builder: (context, value, child) {
+              return Transform.translate(
+                offset: Offset(0, 30 * (1 - value)),
+                child: Opacity(opacity: value, child: child),
+              );
+            },
+            child: _MeetingTile(meeting: meetings[i]),
+          );
+        },
       ),
     );
   }
@@ -106,10 +124,8 @@ class MeetingLibraryScreen extends ConsumerWidget {
   }
 
   Future<void> _startRecording(BuildContext context, WidgetRef ref) async {
-    await Navigator.push<void>(
-      context,
-      MaterialPageRoute<void>(builder: (_) => const RecordingScreen()),
-    );
+    HapticFeedback.lightImpact();
+    await Navigator.push<void>(context, SpringPageRoute(builder: (_) => const RecordingScreen()));
     ref.read(meetingLibraryProvider.notifier).refresh();
   }
 }
@@ -119,10 +135,11 @@ class _MeetingTile extends ConsumerWidget {
 
   const _MeetingTile({required this.meeting});
 
-  @override
+@override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final notifier = ref.watch(meetingProvider(meeting.id).notifier);
+    final cs = Theme.of(context).colorScheme;
 
     return Slidable(
       key: ValueKey(meeting.id),
@@ -132,15 +149,15 @@ class _MeetingTile extends ConsumerWidget {
         children: [
           SlidableAction(
             onPressed: (_) => showMeetingShareSheet(context, meeting),
-            backgroundColor: Colors.teal,
-            foregroundColor: Colors.white,
+            backgroundColor: cs.primary,
+            foregroundColor: cs.onPrimary,
             icon: Icons.share,
             label: l10n.libraryShare,
           ),
           SlidableAction(
             onPressed: (_) => _showRenameDialog(context, notifier),
-            backgroundColor: Colors.blueGrey,
-            foregroundColor: Colors.white,
+            backgroundColor: cs.secondary,
+            foregroundColor: cs.onSecondary,
             icon: Icons.edit,
             label: l10n.libraryRename,
           ),
@@ -152,15 +169,15 @@ class _MeetingTile extends ConsumerWidget {
         children: [
           SlidableAction(
             onPressed: (_) => _archive(context, notifier),
-            backgroundColor: Colors.amber.shade700,
-            foregroundColor: Colors.white,
+            backgroundColor: cs.tertiary,
+            foregroundColor: cs.onTertiary,
             icon: Icons.archive,
             label: l10n.libraryArchive,
           ),
           SlidableAction(
             onPressed: (_) => _confirmDelete(context, notifier),
-            backgroundColor: Colors.red,
-            foregroundColor: Colors.white,
+            backgroundColor: cs.error,
+            foregroundColor: cs.onError,
             icon: Icons.delete,
             label: l10n.libraryDelete,
           ),
@@ -201,12 +218,8 @@ class _MeetingTile extends ConsumerWidget {
         ),
         trailing: _ActionButton(meeting: meeting, notifier: notifier),
         onTap: () async {
-          await Navigator.push<void>(
-            context,
-            MaterialPageRoute<void>(
-              builder: (_) => MeetingDetailScreen(meetingId: meeting.id),
-            ),
-          );
+          HapticFeedback.lightImpact();
+          await Navigator.push<void>(context, SpringPageRoute(builder: (_) => MeetingDetailScreen(meetingId: meeting.id)));
           ref.read(meetingLibraryProvider.notifier).refresh();
         },
       ),
@@ -303,6 +316,7 @@ class _ActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
     switch (meeting.status) {
       case MeetingStatus.recorded:
         if (meeting.type == MeetingType.document) {
@@ -333,10 +347,10 @@ class _ActionButton extends StatelessWidget {
           child: CircularProgressIndicator(strokeWidth: 2),
         );
       case MeetingStatus.done:
-        return const Icon(Icons.check_circle, color: Colors.green);
+        return Icon(Icons.check_circle, color: cs.primary);
       case MeetingStatus.failed:
         if (meeting.type == MeetingType.document) {
-          return const Icon(Icons.error_outline, color: Colors.red);
+          return Icon(Icons.error_outline, color: cs.error);
         }
         return ElevatedButton(
           onPressed: () => notifier.retry(),
