@@ -329,7 +329,8 @@ class VoiceService {
       'filePath': filePath,
       'provider': provider,
       'diarize': diarize,
-    });
+    },
+    );
 
     try {
       final file = File(filePath);
@@ -361,7 +362,8 @@ class VoiceService {
 
         processedPath = await _preprocessAudio(filePath, processedFile.path, onProgress: (p) {
           logger.progress('Preprocessing audio ${(_inputDurationSec > 0 ? '${(p * 100).round()}%' : '…')}', 0.01 + p * 0.09);
-        });
+        },
+        );
 
         if (debugDir != null && await processedFile.exists()) {
           await processedFile.copy('$debugDir/processed.flac');
@@ -374,7 +376,8 @@ class VoiceService {
       logger.progress('Analyzing audio segments…', null);
       final segments = await _detectSilence(processedPath, onProgress: (p) {
         logger.progress('Analyzing audio ${(_inputDurationSec > 0 ? '${(p * 100).round()}%' : '…')}', 0.1 + p * 0.1);
-      });
+      },
+      );
       logger.info('Found ${segments.length} speech segments');
 
       if (segments.isEmpty) {
@@ -472,7 +475,8 @@ class VoiceService {
       logger.info('Transcription complete', data: {
         'chunks': chunkPaths.length,
         'resultLength': result.length,
-      });
+      },
+      );
 
       return result;
     } catch (e) {
@@ -691,8 +695,8 @@ Output only the corrected transcript, no explanations or markdown code blocks.''
 
     await _speech.listen(
       onResult: (result) => recognizedText = result.recognizedWords,
-      listenFor: Duration(seconds: 30),
-      pauseFor: Duration(seconds: 5),
+      listenFor: const Duration(seconds: 30),
+      pauseFor: const Duration(seconds: 5),
       partialResults: false,
       localeId: 'en_US',
     );

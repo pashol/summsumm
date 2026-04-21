@@ -360,8 +360,9 @@ class Summary extends _$Summary {
             )
             .listen(
           (delta) {
-            if (_mounted)
+            if (_mounted) {
               state = state.copyWith(summary: state.summary + delta);
+            }
           },
           onError: (Object e) {
             _stopBlink();
@@ -523,7 +524,7 @@ class Summary extends _$Summary {
 
   Future<io.File?> _getPdfFile(String uri) async {
     try {
-      final channel = const MethodChannel('app.summsumm/intent');
+      const channel = MethodChannel('app.summsumm/intent');
 
       if (uri.startsWith('content://')) {
         final bytes = await channel.invokeMethod<List<dynamic>>(
@@ -541,7 +542,8 @@ class Summary extends _$Summary {
         return file;
       } else if (uri.startsWith('file://') || uri.startsWith('/')) {
         return io.File(
-            uri.startsWith('file://') ? uri.replaceFirst('file://', '') : uri);
+          uri.startsWith('file://') ? uri.replaceFirst('file://', '') : uri,
+        );
       }
 
       return null;

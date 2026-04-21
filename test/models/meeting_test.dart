@@ -45,7 +45,7 @@ void main() {
       );
 
       final json = meeting.toJson();
-      expect(json['summaries'], isA<List>());
+      expect(json['summaries'], isA<List<dynamic>>());
       expect(json['summaries'], hasLength(1));
       expect(json['summaries'][0]['id'], 's1');
       expect(json['summaries'][0]['style'], 'structured');

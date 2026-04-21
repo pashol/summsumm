@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:summsumm/l10n/app_localizations.dart';
 import '../models/document.dart';
 
 class DocumentCarousel extends ConsumerWidget {
@@ -36,7 +37,7 @@ class DocumentCarousel extends ConsumerWidget {
               ),
               child: Center(
                 child: Text(
-                  documents[index].title ?? 'Doc ${index + 1}',
+                  documents[index].title ?? AppLocalizations.of(context)!.carouselDocFallback(index + 1),
                   style: TextStyle(
                     color: isActive
                         ? Theme.of(context).colorScheme.onPrimary

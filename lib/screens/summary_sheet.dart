@@ -107,7 +107,8 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
     ).animate(CurvedAnimation(
       parent: _entryController,
       curve: Curves.easeOutCubic,
-    ));
+    ),
+    );
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _entryController,
@@ -412,7 +413,7 @@ class _SheetBody extends StatelessWidget {
             borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
             border: Border(
               top: BorderSide(
-                color: cs.outlineVariant.withOpacity(0.4),
+                color: cs.outlineVariant.withValues(alpha: 0.4),
                 width: 0.5,
               ),
             ),
@@ -426,7 +427,7 @@ class _SheetBody extends StatelessWidget {
                   width: 48,
                   height: 5,
                   decoration: BoxDecoration(
-                    color: cs.onSurfaceVariant.withOpacity(0.4),
+                    color: cs.onSurfaceVariant.withValues(alpha: 0.4),
                     borderRadius: BorderRadius.circular(3),
                   ),
                 ),
@@ -668,28 +669,32 @@ class _ShimmerLoadingState extends State<_ShimmerLoading>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _ShimmerLine(
-                width: double.infinity,
-                baseColor: baseColor,
-                highlightColor: highlightColor,
-                animation: _controller),
+              width: double.infinity,
+              baseColor: baseColor,
+              highlightColor: highlightColor,
+              animation: _controller,
+            ),
             const SizedBox(height: 8),
             _ShimmerLine(
-                width: MediaQuery.of(context).size.width * 0.85,
-                baseColor: baseColor,
-                highlightColor: highlightColor,
-                animation: _controller),
+              width: MediaQuery.of(context).size.width * 0.85,
+              baseColor: baseColor,
+              highlightColor: highlightColor,
+              animation: _controller,
+            ),
             const SizedBox(height: 8),
             _ShimmerLine(
-                width: MediaQuery.of(context).size.width * 0.7,
-                baseColor: baseColor,
-                highlightColor: highlightColor,
-                animation: _controller),
+              width: MediaQuery.of(context).size.width * 0.7,
+              baseColor: baseColor,
+              highlightColor: highlightColor,
+              animation: _controller,
+            ),
             const SizedBox(height: 8),
             _ShimmerLine(
-                width: MediaQuery.of(context).size.width * 0.6,
-                baseColor: baseColor,
-                highlightColor: highlightColor,
-                animation: _controller),
+              width: MediaQuery.of(context).size.width * 0.6,
+              baseColor: baseColor,
+              highlightColor: highlightColor,
+              animation: _controller,
+            ),
           ],
         );
       },
@@ -753,8 +758,8 @@ class _ChatBubble extends StatelessWidget {
         alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
         child: GlassCard(
           color: isUser
-              ? cs.primaryContainer.withOpacity(0.76)
-              : cs.secondaryContainer.withOpacity(0.76),
+               ? cs.primaryContainer.withValues(alpha: 0.76)
+               : cs.secondaryContainer.withValues(alpha: 0.76),
              child: Container(
                padding: const EdgeInsets.symmetric(
                  horizontal: 12,

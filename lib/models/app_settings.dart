@@ -142,31 +142,45 @@ class CuratedModel {
 
 const kCuratedModels = [
   CuratedModel(
-      id: 'openrouter/free', name: 'Auto (Best Free Model)', series: 'Auto'),
+    id: 'openrouter/free',
+    name: 'Auto (Best Free Model)',
+    series: 'Auto',
+  ),
   CuratedModel(
-      id: 'google/gemini-3-flash-preview',
-      name: 'Gemini 3 Flash',
-      series: 'Google'),
+    id: 'google/gemini-3-flash-preview',
+    name: 'Gemini 3 Flash',
+    series: 'Google',
+  ),
   CuratedModel(
-      id: 'deepseek/deepseek-v3.2', name: 'DeepSeek V3.2', series: 'DeepSeek'),
+    id: 'deepseek/deepseek-v3.2',
+    name: 'DeepSeek V3.2',
+    series: 'DeepSeek',
+  ),
   CuratedModel(
-      id: 'anthropic/claude-haiku-4.5',
-      name: 'Claude Haiku 4.5',
-      series: 'Anthropic'),
+    id: 'anthropic/claude-haiku-4.5',
+    name: 'Claude Haiku 4.5',
+    series: 'Anthropic',
+  ),
   CuratedModel(
-      id: 'openai/gpt-5.4-mini', name: 'GPT-5.4 Mini', series: 'OpenAI'),
+    id: 'openai/gpt-5.4-mini',
+    name: 'GPT-5.4 Mini',
+    series: 'OpenAI',
+  ),
   CuratedModel(
-      id: 'mistralai/mistral-small-3.2-24b-instruct',
-      name: 'Mistral Small 3.2',
-      series: 'Mistral'),
+    id: 'mistralai/mistral-small-3.2-24b-instruct',
+    name: 'Mistral Small 3.2',
+    series: 'Mistral',
+  ),
   CuratedModel(
-      id: 'anthropic/claude-sonnet-4.6',
-      name: 'Claude Sonnet 4.6',
-      series: 'Anthropic'),
+    id: 'anthropic/claude-sonnet-4.6',
+    name: 'Claude Sonnet 4.6',
+    series: 'Anthropic',
+  ),
   CuratedModel(
-      id: 'anthropic/claude-opus-4.6',
-      name: 'Claude Opus 4.6',
-      series: 'Anthropic'),
+    id: 'anthropic/claude-opus-4.6',
+    name: 'Claude Opus 4.6',
+    series: 'Anthropic',
+  ),
 ];
 
 const kOpenAiModels = [

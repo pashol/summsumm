@@ -64,7 +64,8 @@ void main() async {
         type: 'audio',
         path: path,
         durationMs: durationMs,
-      ));
+      ),
+      );
     } else {
       otherDocs.add(Document(
         id: (text.isNotEmpty ? text : uri ?? '').hashCode.toString(),
@@ -74,7 +75,8 @@ void main() async {
         name: name,
         size: size,
         error: error,
-      ));
+      ),
+      );
     }
   }
 
@@ -219,7 +221,8 @@ class _SummsummAppState extends ConsumerState<SummsummApp> {
             type: 'audio',
             path: path,
             durationMs: durationMs,
-          ));
+          ),
+          );
         } else {
           otherDocs.add(Document(
             id: (text.isNotEmpty ? text : uri ?? '').hashCode.toString(),
@@ -229,7 +232,8 @@ class _SummsummAppState extends ConsumerState<SummsummApp> {
             name: name,
             size: size,
             error: error,
-          ));
+          ),
+          );
         }
       }
 

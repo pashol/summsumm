@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/meeting.dart';
 import '../providers/meeting_library_provider.dart';
 import '../providers/meeting_provider.dart';
@@ -14,17 +15,18 @@ class ArchivedMeetingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final meetingsAsync = ref.watch(archivedMeetingsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Archived Meetings')),
+      appBar: AppBar(title: Text(l10n.archiveTitle)),
       body: Container(
         color: Theme.of(context).colorScheme.surface,
         child: meetingsAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('Error: $e')),
+          error: (e, _) => Center(child: Text(l10n.archiveError(e.toString()))),
           data: (meetings) {
             if (meetings.isEmpty) {
-              return const Center(child: Text('No archived meetings'));
+              return Center(child: Text(l10n.archiveNoMeetings));
             }
             return SlidableAutoCloseBehavior(
               child: ListView.builder(
@@ -47,6 +49,7 @@ class _ArchivedMeetingTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final notifier = ref.watch(meetingProvider(meeting.id).notifier);
 
     return Slidable(
@@ -60,14 +63,14 @@ class _ArchivedMeetingTile extends ConsumerWidget {
             backgroundColor: Colors.teal,
             foregroundColor: Colors.white,
             icon: Icons.share,
-            label: 'Share',
+            label: l10n.libraryShare,
           ),
           SlidableAction(
             onPressed: (_) => _unarchive(context, notifier),
             backgroundColor: Colors.blue,
             foregroundColor: Colors.white,
             icon: Icons.unarchive,
-            label: 'Restore',
+            label: l10n.archiveRestore,
           ),
         ],
       ),
@@ -80,7 +83,7 @@ class _ArchivedMeetingTile extends ConsumerWidget {
             backgroundColor: Colors.red,
             foregroundColor: Colors.white,
             icon: Icons.delete,
-            label: 'Delete',
+            label: l10n.libraryDelete,
           ),
         ],
       ),
@@ -107,7 +110,7 @@ class _ArchivedMeetingTile extends ConsumerWidget {
                       color: Theme.of(context).colorScheme.error, size: 12,),
                   const SizedBox(width: 4),
                   Text(
-                    'Failed — tap for details',
+                    l10n.libraryFailedDetails,
                     style: TextStyle(
                         color: Theme.of(context).colorScheme.error,
                         fontSize: 12,),
@@ -142,31 +145,32 @@ class _ArchivedMeetingTile extends ConsumerWidget {
   void _unarchive(BuildContext context, MeetingNotifier notifier) {
     notifier.unarchive();
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Meeting restored to library')),
+      SnackBar(content: Text(AppLocalizations.of(context)!.archiveRestored)),
     );
   }
 
   void _confirmDelete(BuildContext context, MeetingNotifier notifier) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(meeting.type == MeetingType.document
-            ? 'Delete Document?'
-            : 'Delete Meeting?',),
+            ? l10n.libraryDeleteDocument
+            : l10n.libraryDeleteMeeting,),
         content: Text(meeting.type == MeetingType.document
-            ? 'This will permanently delete this document summary.'
-            : 'This will permanently delete the recording and all data.',),
+            ? l10n.libraryDeleteDocumentConfirm
+            : l10n.libraryDeleteMeetingConfirm,),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancelButton),
           ),
           TextButton(
             onPressed: () {
               notifier.delete();
               Navigator.pop(ctx);
             },
-            child: const Text('Delete'),
+            child: Text(l10n.deleteButton),
           ),
         ],
       ),
