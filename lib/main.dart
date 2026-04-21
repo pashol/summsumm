@@ -26,8 +26,6 @@ bool isDocumentShare(List<Document> documents) =>
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Load locale data for intl's DateFormat — without this, non-English locales
-  // throw LocaleDataException when formatting dates in meeting tiles.
   await initializeDateFormatting();
 
   // Retrieve the intent data from the native layer before the UI builds.
@@ -144,6 +142,51 @@ TextTheme _buildTextTheme(ColorScheme colorScheme) {
     headlineSmall: GoogleFonts.fraunces(
       fontSize: 24,
       fontWeight: FontWeight.w600,
+      color: colorScheme.onSurface,
+    ),
+    titleLarge: GoogleFonts.inter(
+      fontSize: 22,
+      fontWeight: FontWeight.w600,
+      color: colorScheme.onSurface,
+    ),
+    titleMedium: GoogleFonts.inter(
+      fontSize: 16,
+      fontWeight: FontWeight.w500,
+      color: colorScheme.onSurface,
+    ),
+    titleSmall: GoogleFonts.inter(
+      fontSize: 14,
+      fontWeight: FontWeight.w500,
+      color: colorScheme.onSurface,
+    ),
+    bodyLarge: GoogleFonts.inter(
+      fontSize: 16,
+      fontWeight: FontWeight.w400,
+      color: colorScheme.onSurface,
+    ),
+    bodyMedium: GoogleFonts.inter(
+      fontSize: 14,
+      fontWeight: FontWeight.w400,
+      color: colorScheme.onSurface,
+    ),
+    bodySmall: GoogleFonts.inter(
+      fontSize: 12,
+      fontWeight: FontWeight.w400,
+      color: colorScheme.onSurface,
+    ),
+    labelLarge: GoogleFonts.inter(
+      fontSize: 14,
+      fontWeight: FontWeight.w500,
+      color: colorScheme.onSurface,
+    ),
+    labelMedium: GoogleFonts.inter(
+      fontSize: 12,
+      fontWeight: FontWeight.w500,
+      color: colorScheme.onSurface,
+    ),
+    labelSmall: GoogleFonts.inter(
+      fontSize: 11,
+      fontWeight: FontWeight.w500,
       color: colorScheme.onSurface,
     ),
   );

@@ -271,7 +271,12 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
             thumbVisibility: _isDesktop,
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: MarkdownBody(data: content),
+              child: MarkdownBody(
+                      data: content,
+                      styleSheet: MarkdownStyleSheet(
+                        p: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                      ),
+                    ),
             ),
           ),
         ),
@@ -293,7 +298,12 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
             thumbVisibility: _isDesktop,
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
-              child: MarkdownBody(data: activeContent),
+              child: MarkdownBody(
+                      data: activeContent,
+                      styleSheet: MarkdownStyleSheet(
+                        p: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                      ),
+                    ),
             ),
           ),
         ),
@@ -320,7 +330,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                       builder: (context, value, child) {
                         return Transform.scale(
                           scale: 0.9 + (0.1 * value),
-                          child: Opacity(opacity: value, child: child),
+                          child: Opacity(opacity: value.clamp(0.0, 1.0), child: child),
                         );
                       },
                       child: Text(
@@ -575,7 +585,12 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                 thumbVisibility: _isDesktop,
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
-                  child: MarkdownBody(data: meeting.transcript ?? ''),
+                  child: MarkdownBody(
+                      data: meeting.transcript ?? '',
+                      styleSheet: MarkdownStyleSheet(
+                        p: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                      ),
+                    ),
                 ),
               ),
             ),
@@ -649,7 +664,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                     curve: Curves.elasticOut,
                     builder: (context, scale, child) {
                       return Opacity(
-                        opacity: scale,
+                        opacity: scale.clamp(0.0, 1.0),
                         child: Transform.scale(scale: scale, child: child),
                       );
                     },
@@ -889,7 +904,12 @@ class _MetadataRow extends StatelessWidget {
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                 ),
-                Text(value, style: Theme.of(context).textTheme.bodyMedium),
+                Text(
+                  value,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
               ],
             ),
           ),

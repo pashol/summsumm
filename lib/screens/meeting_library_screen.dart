@@ -23,8 +23,10 @@ class MeetingLibraryScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    debugPrint('MeetingLibraryScreen.build()');
     final l10n = AppLocalizations.of(context)!;
     final meetingsAsync = ref.watch(meetingLibraryProvider);
+    debugPrint('MeetingLibraryScreen: ${meetingsAsync}');
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.libraryTitle),
@@ -90,7 +92,7 @@ class MeetingLibraryScreen extends ConsumerWidget {
             builder: (context, value, child) {
               return Transform.translate(
                 offset: Offset(0, 30 * (1 - value)),
-                child: Opacity(opacity: value, child: child),
+                child: Opacity(opacity: value.clamp(0.0, 1.0), child: child),
               );
             },
             child: _MeetingTile(meeting: meetings[i]),
@@ -135,8 +137,9 @@ class _MeetingTile extends ConsumerWidget {
 
   const _MeetingTile({required this.meeting});
 
-@override
+  @override
   Widget build(BuildContext context, WidgetRef ref) {
+    debugPrint('_MeetingTile.build() for ${meeting.id}, title: ${meeting.title}');
     final l10n = AppLocalizations.of(context)!;
     final notifier = ref.watch(meetingProvider(meeting.id).notifier);
     final cs = Theme.of(context).colorScheme;

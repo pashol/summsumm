@@ -502,7 +502,7 @@ class _SheetBody extends StatelessWidget {
                         builder: (context, value, child) {
                           return Transform.scale(
                             scale: 0.9 + (0.1 * value),
-                            child: Opacity(opacity: value, child: child),
+                            child: Opacity(opacity: value.clamp(0.0, 1.0), child: child),
                           );
                         },
                         child: Text(
@@ -636,7 +636,9 @@ class _SummaryContent extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: MarkdownBody(
           data: summary,
-          styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)),
+          styleSheet: MarkdownStyleSheet(
+            p: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+          ),
         ),
       ),
     );
@@ -779,7 +781,7 @@ return Container(
           curve: Curves.elasticOut,
           builder: (context, scale, child) {
             return Opacity(
-              opacity: scale,
+              opacity: scale.clamp(0.0, 1.0),
               child: Transform.scale(scale: scale, child: child),
             );
           },
@@ -805,8 +807,8 @@ return Container(
             child: streamingContent != null || msg?.role == 'assistant'
                 ? MarkdownBody(
                     data: displayContent,
-                    styleSheet: MarkdownStyleSheet.fromTheme(
-                      Theme.of(context),
+                    styleSheet: MarkdownStyleSheet(
+                      p: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                     ),
                   )
                 : Text(
