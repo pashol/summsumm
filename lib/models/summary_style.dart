@@ -49,6 +49,8 @@ extension SummaryStyleLocalization on SummaryStyle {
 }
 
 String langSuffix(String language, String subject) {
-  if (language == 'Same as input') return '';
+  if (language == 'Same as input') {
+    return '\n\nIMPORTANT: Respond in the same language as the input text.';
+  }
   return '\n\nIMPORTANT: The summary must be in $language.';
 }
