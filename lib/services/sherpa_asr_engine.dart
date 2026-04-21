@@ -6,18 +6,18 @@ import 'package:summsumm/models/transcription_config.dart';
 const bool _sherpaAvailable = false;
 
 class _OfflineRecognizer {
-  dynamic createStream() => _OfflineStream();
-  void decode(dynamic stream) {}
-  _RecognitionResult getResult(dynamic stream) => _RecognitionResult();
+  _OfflineStream createStream() => _OfflineStream();
+  void decode(_OfflineStream stream) {}
+  _RecognitionResult getResult(_OfflineStream stream) => _RecognitionResult();
   void free() {}
 }
 
 class _OnlineRecognizer {
-  dynamic createStream() => _OnlineStream();
-  bool isReady(dynamic stream) => false;
-  void decode(dynamic stream) {}
-  _RecognitionResult getResult(dynamic stream) => _RecognitionResult();
-  void inputFinished(dynamic stream) {}
+  _OnlineStream createStream() => _OnlineStream();
+  bool isReady(_OnlineStream stream) => false;
+  void decode(_OnlineStream stream) {}
+  _RecognitionResult getResult(_OnlineStream stream) => _RecognitionResult();
+  void inputFinished(_OnlineStream stream) {}
   void free() {}
 }
 

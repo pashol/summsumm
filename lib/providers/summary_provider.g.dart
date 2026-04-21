@@ -6,7 +6,7 @@ part of 'summary_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$summaryHash() => r'fc22de5d0692557d287a7e379fe79a39940177d1';
+String _$summaryHash() => r'8396ca200d5ae220486a12b45999e2cb2c8081c5';
 
 /// See also [Summary].
 @ProviderFor(Summary)

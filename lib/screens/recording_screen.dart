@@ -163,13 +163,6 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> {
     final service = ref.read(recordingServiceProvider);
     final meeting = await service.stopRecording(_elapsedSeconds);
 
-    // Save live transcript if available
-    if (_liveTranscriptSegments.isNotEmpty) {
-      final transcript = _liveTranscriptSegments.join(' ');
-      // Update meeting with transcript
-      // Note: This requires Meeting model to support setting transcript
-    }
-
     final repository = ref.read(meetingRepositoryProvider);
     await repository.save(meeting);
     if (mounted) Navigator.pop(context);

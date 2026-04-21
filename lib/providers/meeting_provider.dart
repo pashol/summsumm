@@ -11,7 +11,6 @@ import 'package:summsumm/models/transcription_config.dart';
 import 'package:summsumm/services/processing_service.dart';
 import 'package:summsumm/services/voice_service.dart';
 import 'package:summsumm/providers/on_device_transcription_provider.dart';
-import 'package:summsumm/services/on_device_transcription_service.dart';
 
 final voiceServiceProvider = Provider<VoiceService>((ref) => VoiceService());
 final aiServiceProvider = Provider<AiService>((ref) => AiService());
