@@ -927,7 +927,7 @@ class _ActionButtonState extends State<_ActionButton>
         onHighlightChanged: (h) {
           if (!h) _controller.reverse();
         },
-        borderRadius: StadiumBorder(),
+        borderRadius: const BorderRadius.all(Radius.circular(12)),
         child: AnimatedBuilder(
           animation: _scaleAnimation,
           builder: (context, child) {
@@ -1082,7 +1082,7 @@ class _FollowUpInputState extends State<_FollowUpInput>
                           ? l10n.summarySheetLastFollowUp
                           : l10n.summarySheetFollowUpHint,
                       border: OutlineInputBorder(
-                        borderRadius: StadiumBorder(),
+                        borderRadius: const BorderRadius.all(Radius.circular(24)),
                       ),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
