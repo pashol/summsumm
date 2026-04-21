@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/meeting.dart';
 import '../providers/import_service_provider.dart';
 import '../providers/meeting_library_provider.dart';
@@ -19,19 +20,20 @@ class MeetingLibraryScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final meetingsAsync = ref.watch(meetingLibraryProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Library'),
+        title: Text(l10n.libraryTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.upload_file_outlined),
-            tooltip: 'Import file',
+            tooltip: l10n.libraryImportFile,
             onPressed: () => _importFile(context, ref),
           ),
           IconButton(
             icon: const Icon(Icons.archive_outlined),
-            tooltip: 'Archived',
+            tooltip: l10n.libraryArchived,
             onPressed: () => Navigator.push<void>(
               context,
               MaterialPageRoute<void>(
@@ -40,7 +42,7 @@ class MeetingLibraryScreen extends ConsumerWidget {
           ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Settings',
+            tooltip: l10n.librarySettings,
             onPressed: () => Navigator.push<void>(
               context,
               MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
@@ -55,10 +57,10 @@ class MeetingLibraryScreen extends ConsumerWidget {
           error: (e, s) => Center(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Text('Error: $e'),
+              child: Text(l10n.libraryError(e.toString())),
             ),
           ),
-          data: (meetings) => _buildList(meetings),
+          data: (meetings) => _buildList(meetings, l10n),
         ),
       ),
       floatingActionButton: FloatingActionButton(
@@ -68,9 +70,9 @@ class MeetingLibraryScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildList(List<Meeting> meetings) {
+  Widget _buildList(List<Meeting> meetings, AppLocalizations l10n) {
     if (meetings.isEmpty) {
-      return const Center(child: Text('No items yet'));
+      return Center(child: Text(l10n.libraryNoItems));
     }
     return SlidableAutoCloseBehavior(
       child: ListView.builder(
@@ -95,8 +97,9 @@ class MeetingLibraryScreen extends ConsumerWidget {
       ref.read(meetingLibraryProvider.notifier).refresh();
     } catch (e) {
       if (context.mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Import failed: $e')),
+          SnackBar(content: Text(l10n.libraryImportFailed(e.toString()))),
         );
       }
     }
@@ -118,6 +121,7 @@ class _MeetingTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final notifier = ref.watch(meetingProvider(meeting.id).notifier);
 
     return Slidable(
@@ -131,14 +135,14 @@ class _MeetingTile extends ConsumerWidget {
             backgroundColor: Colors.teal,
             foregroundColor: Colors.white,
             icon: Icons.share,
-            label: 'Share',
+            label: l10n.libraryShare,
           ),
           SlidableAction(
             onPressed: (_) => _showRenameDialog(context, notifier),
             backgroundColor: Colors.blueGrey,
             foregroundColor: Colors.white,
             icon: Icons.edit,
-            label: 'Rename',
+            label: l10n.libraryRename,
           ),
         ],
       ),
@@ -151,14 +155,14 @@ class _MeetingTile extends ConsumerWidget {
             backgroundColor: Colors.amber.shade700,
             foregroundColor: Colors.white,
             icon: Icons.archive,
-            label: 'Archive',
+            label: l10n.libraryArchive,
           ),
           SlidableAction(
             onPressed: (_) => _confirmDelete(context, notifier),
             backgroundColor: Colors.red,
             foregroundColor: Colors.white,
             icon: Icons.delete,
-            label: 'Delete',
+            label: l10n.libraryDelete,
           ),
         ],
       ),
@@ -185,7 +189,7 @@ class _MeetingTile extends ConsumerWidget {
                       color: Theme.of(context).colorScheme.error, size: 12,),
                   const SizedBox(width: 4),
                   Text(
-                    'Failed — tap for details',
+                    l10n.libraryFailedDetails,
                     style: TextStyle(
                         color: Theme.of(context).colorScheme.error,
                         fontSize: 12,),
@@ -222,13 +226,14 @@ class _MeetingTile extends ConsumerWidget {
   }
 
   void _archive(BuildContext context, MeetingNotifier notifier) {
+    final l10n = AppLocalizations.of(context)!;
     notifier.archive();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('Meeting archived'),
+        content: Text(l10n.libraryArchivedSnackbar),
         duration: const Duration(seconds: 4),
         action: SnackBarAction(
-          label: 'Undo',
+          label: l10n.undoButton,
           onPressed: notifier.unarchive,
         ),
       ),
@@ -236,26 +241,27 @@ class _MeetingTile extends ConsumerWidget {
   }
 
   void _confirmDelete(BuildContext context, MeetingNotifier notifier) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(meeting.type == MeetingType.document
-            ? 'Delete Document?'
-            : 'Delete Meeting?',),
+            ? l10n.libraryDeleteDocument
+            : l10n.libraryDeleteMeeting,),
         content: Text(meeting.type == MeetingType.document
-            ? 'This will permanently delete this document summary.'
-            : 'This will permanently delete the recording and all data.',),
+            ? l10n.libraryDeleteDocumentConfirm
+            : l10n.libraryDeleteMeetingConfirm,),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancelButton),
           ),
           TextButton(
             onPressed: () {
               notifier.delete();
               Navigator.pop(ctx);
             },
-            child: const Text('Delete'),
+            child: Text(l10n.deleteButton),
           ),
         ],
       ),
@@ -263,23 +269,24 @@ class _MeetingTile extends ConsumerWidget {
   }
 
   void _showRenameDialog(BuildContext context, MeetingNotifier notifier) {
+    final l10n = AppLocalizations.of(context)!;
     final controller = TextEditingController(text: meeting.title);
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Rename Meeting'),
+        title: Text(l10n.libraryRenameMeeting),
         content: TextField(controller: controller),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancelButton),
           ),
           TextButton(
             onPressed: () {
               notifier.rename(controller.text);
               Navigator.pop(ctx);
             },
-            child: const Text('Save'),
+            child: Text(l10n.saveButton),
           ),
         ],
       ),
@@ -295,17 +302,18 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     switch (meeting.status) {
       case MeetingStatus.recorded:
         if (meeting.type == MeetingType.document) {
           return ElevatedButton(
             onPressed: () => notifier.summarize(),
-            child: const Text('Summarize'),
+            child: Text(l10n.summarizeButton),
           );
         }
         return ElevatedButton(
           onPressed: () => notifier.transcribe(),
-          child: const Text('Transcribe'),
+          child: Text(l10n.transcribeButton),
         );
       case MeetingStatus.transcribing:
         return const SizedBox(
@@ -316,7 +324,7 @@ class _ActionButton extends StatelessWidget {
       case MeetingStatus.transcribed:
         return ElevatedButton(
           onPressed: () => notifier.summarize(),
-          child: const Text('Summarize'),
+          child: Text(l10n.summarizeButton),
         );
       case MeetingStatus.summarizing:
         return const SizedBox(
@@ -332,7 +340,7 @@ class _ActionButton extends StatelessWidget {
         }
         return ElevatedButton(
           onPressed: () => notifier.retry(),
-          child: const Text('Retry'),
+          child: Text(l10n.retryButton),
         );
     }
   }
