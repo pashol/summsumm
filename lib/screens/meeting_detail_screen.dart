@@ -9,6 +9,7 @@ import 'package:summsumm/l10n/app_localizations.dart';
 import 'package:summsumm/models/meeting.dart';
 import 'package:summsumm/models/summary_style.dart';
 import 'package:summsumm/models/app_settings.dart';
+import 'package:summsumm/theme/reduced_motion.dart';
 import 'package:summsumm/providers/meeting_chat_provider.dart';
 import 'package:summsumm/providers/meeting_library_provider.dart';
 import 'package:summsumm/providers/meeting_provider.dart';
@@ -644,7 +645,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                       : Alignment.centerLeft,
                   child: TweenAnimationBuilder<double>(
                     tween: Tween(begin: 0.8, end: 1.0),
-                    duration: const Duration(milliseconds: 400),
+                    duration: animDuration(context, const Duration(milliseconds: 400)),
                     curve: Curves.elasticOut,
                     builder: (context, scale, child) {
                       return Opacity(
@@ -791,19 +792,11 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
         title: Text(l10n.libraryRenameMeeting),
         content: TextField(controller: controller),
         actions: _buildDialogActions(ctx, [
-          DialogAction(
-            label: l10n.cancelButton,
-            onPressed: () => Navigator.pop(ctx),
-            isDefault: false,
-          ),
-          DialogAction(
-            label: l10n.saveButton,
-            onPressed: () {
+          (label: l10n.cancelButton, onPressed: () => Navigator.pop(ctx), isDefault: false),
+          (label: l10n.saveButton, onPressed: () {
               provider.rename(controller.text);
               Navigator.pop(ctx);
-            },
-            isDefault: true,
-          ),
+            }, isDefault: true),
         ]),
       ),
     );
@@ -829,20 +822,12 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
               : l10n.libraryDeleteMeetingConfirm,
         ),
         actions: _buildDialogActions(ctx, [
-          DialogAction(
-            label: l10n.cancelButton,
-            onPressed: () => Navigator.pop(ctx),
-            isDefault: false,
-          ),
-          DialogAction(
-            label: l10n.deleteButton,
-            onPressed: () {
+          (label: l10n.cancelButton, onPressed: () => Navigator.pop(ctx), isDefault: false),
+          (label: l10n.deleteButton, onPressed: () {
               provider.delete();
               Navigator.pop(ctx);
               Navigator.pop(context);
-            },
-            isDefault: true,
-          ),
+            }, isDefault: true),
         ]),
       ),
     );
@@ -933,7 +918,7 @@ class _TranscribingIndicatorState extends State<_TranscribingIndicator>
     super.initState();
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: animDuration(context, const Duration(milliseconds: 1500)),
     )..repeat(reverse: true);
 
     _breathAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
