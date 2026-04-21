@@ -22,6 +22,9 @@
 # SSE parsing
 -keepclassmembers class app.summsumm.services.AiService { *; }
 
+# FFmpeg Kit
+-keep class com.antonkarpenko.ffmpegkit.** { *; }
+
 # Google Play Core (referenced by Flutter embedding but not used)
 -dontwarn com.google.android.play.core.splitcompat.**
 -dontwarn com.google.android.play.core.splitinstall.**
