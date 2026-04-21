@@ -9,6 +9,7 @@ import 'package:summsumm/l10n/app_localizations.dart';
 import 'package:summsumm/models/meeting.dart';
 import 'package:summsumm/models/summary_style.dart';
 import 'package:summsumm/models/app_settings.dart';
+import 'package:summsumm/models/transcription_config.dart';
 import 'package:summsumm/theme/reduced_motion.dart';
 import 'package:summsumm/providers/meeting_chat_provider.dart';
 import 'package:summsumm/providers/meeting_library_provider.dart';
@@ -527,19 +528,21 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
           );
         }
         final settings = ref.watch(settingsProvider);
-        final isOpenRouter = settings.provider == 'openrouter';
+        final canDiarize = settings.provider == 'openrouter' ||
+                           settings.transcriptionStrategy == TranscriptionStrategy.onDevice;
+
         return Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Tooltip(
-                message: isOpenRouter ? '' : l10n.meetingDetailDiarizationRequires,
+                message: canDiarize ? '' : l10n.meetingDetailDiarizationRequires,
                 child: Row(
                   children: [
                     Switch(
                       value: _diarize,
-                      onChanged: isOpenRouter
+                      onChanged: canDiarize
                           ? (v) => setState(() => _diarize = v)
                           : null,
                     ),
@@ -547,7 +550,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                     Text(
                       l10n.meetingDetailDiarizeSpeakers,
                       style: TextStyle(
-                        color: isOpenRouter
+                        color: canDiarize
                             ? null
                             : Theme.of(context).disabledColor,
                       ),

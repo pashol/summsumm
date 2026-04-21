@@ -7,8 +7,11 @@ import 'package:summsumm/providers/meeting_library_provider.dart';
 import 'package:summsumm/providers/meeting_repository_provider.dart';
 import 'package:summsumm/providers/settings_provider.dart';
 import 'package:summsumm/services/ai_service.dart';
+import 'package:summsumm/models/transcription_config.dart';
 import 'package:summsumm/services/processing_service.dart';
 import 'package:summsumm/services/voice_service.dart';
+import 'package:summsumm/providers/on_device_transcription_provider.dart';
+import 'package:summsumm/services/on_device_transcription_service.dart';
 
 final voiceServiceProvider = Provider<VoiceService>((ref) => VoiceService());
 final aiServiceProvider = Provider<AiService>((ref) => AiService());
@@ -92,8 +95,15 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
   Future<void> transcribe({bool diarize = false}) async {
     final meeting = state;
     final settings = ref.read(settingsProvider);
-    final voiceService = ref.read(voiceServiceProvider);
     final repository = ref.read(meetingRepositoryProvider);
+
+    // Check if using on-device transcription
+    if (settings.transcriptionStrategy == TranscriptionStrategy.onDevice) {
+      await _transcribeOnDevice(diarize: diarize);
+      return;
+    }
+
+    final voiceService = ref.read(voiceServiceProvider);
     final processingService = ref.read(processingServiceProvider);
 
     if (!await _hasConnectivity(settings.provider)) {
@@ -128,6 +138,16 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
         },
       );
 
+      if (transcript == null || transcript.trim().isEmpty) {
+        state = meeting.copyWith(
+          status: MeetingStatus.failed,
+          lastError: 'Transcription returned no text. Please ensure the audio file is valid.',
+        );
+        await repository.save(state);
+        ref.read(meetingLibraryProvider.notifier).refresh();
+        return;
+      }
+
       state = meeting.copyWith(
         transcript: transcript,
         status: MeetingStatus.transcribed,
@@ -148,6 +168,69 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
       rethrow;
     } finally {
       await processingService.stop();
+    }
+  }
+
+  Future<void> _transcribeOnDevice({bool diarize = false}) async {
+    final meeting = state;
+    final settings = ref.read(settingsProvider);
+    final repository = ref.read(meetingRepositoryProvider);
+    final service = ref.read(onDeviceTranscriptionServiceProvider);
+
+    state = meeting.copyWith(
+      status: MeetingStatus.transcribing,
+      clearLastError: true,
+      transcriptionStatus: 'Loading models…',
+      transcriptionProgress: null,
+    );
+    await repository.save(state);
+    ref.read(meetingLibraryProvider.notifier).refresh();
+
+    try {
+      // Initialize service
+      await service.initialize(settings.onDeviceModelSize);
+
+      // Transcribe
+      final transcript = await service.transcribeFile(
+        meeting.audioPath,
+        diarize: diarize && settings.onDeviceDiarization,
+        onProgress: (status, progress) {
+          state = state.copyWith(
+            transcriptionStatus: status,
+            transcriptionProgress: progress,
+          );
+          _throttledSave(state);
+        },
+      );
+
+      if (transcript.isEmpty) {
+        state = meeting.copyWith(
+          status: MeetingStatus.failed,
+          lastError: 'Transcription returned no text. Please ensure the audio file is valid.',
+        );
+        await repository.save(state);
+        ref.read(meetingLibraryProvider.notifier).refresh();
+        return;
+      }
+
+      state = meeting.copyWith(
+        transcript: transcript,
+        status: MeetingStatus.transcribed,
+        provider: 'on-device',
+        clearLastError: true,
+        clearTranscriptionStatus: true,
+        clearTranscriptionProgress: true,
+      );
+      await repository.save(state);
+      ref.read(meetingLibraryProvider.notifier).refresh();
+    } catch (e) {
+      state = meeting.copyWith(
+        status: MeetingStatus.failed,
+        lastError: e.toString(),
+      );
+      await repository.save(state);
+      ref.read(meetingLibraryProvider.notifier).refresh();
+      rethrow;
     }
   }
 
