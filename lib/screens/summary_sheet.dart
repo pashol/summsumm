@@ -757,19 +757,36 @@ class _ChatBubble extends StatelessWidget {
     final displayContent =
         streamingContent != null && isCursorVisible ? '$content▋' : content;
 
-     return Container(
-       margin: const EdgeInsets.symmetric(vertical: 8),
+return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
       child: Align(
         alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-        child: GlassCard(
-          color: isUser
-               ? cs.primaryContainer.withValues(alpha: 0.76)
-               : cs.secondaryContainer.withValues(alpha: 0.76),
-             child: Container(
-               padding: const EdgeInsets.symmetric(
-                 horizontal: 12,
-                 vertical: 8,
-               ),
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.8, end: 1.0),
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.elasticOut,
+          builder: (context, scale, child) {
+            return Opacity(
+              opacity: scale,
+              child: Transform.scale(scale: scale, child: child),
+            );
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              color: isUser
+                  ? cs.primaryContainer.withValues(alpha: 0.76)
+                  : cs.secondaryContainer.withValues(alpha: 0.76),
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(20),
+                topRight: const Radius.circular(20),
+                bottomLeft: isUser ? const Radius.circular(20) : const Radius.circular(4),
+                bottomRight: isUser ? const Radius.circular(4) : const Radius.circular(20),
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 8,
+            ),
             constraints: BoxConstraints(
               maxWidth: MediaQuery.sizeOf(context).width * 0.78,
             ),
