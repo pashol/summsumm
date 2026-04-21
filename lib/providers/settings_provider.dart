@@ -3,6 +3,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/app_settings.dart';
+import '../models/transcription_config.dart';
 import '../services/secure_storage_service.dart';
 
 part 'settings_provider.g.dart';
@@ -103,6 +104,30 @@ class Settings extends _$Settings {
       return;
     }
     final next = state.copyWith(localeOverride: languageCode);
+    state = next;
+    await _persist(next);
+  }
+
+  Future<void> setTranscriptionStrategy(TranscriptionStrategy strategy) async {
+    final next = state.copyWith(transcriptionStrategy: strategy);
+    state = next;
+    await _persist(next);
+  }
+
+  Future<void> setOnDeviceModelSize(ModelSize size) async {
+    final next = state.copyWith(onDeviceModelSize: size);
+    state = next;
+    await _persist(next);
+  }
+
+  Future<void> setEnableRealTimeTranscription(bool enabled) async {
+    final next = state.copyWith(enableRealTimeTranscription: enabled);
+    state = next;
+    await _persist(next);
+  }
+
+  Future<void> setOnDeviceDiarization(bool enabled) async {
+    final next = state.copyWith(onDeviceDiarization: enabled);
     state = next;
     await _persist(next);
   }

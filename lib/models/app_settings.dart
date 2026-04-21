@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'transcription_config.dart';
 
 class AppSettings {
   final String provider;
@@ -11,6 +12,10 @@ class AppSettings {
   final String openrouterKey;
   final bool debugMode;
   final String? localeOverride;
+  final TranscriptionStrategy transcriptionStrategy;
+  final ModelSize onDeviceModelSize;
+  final bool enableRealTimeTranscription;
+  final bool onDeviceDiarization;
 
   const AppSettings({
     required this.provider,
@@ -23,6 +28,10 @@ class AppSettings {
     required this.openrouterKey,
     this.debugMode = false,
     this.localeOverride,
+    this.transcriptionStrategy = TranscriptionStrategy.cloud,
+    this.onDeviceModelSize = ModelSize.base,
+    this.enableRealTimeTranscription = false,
+    this.onDeviceDiarization = true,
   });
 
   factory AppSettings.defaults() => const AppSettings(
@@ -36,6 +45,10 @@ class AppSettings {
         openrouterKey: '',
         debugMode: false,
         localeOverride: null,
+        transcriptionStrategy: TranscriptionStrategy.cloud,
+        onDeviceModelSize: ModelSize.base,
+        enableRealTimeTranscription: false,
+        onDeviceDiarization: true,
       );
 
   AppSettings copyWith({
@@ -49,6 +62,10 @@ class AppSettings {
     String? openrouterKey,
     bool? debugMode,
     String? localeOverride,
+    TranscriptionStrategy? transcriptionStrategy,
+    ModelSize? onDeviceModelSize,
+    bool? enableRealTimeTranscription,
+    bool? onDeviceDiarization,
   }) =>
       AppSettings(
         provider: provider ?? this.provider,
@@ -61,6 +78,10 @@ class AppSettings {
         openrouterKey: openrouterKey ?? this.openrouterKey,
         debugMode: debugMode ?? this.debugMode,
         localeOverride: localeOverride ?? this.localeOverride,
+        transcriptionStrategy: transcriptionStrategy ?? this.transcriptionStrategy,
+        onDeviceModelSize: onDeviceModelSize ?? this.onDeviceModelSize,
+        enableRealTimeTranscription: enableRealTimeTranscription ?? this.enableRealTimeTranscription,
+        onDeviceDiarization: onDeviceDiarization ?? this.onDeviceDiarization,
       );
 
   Map<String, dynamic> toJson() => {
@@ -74,6 +95,10 @@ class AppSettings {
         'openrouterKey': openrouterKey,
         'debugMode': debugMode,
         'localeOverride': localeOverride,
+        'transcriptionStrategy': transcriptionStrategy.name,
+        'onDeviceModelSize': onDeviceModelSize.name,
+        'enableRealTimeTranscription': enableRealTimeTranscription,
+        'onDeviceDiarization': onDeviceDiarization,
       };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
@@ -87,6 +112,15 @@ class AppSettings {
         openrouterKey: json['openrouterKey'] as String? ?? '',
         debugMode: json['debugMode'] as bool? ?? false,
         localeOverride: json['localeOverride'] as String?,
+        transcriptionStrategy: TranscriptionStrategy.values.byName(
+          json['transcriptionStrategy'] as String? ?? 'cloud',
+        ),
+        onDeviceModelSize: ModelSize.values.byName(
+          json['onDeviceModelSize'] as String? ?? 'base',
+        ),
+        enableRealTimeTranscription:
+            json['enableRealTimeTranscription'] as bool? ?? false,
+        onDeviceDiarization: json['onDeviceDiarization'] as bool? ?? true,
       );
 
   String get activeModel =>
@@ -110,7 +144,11 @@ class AppSettings {
         other.openaiKey == openaiKey &&
         other.openrouterKey == openrouterKey &&
         other.debugMode == debugMode &&
-        other.localeOverride == localeOverride;
+        other.localeOverride == localeOverride &&
+        other.transcriptionStrategy == transcriptionStrategy &&
+        other.onDeviceModelSize == onDeviceModelSize &&
+        other.enableRealTimeTranscription == enableRealTimeTranscription &&
+        other.onDeviceDiarization == onDeviceDiarization;
   }
 
   @override
@@ -125,6 +163,10 @@ class AppSettings {
         openrouterKey,
         debugMode,
         localeOverride,
+        transcriptionStrategy,
+        onDeviceModelSize,
+        enableRealTimeTranscription,
+        onDeviceDiarization,
       );
 }
 
