@@ -675,17 +675,18 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                           bottomRight: isUser ? const Radius.circular(4) : const Radius.circular(20),
                         ),
                       ),
-                    child: MarkdownBody(
-                      data: msg.content,
-                      styleSheet: MarkdownStyleSheet(
-                        p: TextStyle(
-                          color: isUser
-                              ? Theme.of(context)
-                                  .colorScheme
-                                  .onPrimaryContainer
-                              : Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
+                      child: MarkdownBody(
+                        data: msg.content,
+                        styleSheet: MarkdownStyleSheet(
+                          p: TextStyle(
+                            color: isUser
+                                ? Theme.of(context)
+                                    .colorScheme
+                                    .onPrimaryContainer
+                                : Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                          ),
                         ),
                       ),
                     ),

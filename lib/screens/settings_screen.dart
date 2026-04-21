@@ -11,7 +11,6 @@ import '../providers/settings_provider.dart';
 import '../services/ai_service.dart';
 import '../utils/localized_strings.dart';
 import '../widgets/glass_card.dart';
-import '../widgets/spring_page_route.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key, this.isInitialSetup = false});

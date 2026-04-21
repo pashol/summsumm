@@ -14,6 +14,7 @@ import 'package:summsumm/providers/voice_service_provider.dart';
 import '../widgets/document_carousel.dart';
 import '../widgets/glass_card.dart';
 import 'package:summsumm/l10n/app_localizations.dart';
+import '../theme/reduced_motion.dart';
 import '../theme/m3_tokens.dart';
 import 'settings_screen.dart';
 
@@ -99,7 +100,7 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
     super.initState();
     _activeIndex = widget.initialIndex;
     _entryController = AnimationController(
-      duration: M3Tokens.durationSpring,
+      duration: animDuration(context, M3Tokens.durationSpring),
       vsync: this,
     );
     _slideAnimation = Tween<Offset>(
@@ -923,7 +924,7 @@ class _ActionButtonState extends State<_ActionButton>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: M3Tokens.durationStandard,
+      duration: animDuration(context, M3Tokens.durationStandard),
     );
     _scaleAnimation = Tween<double>(begin: 1.0, end: 0.9).animate(
       CurvedAnimation(
@@ -1017,7 +1018,7 @@ class _FollowUpInputState extends State<_FollowUpInput>
     super.initState();
     _pulseCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: animDuration(context, const Duration(milliseconds: 800)),
     );
     _scaleAnim = Tween<double>(begin: 1.0, end: 1.5).animate(
       CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeOut),

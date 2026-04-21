@@ -10,6 +10,7 @@ import '../models/meeting.dart';
 import '../providers/import_service_provider.dart';
 import '../providers/meeting_library_provider.dart';
 import '../providers/meeting_provider.dart';
+import '../theme/reduced_motion.dart';
 import '../widgets/meeting_share_sheet.dart';
 import '../widgets/spring_page_route.dart';
 import 'archived_meetings_screen.dart';
@@ -84,7 +85,7 @@ class MeetingLibraryScreen extends ConsumerWidget {
         itemBuilder: (ctx, i) {
           return TweenAnimationBuilder<double>(
             tween: Tween(begin: 0.0, end: 1.0),
-            duration: Duration(milliseconds: 400 + (i * 50)),
+            duration: animDuration(ctx, Duration(milliseconds: 400 + (i * 50))),
             curve: Curves.elasticOut,
             builder: (context, value, child) {
               return Transform.translate(
