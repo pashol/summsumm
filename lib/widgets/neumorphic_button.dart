@@ -23,8 +23,9 @@ class _NeumorphicButtonState extends State<NeumorphicButton> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final color =
-        widget.color ?? Theme.of(context).colorScheme.primaryContainer;
+        widget.color ?? cs.primaryContainer;
     return GestureDetector(
       onTapDown: (_) => setState(() => _isPressed = true),
       onTapUp: (_) => setState(() => _isPressed = false),
@@ -50,7 +51,7 @@ class _NeumorphicButtonState extends State<NeumorphicButton> {
                     blurRadius: 8,
                   ),
                   BoxShadow(
-                    color: Colors.white.withValues(alpha: 0.2),
+                    color: cs.surface.withValues(alpha: 0.2),
                     offset: const Offset(-4, -4),
                     blurRadius: 8,
                   ),
