@@ -119,10 +119,11 @@ class _MeetingTile extends ConsumerWidget {
 
   const _MeetingTile({required this.meeting});
 
-  @override
+@override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final notifier = ref.watch(meetingProvider(meeting.id).notifier);
+    final cs = Theme.of(context).colorScheme;
 
     return Slidable(
       key: ValueKey(meeting.id),
@@ -132,15 +133,15 @@ class _MeetingTile extends ConsumerWidget {
         children: [
           SlidableAction(
             onPressed: (_) => showMeetingShareSheet(context, meeting),
-            backgroundColor: Colors.teal,
-            foregroundColor: Colors.white,
+            backgroundColor: cs.primary,
+            foregroundColor: cs.onPrimary,
             icon: Icons.share,
             label: l10n.libraryShare,
           ),
           SlidableAction(
             onPressed: (_) => _showRenameDialog(context, notifier),
-            backgroundColor: Colors.blueGrey,
-            foregroundColor: Colors.white,
+            backgroundColor: cs.secondary,
+            foregroundColor: cs.onSecondary,
             icon: Icons.edit,
             label: l10n.libraryRename,
           ),
@@ -152,15 +153,15 @@ class _MeetingTile extends ConsumerWidget {
         children: [
           SlidableAction(
             onPressed: (_) => _archive(context, notifier),
-            backgroundColor: Colors.amber.shade700,
-            foregroundColor: Colors.white,
+            backgroundColor: cs.tertiary,
+            foregroundColor: cs.onTertiary,
             icon: Icons.archive,
             label: l10n.libraryArchive,
           ),
           SlidableAction(
             onPressed: (_) => _confirmDelete(context, notifier),
-            backgroundColor: Colors.red,
-            foregroundColor: Colors.white,
+            backgroundColor: cs.error,
+            foregroundColor: cs.onError,
             icon: Icons.delete,
             label: l10n.libraryDelete,
           ),
@@ -303,6 +304,7 @@ class _ActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
     switch (meeting.status) {
       case MeetingStatus.recorded:
         if (meeting.type == MeetingType.document) {
@@ -333,10 +335,10 @@ class _ActionButton extends StatelessWidget {
           child: CircularProgressIndicator(strokeWidth: 2),
         );
       case MeetingStatus.done:
-        return const Icon(Icons.check_circle, color: Colors.green);
+        return Icon(Icons.check_circle, color: cs.primary);
       case MeetingStatus.failed:
         if (meeting.type == MeetingType.document) {
-          return const Icon(Icons.error_outline, color: Colors.red);
+          return Icon(Icons.error_outline, color: cs.error);
         }
         return ElevatedButton(
           onPressed: () => notifier.retry(),
