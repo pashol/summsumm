@@ -7,10 +7,12 @@ import 'package:summsumm/providers/meeting_library_provider.dart';
 import 'package:summsumm/providers/meeting_repository_provider.dart';
 import 'package:summsumm/providers/settings_provider.dart';
 import 'package:summsumm/services/ai_service.dart';
+import 'package:summsumm/services/processing_service.dart';
 import 'package:summsumm/services/voice_service.dart';
 
 final voiceServiceProvider = Provider<VoiceService>((ref) => VoiceService());
 final aiServiceProvider = Provider<AiService>((ref) => AiService());
+final processingServiceProvider = Provider<ProcessingService>((ref) => ProcessingService());
 
 final meetingProvider = NotifierProvider.family<MeetingNotifier, Meeting, String>(
   MeetingNotifier.new,
@@ -92,6 +94,7 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
     final settings = ref.read(settingsProvider);
     final voiceService = ref.read(voiceServiceProvider);
     final repository = ref.read(meetingRepositoryProvider);
+    final processingService = ref.read(processingServiceProvider);
 
     if (!await _hasConnectivity(settings.provider)) {
       state = meeting.copyWith(
@@ -108,6 +111,7 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
     ref.read(meetingLibraryProvider.notifier).refresh();
 
     try {
+      await processingService.start();
       final apiKey = await ref.read(settingsProvider.notifier).getApiKey(settings.provider) ?? '';
       final transcript = await voiceService.transcribeFile(
         meeting.audioPath,
@@ -124,7 +128,7 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
         },
       );
 
-      state = state.copyWith(
+      state = meeting.copyWith(
         transcript: transcript,
         status: MeetingStatus.transcribed,
         provider: settings.provider,
@@ -135,13 +139,15 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
       await repository.save(state);
       ref.read(meetingLibraryProvider.notifier).refresh();
     } catch (e) {
-      state = state.copyWith(
+      state = meeting.copyWith(
         status: MeetingStatus.failed,
         lastError: e.toString(),
       );
       await repository.save(state);
       ref.read(meetingLibraryProvider.notifier).refresh();
       rethrow;
+    } finally {
+      await processingService.stop();
     }
   }
 

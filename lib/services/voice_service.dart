@@ -543,6 +543,9 @@ class VoiceService {
   static const _transcriptionPrompt =
       'Transcribe this audio accurately. Output only the transcript.';
 
+  static const _transcribeTimeout = Duration(seconds: 60);
+  static const _maxTranscribeRetries = 3;
+
   Future<String?> _transcribeWithGemini(String filePath, String apiKey, {bool diarize = false}) async {
     final file = File(filePath);
     if (!await file.exists()) {
@@ -564,54 +567,86 @@ class VoiceService {
 
     final prompt = diarize ? _diarizationPrompt : _transcriptionPrompt;
 
-    final response = await _http.post(
-      Uri.parse('https://openrouter.ai/api/v1/chat/completions'),
-      headers: {
-        'Authorization': 'Bearer $apiKey',
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://github.com/pashol/summsumm',
-        'X-Title': 'AI Text Summarizer',
-      },
-      body: jsonEncode({
-        'model': _geminiTranscriptionModel,
-        'messages': [
-          {
-            'role': 'user',
-            'content': [
-              {
-                'type': 'input_audio',
-                'input_audio': {'data': audioB64, 'format': audioFormat},
-              },
-              {
-                'type': 'text',
-                'text': prompt,
-              },
-            ],
-          },
-        ],
-      }),
-    );
+    Exception? lastError;
+    for (var attempt = 0; attempt < _maxTranscribeRetries; attempt++) {
+      try {
+        final request = http.Request('POST', Uri.parse('https://openrouter.ai/api/v1/chat/completions'));
+        request.headers.addAll({
+          'Authorization': 'Bearer $apiKey',
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://github.com/pashol/summsumm',
+          'X-Title': 'AI Text Summarizer',
+        });
+        request.body = jsonEncode({
+          'model': _geminiTranscriptionModel,
+          'messages': [
+            {
+              'role': 'user',
+              'content': [
+                {
+                  'type': 'input_audio',
+                  'input_audio': {'data': audioB64, 'format': audioFormat},
+                },
+                {
+                  'type': 'text',
+                  'text': prompt,
+                },
+              ],
+            },
+          ],
+        });
 
-    if (response.statusCode == 200) {
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
-      final choices = json['choices'] as List?;
-      if (choices == null || choices.isEmpty) return null;
-      final message = choices.first['message'] as Map<String, dynamic>?;
-      final content = message?['content'];
-      if (content is String) return content.trim();
-      if (content is List) {
-        final text = content
-            .whereType<Map<String, dynamic>>()
-            .map((p) => p['text']?.toString() ?? '')
-            .join()
-            .trim();
-        return text.isEmpty ? null : text;
+        final streamedResponse = await _http.send(request).timeout(_transcribeTimeout);
+        final response = await http.Response.fromStream(streamedResponse);
+
+        if (response.statusCode == 200) {
+          final json = jsonDecode(response.body) as Map<String, dynamic>;
+          final choices = json['choices'] as List?;
+          if (choices == null || choices.isEmpty) return null;
+          final message = choices.first['message'] as Map<String, dynamic>?;
+          final content = message?['content'];
+          if (content is String) return content.trim();
+          if (content is List) {
+            final text = content
+                .whereType<Map<String, dynamic>>()
+                .map((p) => p['text']?.toString() ?? '')
+                .join()
+                .trim();
+            return text.isEmpty ? null : text;
+          }
+          return null;
+        }
+        throw VoiceTranscriptionException(
+          _formatError('OpenRouter/Gemini', response.statusCode, response.body),
+        );
+      } on TimeoutException {
+        lastError = VoiceTranscriptionException('Transcription timed out after ${_transcribeTimeout.inSeconds}s');
+        if (attempt < _maxTranscribeRetries - 1) {
+          await Future<void>.delayed(Duration(seconds: attempt + 1));
+          continue;
+        }
+      } on SocketException catch (e) {
+        lastError = VoiceTranscriptionException('Connection error: ${e.message}');
+        if (attempt < _maxTranscribeRetries - 1) {
+          await Future<void>.delayed(Duration(seconds: attempt + 1));
+          continue;
+        }
+      } on http.ClientException catch (e) {
+        lastError = VoiceTranscriptionException('Connection error: ${e.message}');
+        if (attempt < _maxTranscribeRetries - 1) {
+          await Future<void>.delayed(Duration(seconds: attempt + 1));
+          continue;
+        }
+      } catch (e) {
+        if (e is VoiceTranscriptionException) rethrow;
+        lastError = VoiceTranscriptionException(e.toString());
+        if (attempt < _maxTranscribeRetries - 1) {
+          await Future<void>.delayed(Duration(seconds: attempt + 1));
+          continue;
+        }
       }
-      return null;
     }
-    throw VoiceTranscriptionException(
-      _formatError('OpenRouter/Gemini', response.statusCode, response.body),
-    );
+    throw lastError ?? VoiceTranscriptionException('Transcription failed after $_maxTranscribeRetries attempts');
   }
 
   static const _relabelingModel = 'google/gemini-3-flash-preview';

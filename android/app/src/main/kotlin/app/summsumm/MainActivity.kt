@@ -33,6 +33,7 @@ class MainActivity : FlutterActivity() {
         private const val CHANNEL = "app.summsumm/intent"
         private const val RECORDING_CHANNEL = "app.summsumm/recording"
         private const val RECORDING_EVENTS_CHANNEL = "app.summsumm/recording_events"
+        private const val PROCESSING_CHANNEL = "app.summsumm/processing"
         private const val STOP_RECORDING_ACTION = "app.summsumm.STOP_RECORDING"
         private const val REQUEST_READ_STORAGE = 1001
         private const val MAX_PDF_SIZE_BYTES = 10 * 1024 * 1024 // 10MB
@@ -139,6 +140,27 @@ class MainActivity : FlutterActivity() {
                 }
                 "stopForegroundService" -> {
                     val intent = Intent(this, RecordingService::class.java)
+                    stopService(intent)
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        // MethodChannel for processing service (transcription/summarization)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, PROCESSING_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "startProcessingService" -> {
+                    val intent = Intent(this, ProcessingService::class.java)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        startForegroundService(intent)
+                    } else {
+                        startService(intent)
+                    }
+                    result.success(null)
+                }
+                "stopProcessingService" -> {
+                    val intent = Intent(this, ProcessingService::class.java)
                     stopService(intent)
                     result.success(null)
                 }
