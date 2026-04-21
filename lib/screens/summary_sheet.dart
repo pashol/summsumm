@@ -1012,9 +1012,8 @@ class _FollowUpInputState extends State<_FollowUpInput>
   }
 
   Widget _buildButton(BuildContext context) {
-    final color = widget.isRecording
-        ? Colors.red.shade700
-        : Theme.of(context).colorScheme.primary;
+    final cs = Theme.of(context).colorScheme;
+    final color = widget.isRecording ? cs.error : cs.primary;
     return GestureDetector(
       onTap: widget.isRecording ? null : widget.onSend,
       onLongPressStart: widget.onLongPressStart,
@@ -1034,7 +1033,7 @@ class _FollowUpInputState extends State<_FollowUpInput>
                     height: 48,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.red, width: 2),
+                      border: Border.all(color: cs.error, width: 2),
                     ),
                   ),
                 ),
@@ -1046,7 +1045,7 @@ class _FollowUpInputState extends State<_FollowUpInput>
             decoration: BoxDecoration(shape: BoxShape.circle, color: color),
             child: Icon(
               widget.isRecording ? Icons.mic : Icons.send,
-              color: Colors.white,
+              color: cs.onPrimary,
               size: 22,
             ),
           ),
