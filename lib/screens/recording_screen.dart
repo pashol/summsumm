@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:summsumm/l10n/app_localizations.dart';
 import 'package:summsumm/providers/meeting_repository_provider.dart';
 import 'package:summsumm/providers/recording_provider.dart';
 
@@ -28,8 +29,9 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Record Meeting')),
+      appBar: AppBar(title: Text(l10n.recordingTitle)),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -42,11 +44,11 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> {
             _isRecording
                 ? ElevatedButton(
                     onPressed: _stopRecording,
-                    child: const Text('Stop'),
+                    child: Text(l10n.stopButton),
                   )
                 : ElevatedButton(
                     onPressed: _startRecording,
-                    child: const Text('Start'),
+                    child: Text(l10n.startButton),
                   ),
           ],
         ),
@@ -65,7 +67,7 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> {
     if (!status.isGranted) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Microphone permission is required to record')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.recordingMicPermission)),
         );
       }
       return;
@@ -83,7 +85,7 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to start recording: $e')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.recordingFailedStart(e.toString()))),
         );
       }
     }
