@@ -422,4 +422,65 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get langTurkish => 'Turkish';
+
+  @override
+  String get onboardingWelcomeTitle => 'Summarize Anything, Anywhere';
+
+  @override
+  String get onboardingWelcomeSubtitle =>
+      'AI-powered summaries from text, voice, and documents';
+
+  @override
+  String get onboardingGetStarted => 'Get Started';
+
+  @override
+  String get onboardingSkipSetup => 'Skip Setup';
+
+  @override
+  String get onboardingFeaturesTitle => 'What You Can Do';
+
+  @override
+  String get onboardingOnlineFeatures => 'Online Features';
+
+  @override
+  String get onboardingOnlineFeaturesDesc =>
+      'Text summarization, PDF summaries, cloud transcription — Requires API key';
+
+  @override
+  String get onboardingOfflineFeatures => 'Offline Features';
+
+  @override
+  String get onboardingOfflineFeaturesDesc =>
+      'Meeting recording, on-device transcription — Works without internet after model download';
+
+  @override
+  String get onboardingTranscriptionNote =>
+      'On-device transcription supports multiple languages. Live transcription works best with English.';
+
+  @override
+  String get onboardingContinue => 'Continue';
+
+  @override
+  String get onboardingApiKeyTitle => 'Connect Your AI';
+
+  @override
+  String get onboardingApiKeySubtitle =>
+      'Add an API key to use AI-powered features. You can skip this and add it later in Settings.';
+
+  @override
+  String get onboardingSkipForNow => 'Skip for Now';
+
+  @override
+  String get onboardingQuickStartTitle => 'You\'re Ready!';
+
+  @override
+  String get onboardingQuickStartOnline =>
+      'You\'re ready to summarize text and PDFs.';
+
+  @override
+  String get onboardingQuickStartOffline =>
+      'You can record meetings and use on-device transcription. Add an API key later for AI features.';
+
+  @override
+  String get onboardingGoToSettings => 'Go to Settings';
 }

@@ -859,6 +859,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Turkish'**
   String get langTurkish;
+
+  /// Onboarding welcome screen headline
+  ///
+  /// In en, this message translates to:
+  /// **'Summarize Anything, Anywhere'**
+  String get onboardingWelcomeTitle;
+
+  /// Onboarding welcome screen subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'AI-powered summaries from text, voice, and documents'**
+  String get onboardingWelcomeSubtitle;
+
+  /// Primary button on onboarding welcome screen
+  ///
+  /// In en, this message translates to:
+  /// **'Get Started'**
+  String get onboardingGetStarted;
+
+  /// Skip button on onboarding screens
+  ///
+  /// In en, this message translates to:
+  /// **'Skip Setup'**
+  String get onboardingSkipSetup;
+
+  /// Onboarding features screen title
+  ///
+  /// In en, this message translates to:
+  /// **'What You Can Do'**
+  String get onboardingFeaturesTitle;
+
+  /// Title for online features card
+  ///
+  /// In en, this message translates to:
+  /// **'Online Features'**
+  String get onboardingOnlineFeatures;
+
+  /// Description for online features card
+  ///
+  /// In en, this message translates to:
+  /// **'Text summarization, PDF summaries, cloud transcription — Requires API key'**
+  String get onboardingOnlineFeaturesDesc;
+
+  /// Title for offline features card
+  ///
+  /// In en, this message translates to:
+  /// **'Offline Features'**
+  String get onboardingOfflineFeatures;
+
+  /// Description for offline features card
+  ///
+  /// In en, this message translates to:
+  /// **'Meeting recording, on-device transcription — Works without internet after model download'**
+  String get onboardingOfflineFeaturesDesc;
+
+  /// Note about transcription language support
+  ///
+  /// In en, this message translates to:
+  /// **'On-device transcription supports multiple languages. Live transcription works best with English.'**
+  String get onboardingTranscriptionNote;
+
+  /// Continue button on onboarding screens
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get onboardingContinue;
+
+  /// Onboarding API key screen title
+  ///
+  /// In en, this message translates to:
+  /// **'Connect Your AI'**
+  String get onboardingApiKeyTitle;
+
+  /// Onboarding API key screen subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Add an API key to use AI-powered features. You can skip this and add it later in Settings.'**
+  String get onboardingApiKeySubtitle;
+
+  /// Skip API key setup button
+  ///
+  /// In en, this message translates to:
+  /// **'Skip for Now'**
+  String get onboardingSkipForNow;
+
+  /// Onboarding quick start screen title
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re Ready!'**
+  String get onboardingQuickStartTitle;
+
+  /// Quick start message when API key is configured
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re ready to summarize text and PDFs.'**
+  String get onboardingQuickStartOnline;
+
+  /// Quick start message when API key was skipped
+  ///
+  /// In en, this message translates to:
+  /// **'You can record meetings and use on-device transcription. Add an API key later for AI features.'**
+  String get onboardingQuickStartOffline;
+
+  /// Link to settings from onboarding completion
+  ///
+  /// In en, this message translates to:
+  /// **'Go to Settings'**
+  String get onboardingGoToSettings;
 }
 
 class _AppLocalizationsDelegate

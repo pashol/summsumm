@@ -423,4 +423,65 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get langTurkish => 'Türkisch';
+
+  @override
+  String get onboardingWelcomeTitle => 'Alles zusammenfassen, überall';
+
+  @override
+  String get onboardingWelcomeSubtitle =>
+      'KI-gestützte Zusammenfassungen aus Text, Sprache und Dokumenten';
+
+  @override
+  String get onboardingGetStarted => 'Loslegen';
+
+  @override
+  String get onboardingSkipSetup => 'Einrichtung überspringen';
+
+  @override
+  String get onboardingFeaturesTitle => 'Was du tun kannst';
+
+  @override
+  String get onboardingOnlineFeatures => 'Online-Funktionen';
+
+  @override
+  String get onboardingOnlineFeaturesDesc =>
+      'Textzusammenfassung, PDF-Zusammenfassungen, Cloud-Transkription — Erfordert API-Schlüssel';
+
+  @override
+  String get onboardingOfflineFeatures => 'Offline-Funktionen';
+
+  @override
+  String get onboardingOfflineFeaturesDesc =>
+      'Meeting-Aufnahme, On-Device-Transkription — Funktioniert ohne Internet nach Modell-Download';
+
+  @override
+  String get onboardingTranscriptionNote =>
+      'On-Device-Transkription unterstützt mehrere Sprachen. Live-Transkription funktioniert am besten auf Englisch.';
+
+  @override
+  String get onboardingContinue => 'Weiter';
+
+  @override
+  String get onboardingApiKeyTitle => 'Deine KI verbinden';
+
+  @override
+  String get onboardingApiKeySubtitle =>
+      'Füge einen API-Schlüssel hinzu, um KI-Funktionen zu nutzen. Du kannst dies überspringen und später in den Einstellungen hinzufügen.';
+
+  @override
+  String get onboardingSkipForNow => 'Jetzt überspringen';
+
+  @override
+  String get onboardingQuickStartTitle => 'Bereit!';
+
+  @override
+  String get onboardingQuickStartOnline =>
+      'Du kannst jetzt Text und PDFs zusammenfassen.';
+
+  @override
+  String get onboardingQuickStartOffline =>
+      'Du kannst Meetings aufnehmen und On-Device-Transkription nutzen. Füge später einen API-Schlüssel für KI-Funktionen hinzu.';
+
+  @override
+  String get onboardingGoToSettings => 'Zu den Einstellungen';
 }
