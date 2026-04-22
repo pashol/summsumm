@@ -583,20 +583,43 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                 backgroundColor:
                     Theme.of(context).colorScheme.surfaceContainerHighest,
               ),
-            Expanded(
-              child: Scrollbar(
-                thumbVisibility: _isDesktop,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: MarkdownBody(
-                      data: meeting.transcript ?? '',
-                      styleSheet: MarkdownStyleSheet(
-                        p: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+            if (meeting.speakerSegments != null && meeting.speakerSegments!.isNotEmpty)
+              Expanded(
+                child: Scrollbar(
+                  thumbVisibility: _isDesktop,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: meeting.speakerSegments!.length,
+                    itemBuilder: (context, index) {
+                      final segment = meeting.speakerSegments![index];
+                      final startMin = (segment.startTime ~/ 60).toString().padLeft(2, '0');
+                      final startSec = (segment.startTime % 60).toInt().toString().padLeft(2, '0');
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Text(
+                          '[$startMin:$startSec] ${segment.speakerLabel}: ${segment.text}',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              )
+            else
+              Expanded(
+                child: Scrollbar(
+                  thumbVisibility: _isDesktop,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: MarkdownBody(
+                        data: meeting.transcript ?? '',
+                        styleSheet: MarkdownStyleSheet(
+                          p: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                        ),
                       ),
-                    ),
+                  ),
                 ),
               ),
-            ),
           ],
         );
       case MeetingStatus.failed:

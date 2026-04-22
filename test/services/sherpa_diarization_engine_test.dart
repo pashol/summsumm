@@ -17,9 +17,11 @@ void main() {
       expect(engine.isInitialized, false);
     });
 
-    test('diarize returns empty list (not yet implemented)', () async {
-      final result = await engine.diarize('test.wav', []);
-      expect(result, isEmpty);
+    test('diarize throws when not initialized', () async {
+      expect(
+        () => engine.diarize('test.wav'),
+        throwsStateError,
+      );
     });
   });
 }

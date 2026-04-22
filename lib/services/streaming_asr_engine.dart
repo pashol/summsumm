@@ -9,7 +9,9 @@ class StreamingAsrEngine {
   double _currentTime = 0.0;
 
   Future<void> loadModel(StreamingModelConfig config) async {
-    if (_isInitialized) return;
+    if (_isInitialized) {
+      throw StateError('Engine already initialized. Call dispose() first to load a different model.');
+    }
 
     sherpa.initBindings();
 
@@ -38,13 +40,17 @@ class StreamingAsrEngine {
     _isInitialized = true;
   }
 
-  void acceptWaveform(Float32List samples) {
+  void acceptWaveform(Float32List samples, {int sampleRate = 16000}) {
     if (_stream == null || _recognizer == null) {
       throw StateError('Engine not initialized. Call loadModel() first.');
     }
 
-    _stream!.acceptWaveform(samples: samples, sampleRate: 16000);
-    _currentTime += samples.length / 16000.0;
+    if (sampleRate != 16000) {
+      throw ArgumentError('Sample rate must be 16000, got $sampleRate');
+    }
+
+    _stream!.acceptWaveform(samples: samples, sampleRate: sampleRate);
+    _currentTime += samples.length / sampleRate;
   }
 
   String decode() {
@@ -72,7 +78,9 @@ class StreamingAsrEngine {
     if (_stream == null || _recognizer == null) return '';
 
     // Process any remaining audio
-    _recognizer!.decode(_stream!);
+    while (_recognizer!.isReady(_stream!)) {
+      _recognizer!.decode(_stream!);
+    }
     final result = _recognizer!.getResult(_stream!);
     return result.text;
   }

@@ -16,6 +16,8 @@ class AppSettings {
   final ModelSize onDeviceModelSize;
   final bool enableRealTimeTranscription;
   final bool onDeviceDiarization;
+  final String streamingModelLanguage;
+  final bool compressAudioStorage;
 
   const AppSettings({
     required this.provider,
@@ -32,6 +34,8 @@ class AppSettings {
     this.onDeviceModelSize = ModelSize.base,
     this.enableRealTimeTranscription = false,
     this.onDeviceDiarization = true,
+    this.streamingModelLanguage = 'English',
+    this.compressAudioStorage = false,
   });
 
   factory AppSettings.defaults() => const AppSettings(
@@ -49,6 +53,8 @@ class AppSettings {
         onDeviceModelSize: ModelSize.base,
         enableRealTimeTranscription: false,
         onDeviceDiarization: true,
+        streamingModelLanguage: 'English',
+        compressAudioStorage: false,
       );
 
   AppSettings copyWith({
@@ -66,6 +72,8 @@ class AppSettings {
     ModelSize? onDeviceModelSize,
     bool? enableRealTimeTranscription,
     bool? onDeviceDiarization,
+    String? streamingModelLanguage,
+    bool? compressAudioStorage,
   }) =>
       AppSettings(
         provider: provider ?? this.provider,
@@ -82,6 +90,8 @@ class AppSettings {
         onDeviceModelSize: onDeviceModelSize ?? this.onDeviceModelSize,
         enableRealTimeTranscription: enableRealTimeTranscription ?? this.enableRealTimeTranscription,
         onDeviceDiarization: onDeviceDiarization ?? this.onDeviceDiarization,
+        streamingModelLanguage: streamingModelLanguage ?? this.streamingModelLanguage,
+        compressAudioStorage: compressAudioStorage ?? this.compressAudioStorage,
       );
 
   Map<String, dynamic> toJson() => {
@@ -99,6 +109,8 @@ class AppSettings {
         'onDeviceModelSize': onDeviceModelSize.name,
         'enableRealTimeTranscription': enableRealTimeTranscription,
         'onDeviceDiarization': onDeviceDiarization,
+        'streamingModelLanguage': streamingModelLanguage,
+        'compressAudioStorage': compressAudioStorage,
       };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
@@ -121,6 +133,8 @@ class AppSettings {
         enableRealTimeTranscription:
             json['enableRealTimeTranscription'] as bool? ?? false,
         onDeviceDiarization: json['onDeviceDiarization'] as bool? ?? true,
+        streamingModelLanguage: json['streamingModelLanguage'] as String? ?? 'English',
+        compressAudioStorage: json['compressAudioStorage'] as bool? ?? false,
       );
 
   String get activeModel =>
@@ -148,7 +162,9 @@ class AppSettings {
         other.transcriptionStrategy == transcriptionStrategy &&
         other.onDeviceModelSize == onDeviceModelSize &&
         other.enableRealTimeTranscription == enableRealTimeTranscription &&
-        other.onDeviceDiarization == onDeviceDiarization;
+        other.onDeviceDiarization == onDeviceDiarization &&
+        other.streamingModelLanguage == streamingModelLanguage &&
+        other.compressAudioStorage == compressAudioStorage;
   }
 
   @override
@@ -167,6 +183,8 @@ class AppSettings {
         onDeviceModelSize,
         enableRealTimeTranscription,
         onDeviceDiarization,
+        streamingModelLanguage,
+        compressAudioStorage,
       );
 }
 

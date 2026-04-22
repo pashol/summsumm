@@ -482,11 +482,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     final progressAsync = ref.watch(modelDownloadProgressProvider);
                     return downloadedAsync.when(
                       data: (downloaded) {
-                        return Column(
+                            return Column(
                           children: downloaded.entries.map((entry) {
                             final size = entry.key;
                             final isDownloaded = entry.value;
-                            final isActive = size == settings.onDeviceModelSize;
+                            final isSelected = size == settings.onDeviceModelSize;
+                            final isActive = isDownloaded && isSelected;
                             final label = switch (size) {
                               ModelSize.base => 'Tiny',
                               ModelSize.small => 'Base',
@@ -548,8 +549,52 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                                 );
                                                 if (confirmed == true) {
                                                   final manager = ref.read(modelDownloadManagerProvider);
-                                                  await manager.downloadModel(size);
-                                                  ref.invalidate(downloadedModelsProvider);
+                                                  final scaffoldMessenger = ScaffoldMessenger.of(context);
+                                                  
+                                                  try {
+                                                    // Download main ASR model
+                                                    await manager.downloadModel(size);
+                                                    
+                                                    // Download streaming model
+                                                    if (!await manager.isStreamingModelAvailable('English')) {
+                                                      scaffoldMessenger.showSnackBar(
+                                                        const SnackBar(content: Text('Downloading streaming model...')),
+                                                      );
+                                                      await manager.downloadStreamingModel('English');
+                                                    }
+                                                    
+                                                    // Download segmentation model
+                                                    if (!await manager.isSegmentationModelAvailable()) {
+                                                      scaffoldMessenger.showSnackBar(
+                                                        const SnackBar(content: Text('Downloading speaker segmentation model...')),
+                                                      );
+                                                      await manager.downloadSegmentationModel();
+                                                    }
+                                                    
+                                                    // Download embedding model
+                                                    if (!await manager.isEmbeddingModelAvailable()) {
+                                                      scaffoldMessenger.showSnackBar(
+                                                        const SnackBar(content: Text('Downloading speaker embedding model...')),
+                                                      );
+                                                      await manager.downloadEmbeddingModel();
+                                                    }
+                                                    
+                                                    scaffoldMessenger.showSnackBar(
+                                                      const SnackBar(
+                                                        content: Text('All models downloaded successfully!'),
+                                                        backgroundColor: Colors.green,
+                                                      ),
+                                                    );
+                                                  } catch (e) {
+                                                    scaffoldMessenger.showSnackBar(
+                                                      SnackBar(
+                                                        content: Text('Download failed: $e'),
+                                                        backgroundColor: Colors.red,
+                                                      ),
+                                                    );
+                                                  } finally {
+                                                    ref.invalidate(downloadedModelsProvider);
+                                                  }
                                                 }
                                               },
                                             ))),
@@ -618,7 +663,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   title: const Text('Live transcription'),
                   subtitle: const Text('Transcribe while recording'),
                   value: settings.enableRealTimeTranscription,
-                  onChanged: (v) => notifier.setEnableRealTimeTranscription(v),
+                  onChanged: (v) async {
+                    if (v && settings.language == 'German') {
+                      await showDialog<void>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('English Model Only'),
+                          content: const Text(
+                            'Live transcription uses an English model. German speech will be transcribed with limited accuracy. Use cloud transcription for German.',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('OK'),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    await notifier.setEnableRealTimeTranscription(v);
+                  },
                 ),
                 
                 // Diarization toggle

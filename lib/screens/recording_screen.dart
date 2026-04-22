@@ -24,10 +24,12 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> {
   Timer? _timer;
   bool _liveTranscriptionEnabled = false;
   final List<String> _liveTranscriptSegments = [];
+  StreamSubscription<TranscriptSegment>? _transcriptSubscription;
 
   @override
   void dispose() {
     _timer?.cancel();
+    _transcriptSubscription?.cancel();
     if (_isRecording) _stopRecording();
     super.dispose();
   }
@@ -55,24 +57,28 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> {
                     onPressed: _startRecording,
                     child: Text(l10n.startButton),
                   ),
-            if (_liveTranscriptionEnabled && _liveTranscriptSegments.isNotEmpty) ...[
-              const SizedBox(height: 20),
-              Container(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(context).size.height * 0.3,
-                ),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: SingleChildScrollView(
-                  child: Text(
-                    _liveTranscriptSegments.join(' '),
-                    style: Theme.of(context).textTheme.bodyMedium,
+            if (_liveTranscriptionEnabled) ...[
+              const SizedBox(height: 12),
+              _buildLiveIndicator(),
+              if (_liveTranscriptSegments.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Container(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.3,
+                  ),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: SingleChildScrollView(
+                    child: Text(
+                      _liveTranscriptSegments.join(' '),
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
                   ),
                 ),
-              ),
+              ],
             ],
           ],
         ),
@@ -96,14 +102,42 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> {
       }
       return;
     }
+
+    final settings = ref.read(settingsProvider);
+    final isOnDevice = settings.transcriptionStrategy == TranscriptionStrategy.onDevice;
+    var liveTranscription = settings.enableRealTimeTranscription;
+
+    // Ask user if they want live transcription for this recording
+    if (isOnDevice && !liveTranscription) {
+      final wantLive = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Live Transcription'),
+          content: const Text(
+            'Transcribe speech in real-time while recording?\n\n'
+            'This uses more battery but lets you see text appear as you speak.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('No'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Yes'),
+            ),
+          ],
+        ),
+      );
+      liveTranscription = wantLive ?? false;
+    }
+
     try {
       final service = ref.read(recordingServiceProvider);
-      await service.startRecording(_title);
+      await service.startRecording(_title, liveTranscription: liveTranscription);
 
       // Start live transcription if enabled
-      final settings = ref.read(settingsProvider);
-      if (settings.transcriptionStrategy == TranscriptionStrategy.onDevice &&
-          settings.enableRealTimeTranscription) {
+      if (liveTranscription) {
         await _startLiveTranscription();
       }
 
@@ -128,14 +162,18 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> {
     final service = ref.read(realTimeTranscriptionServiceProvider);
 
     await service.start(
-      language: settings.language,
+      language: settings.streamingModelLanguage,
     );
 
     // Listen to transcript stream
-    service.transcriptStream.listen((segment) {
-      setState(() {
-        _liveTranscriptSegments.add(segment.text);
-      });
+    _transcriptSubscription = service.transcriptStream.listen((segment) {
+      if (mounted) {
+        setState(() {
+          if (segment.isFinal) {
+            _liveTranscriptSegments.add(segment.text);
+          }
+        });
+      }
     });
 
     setState(() {
@@ -143,11 +181,38 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> {
     });
   }
 
+  Widget _buildLiveIndicator() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: const BoxDecoration(
+            color: Colors.red,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          'LIVE',
+          style: TextStyle(
+            color: Colors.red,
+            fontWeight: FontWeight.bold,
+            fontSize: Theme.of(context).textTheme.bodySmall?.fontSize,
+          ),
+        ),
+      ],
+    );
+  }
+
   Future<void> _stopRecording() async {
     if (!_isRecording) return;
 
     // Stop live transcription
     if (_liveTranscriptionEnabled) {
+      await _transcriptSubscription?.cancel();
+      _transcriptSubscription = null;
       final service = ref.read(realTimeTranscriptionServiceProvider);
       await service.stop();
       setState(() {

@@ -176,6 +176,48 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
     final repository = ref.read(meetingRepositoryProvider);
     final service = ref.read(onDeviceTranscriptionServiceProvider);
 
+    // Skip transcription if already live-transcribed
+    if (meeting.wasLiveTranscribed) {
+      // Only do diarization if needed
+      if (diarize && settings.onDeviceDiarization) {
+        state = meeting.copyWith(
+          status: MeetingStatus.transcribing,
+          clearLastError: true,
+          transcriptionStatus: 'Identifying speakers…',
+          transcriptionProgress: null,
+        );
+        await repository.save(state);
+        ref.read(meetingLibraryProvider.notifier).refresh();
+
+        try {
+          final segments = await service.diarizeFile(meeting.audioPath);
+          state = meeting.copyWith(
+            speakerSegments: segments,
+            status: MeetingStatus.transcribed,
+            provider: 'on-device',
+            clearLastError: true,
+            clearTranscriptionStatus: true,
+            clearTranscriptionProgress: true,
+          );
+        } catch (e) {
+          state = meeting.copyWith(
+            status: MeetingStatus.failed,
+            lastError: e.toString(),
+          );
+        }
+        await repository.save(state);
+        ref.read(meetingLibraryProvider.notifier).refresh();
+      } else {
+        state = meeting.copyWith(
+          status: MeetingStatus.transcribed,
+          provider: 'on-device',
+        );
+        await repository.save(state);
+        ref.read(meetingLibraryProvider.notifier).refresh();
+      }
+      return;
+    }
+
     state = meeting.copyWith(
       status: MeetingStatus.transcribing,
       clearLastError: true,

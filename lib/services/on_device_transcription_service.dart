@@ -2,17 +2,21 @@ import 'dart:async';
 import 'package:summsumm/models/transcription_config.dart';
 import 'package:summsumm/services/model_download_manager.dart';
 import 'package:summsumm/services/sherpa_asr_engine.dart';
+import 'package:summsumm/services/sherpa_diarization_engine.dart';
 
 class OnDeviceTranscriptionService {
   final ModelDownloadManager _downloadManager;
   final SherpaAsrEngine _asrEngine;
+  final SherpaDiarizationEngine _diarizationEngine;
   bool _isInitialized = false;
 
   OnDeviceTranscriptionService({
     ModelDownloadManager? downloadManager,
     SherpaAsrEngine? asrEngine,
+    SherpaDiarizationEngine? diarizationEngine,
   })  : _downloadManager = downloadManager ?? ModelDownloadManager(),
-        _asrEngine = asrEngine ?? SherpaAsrEngine();
+        _asrEngine = asrEngine ?? SherpaAsrEngine(),
+        _diarizationEngine = diarizationEngine ?? SherpaDiarizationEngine();
 
   Future<void> initialize(ModelSize modelSize) async {
     if (_isInitialized) return;
@@ -45,8 +49,14 @@ class OnDeviceTranscriptionService {
     return transcript;
   }
 
+  Future<List<SpeakerSegment>> diarizeFile(String audioPath) async {
+    await _diarizationEngine.loadModel();
+    return await _diarizationEngine.diarize(audioPath);
+  }
+
   Future<void> dispose() async {
     await _asrEngine.dispose();
+    await _diarizationEngine.dispose();
     _downloadManager.dispose();
     _isInitialized = false;
   }

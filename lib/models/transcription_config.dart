@@ -60,6 +60,24 @@ class SpeakerSegment {
     required this.endTime,
     required this.text,
   });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'speakerLabel': speakerLabel,
+      'startTime': startTime,
+      'endTime': endTime,
+      'text': text,
+    };
+  }
+
+  factory SpeakerSegment.fromJson(Map<String, dynamic> json) {
+    return SpeakerSegment(
+      speakerLabel: json['speakerLabel'] as String? ?? 'Unknown',
+      startTime: (json['startTime'] as num?)?.toDouble() ?? 0.0,
+      endTime: (json['endTime'] as num?)?.toDouble() ?? 0.0,
+      text: json['text'] as String? ?? '',
+    );
+  }
 }
 
 class TranscriptWord {

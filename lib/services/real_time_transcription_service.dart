@@ -51,6 +51,7 @@ class RealTimeTranscriptionService {
     _buffer.clear();
     _fullTranscript = '';
     _currentSegment = '';
+    _chunkStartTime = 0.0;
   }
 
   void onAudioData(Uint8List pcm16Data) {
@@ -59,19 +60,24 @@ class RealTimeTranscriptionService {
 
     // Process when we have enough data
     while (_buffer.length >= _chunkSizeBytes) {
-      final chunk = Uint8List.sublistView(
-        _buffer.toBytes(), 0, _chunkSizeBytes
-      );
+      final allBytes = _buffer.toBytes();
+      final chunk = Uint8List.sublistView(allBytes, 0, _chunkSizeBytes);
       _processChunk(chunk);
 
       // Remove processed bytes
-      final remaining = _buffer.toBytes().sublist(_chunkSizeBytes);
+      final remaining = Uint8List.sublistView(allBytes, _chunkSizeBytes);
       _buffer.clear();
       _buffer.add(remaining);
     }
   }
 
+  double _chunkStartTime = 0.0;
+
   void _processChunk(Uint8List pcm16Data) {
+    final chunkStart = _chunkStartTime;
+    final chunkEnd = chunkStart + (pcm16Data.length / 2 / 16000.0);
+    _chunkStartTime = chunkEnd;
+
     final samples = _convertPcm16ToFloat32(pcm16Data);
     _asrEngine.acceptWaveform(samples);
 
@@ -81,8 +87,8 @@ class RealTimeTranscriptionService {
       _currentSegment = text;
       _segmentController.add(TranscriptSegment(
         text: text,
-        startTime: _asrEngine.currentTime - 0.5,
-        endTime: _asrEngine.currentTime,
+        startTime: chunkStart,
+        endTime: chunkEnd,
         isFinal: _asrEngine.isEndpoint(),
       ));
     }
@@ -121,7 +127,6 @@ class RealTimeTranscriptionService {
   Future<void> dispose() async {
     await stop();
     _asrEngine.dispose();
-    _downloadManager.dispose();
     await _segmentController.close();
   }
 

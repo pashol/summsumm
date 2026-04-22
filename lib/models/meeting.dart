@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'summary_style.dart';
+import 'transcription_config.dart';
 
 export 'summary_style.dart' show MeetingType;
 
@@ -74,6 +75,8 @@ class Meeting {
   final String? transcriptionStatus;
   final double? transcriptionProgress;
   final List<MeetingSummary> summaries;
+  final List<SpeakerSegment>? speakerSegments;
+  final bool wasLiveTranscribed;
 
   const Meeting({
     required this.id,
@@ -91,6 +94,8 @@ class Meeting {
     this.transcriptionStatus,
     this.transcriptionProgress,
     this.summaries = const [],
+    this.speakerSegments,
+    this.wasLiveTranscribed = false,
   });
 
   /// Convenience getter for backward compatibility.
@@ -116,6 +121,8 @@ class Meeting {
     bool clearTranscriptionProgress = false,
     double? transcriptionProgress,
     List<MeetingSummary>? summaries,
+    List<SpeakerSegment>? speakerSegments,
+    bool? wasLiveTranscribed,
   }) {
     return Meeting(
       id: id ?? this.id,
@@ -133,6 +140,8 @@ class Meeting {
       transcriptionStatus: clearTranscriptionStatus ? null : (transcriptionStatus ?? this.transcriptionStatus),
       transcriptionProgress: clearTranscriptionProgress ? null : (transcriptionProgress ?? this.transcriptionProgress),
       summaries: summaries ?? this.summaries,
+      speakerSegments: speakerSegments ?? this.speakerSegments,
+      wasLiveTranscribed: wasLiveTranscribed ?? this.wasLiveTranscribed,
     );
   }
 
@@ -153,6 +162,8 @@ class Meeting {
       'transcriptionStatus': transcriptionStatus,
       'transcriptionProgress': transcriptionProgress,
       'summaries': summaries.map((s) => s.toJson()).toList(),
+      'speakerSegments': speakerSegments?.map((s) => s.toJson()).toList(),
+      'wasLiveTranscribed': wasLiveTranscribed,
     };
   }
 
@@ -201,6 +212,10 @@ class Meeting {
       transcriptionStatus: json['transcriptionStatus'] as String?,
       transcriptionProgress: (json['transcriptionProgress'] as num?)?.toDouble(),
       summaries: summaries,
+      speakerSegments: (json['speakerSegments'] as List<dynamic>?)
+          ?.map((s) => SpeakerSegment.fromJson(s as Map<String, dynamic>))
+          .toList(),
+      wasLiveTranscribed: json['wasLiveTranscribed'] as bool? ?? false,
     );
   }
 

@@ -373,6 +373,17 @@ class ModelDownloadManager {
     return await File('$dir/speaker-embedding.onnx').exists();
   }
 
+  Future<void> downloadEmbeddingModel() async {
+    final dir = await _modelsDir;
+    final modelPath = '$dir/speaker-embedding.onnx';
+    if (await File(modelPath).exists()) return;
+
+    const url = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx';
+    final outputPath = '$dir/speaker-embedding.onnx';
+
+    await _downloadFile(url, outputPath, (_) {});
+  }
+
   Future<void> downloadSegmentationModel() async {
     final dir = await _modelsDir;
     final modelPath = '$dir/sherpa-onnx-pyannote-segmentation-3-0.onnx';
@@ -411,6 +422,8 @@ class ModelDownloadManager {
       }
     }
   }
+
+  Future<String> getModelsDir() async => await _modelsDir;
 
   void dispose() {
     _progressController.close();

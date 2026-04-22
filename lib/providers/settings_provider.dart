@@ -132,6 +132,18 @@ class Settings extends _$Settings {
     await _persist(next);
   }
 
+  Future<void> setStreamingModelLanguage(String language) async {
+    final next = state.copyWith(streamingModelLanguage: language);
+    state = next;
+    await _persist(next);
+  }
+
+  Future<void> setCompressAudioStorage(bool enabled) async {
+    final next = state.copyWith(compressAudioStorage: enabled);
+    state = next;
+    await _persist(next);
+  }
+
   Future<String?> getApiKey(String provider) =>
       ref.read(secureStorageProvider).getApiKey(provider);
 
