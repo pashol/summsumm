@@ -160,7 +160,7 @@ void main() {
         durationSec: 300,
         audioPath: '/path/to/audio.m4a',
         title: 'Sprint Review',
-        transcript: 'Full transcript here',
+        rawTranscript: 'Full transcript here',
         status: MeetingStatus.done,
         lastError: null,
         provider: 'openai',
@@ -187,7 +187,7 @@ void main() {
       expect(restored.durationSec, original.durationSec);
       expect(restored.audioPath, original.audioPath);
       expect(restored.title, original.title);
-      expect(restored.transcript, original.transcript);
+      expect(restored.transcript, original.rawTranscript);
       expect(restored.status, original.status);
       expect(restored.lastError, original.lastError);
       expect(restored.provider, original.provider);
@@ -273,6 +273,28 @@ void main() {
       final restored = Meeting.fromJson(json);
       expect(restored.createdAt.isUtc, isTrue);
       expect(restored.createdAt, original.createdAt);
+    });
+
+    test('Meeting serializes and deserializes with cleanup fields', () {
+      final meeting = Meeting(
+        id: 'test-1',
+        createdAt: DateTime.now(),
+        durationSec: 60,
+        audioPath: '/path/to/audio.m4a',
+        title: 'Test Meeting',
+        status: MeetingStatus.transcribed,
+        rawTranscript: 'Um, like, this is a test.',
+        cleanedTranscript: 'This is a test.',
+        cleanupEnabled: true,
+      );
+
+      final json = meeting.toJson();
+      final restored = Meeting.fromJson(json);
+
+      expect(restored.rawTranscript, 'Um, like, this is a test.');
+      expect(restored.cleanedTranscript, 'This is a test.');
+      expect(restored.cleanupEnabled, true);
+      expect(restored.transcript, 'This is a test.');
     });
   });
 }

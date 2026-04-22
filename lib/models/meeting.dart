@@ -65,7 +65,9 @@ class Meeting {
   final int durationSec;
   final String audioPath;
   final String title;
-  final String? transcript;
+  final String? rawTranscript;
+  final String? cleanedTranscript;
+  final bool cleanupEnabled;
   final MeetingStatus status;
   final String? lastError;
   final String? provider;
@@ -84,7 +86,9 @@ class Meeting {
     required this.durationSec,
     required this.audioPath,
     required this.title,
-    this.transcript,
+    this.rawTranscript,
+    this.cleanedTranscript,
+    this.cleanupEnabled = true,
     required this.status,
     this.lastError,
     this.provider,
@@ -102,6 +106,9 @@ class Meeting {
   /// Returns the content of the first summary, or null if none exist.
   String? get summary => summaries.isEmpty ? null : summaries.first.content;
 
+  /// Computed transcript: returns cleaned version if available, otherwise raw.
+  String? get transcript => cleanedTranscript ?? rawTranscript;
+
   Meeting copyWith({
     String? id,
     DateTime? createdAt,
@@ -109,6 +116,9 @@ class Meeting {
     String? audioPath,
     String? title,
     String? transcript,
+    String? rawTranscript,
+    String? cleanedTranscript,
+    bool? cleanupEnabled,
     MeetingStatus? status,
     String? lastError,
     bool clearLastError = false,
@@ -130,7 +140,9 @@ class Meeting {
       durationSec: durationSec ?? this.durationSec,
       audioPath: audioPath ?? this.audioPath,
       title: title ?? this.title,
-      transcript: transcript ?? this.transcript,
+      rawTranscript: rawTranscript ?? this.rawTranscript,
+      cleanedTranscript: cleanedTranscript ?? this.cleanedTranscript,
+      cleanupEnabled: cleanupEnabled ?? this.cleanupEnabled,
       status: status ?? this.status,
       lastError: clearLastError ? null : (lastError ?? this.lastError),
       provider: provider ?? this.provider,
@@ -152,7 +164,9 @@ class Meeting {
       'durationSec': durationSec,
       'audioPath': audioPath,
       'title': title,
-      'transcript': transcript,
+      'rawTranscript': rawTranscript,
+      'cleanedTranscript': cleanedTranscript,
+      'cleanupEnabled': cleanupEnabled,
       'status': status.name,
       'lastError': lastError,
       'provider': provider,
@@ -196,7 +210,9 @@ class Meeting {
       durationSec: (json['durationSec'] as num).toInt(),
       audioPath: json['audioPath'] as String? ?? '',
       title: json['title'] as String? ?? 'Untitled',
-      transcript: json['transcript'] as String?,
+      rawTranscript: json['rawTranscript'] as String?,
+      cleanedTranscript: json['cleanedTranscript'] as String?,
+      cleanupEnabled: json['cleanupEnabled'] as bool? ?? false,
       status: MeetingStatus.values.firstWhere(
         (e) => e.name == json['status'],
         orElse: () => MeetingStatus.recorded,
