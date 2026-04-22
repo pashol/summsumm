@@ -5,6 +5,7 @@ import 'package:summsumm/models/app_settings.dart';
 import 'package:summsumm/providers/models_provider.dart';
 import 'package:summsumm/providers/settings_provider.dart';
 import 'package:summsumm/screens/meeting_library_screen.dart';
+import 'package:summsumm/screens/settings_screen.dart';
 import 'package:summsumm/services/ai_service.dart';
 import 'package:summsumm/widgets/glass_card.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -33,6 +34,7 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final _pageController = PageController();
   final _apiKeyCtrl = TextEditingController();
+  int _currentPage = 0;
   bool _showKey = false;
   bool _testingConnection = false;
   String? _connectionResult;
@@ -40,11 +42,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   bool _configuredApiKey = false;
   String _selectedProvider = 'openrouter';
   String _selectedModel = '';
-
-  int get _currentPage {
-    if (!_pageController.hasClients) return 0;
-    return _pageController.page?.round() ?? 0;
-  }
 
   @override
   void initState() {
@@ -69,7 +66,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
-      setState(() {});
     }
   }
 
@@ -79,7 +75,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
     );
-    setState(() {});
   }
 
   Future<void> _testConnection() async {
@@ -173,6 +168,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               child: PageView(
                 controller: _pageController,
                 physics: const NeverScrollableScrollPhysics(),
+                onPageChanged: (index) => setState(() => _currentPage = index),
                 children: [
                   _WelcomePage(
                     l10n: l10n,
@@ -200,6 +196,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     onShowKeyToggle: () => setState(() => _showKey = !_showKey),
                     onProviderChanged: (provider) async {
                       await notifier.setProvider(provider);
+                      if (!mounted) return;
                       setState(() {
                         _selectedProvider = provider;
                         _selectedModel = provider == 'openai'
@@ -208,12 +205,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       });
                     },
                     onModelChanged: (model) async {
-                      final notifier = ref.read(settingsProvider.notifier);
+                      final modelNotifier = ref.read(settingsProvider.notifier);
                       if (_selectedProvider == 'openai') {
-                        await notifier.setOpenAiModel(model);
+                        await modelNotifier.setOpenAiModel(model);
                       } else {
-                        await notifier.setOpenRouterModel(model);
+                        await modelNotifier.setOpenRouterModel(model);
                       }
+                      if (!mounted) return;
                       setState(() {
                         _selectedModel = model;
                       });
@@ -234,12 +232,21 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     cs: cs,
                     configured: _configuredApiKey || _apiKeyCtrl.text.trim().isNotEmpty,
                     onComplete: _complete,
-                    onGoToSettings: () {
-                      Navigator.of(context).pushReplacement(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const MeetingLibraryScreen(),
-                        ),
-                      );
+                    onGoToSettings: () async {
+                      await ref.read(onboardingServiceProvider).completeOnboarding();
+                      if (mounted) {
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const MeetingLibraryScreen(),
+                          ),
+                        ).then((_) {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const SettingsScreen(),
+                            ),
+                          );
+                        });
+                      }
                     },
                   ),
                 ],
@@ -551,7 +558,7 @@ class _ApiKeyPage extends StatelessWidget {
           DropdownButtonFormField<String>(
             initialValue: selectedModel.isEmpty ? models.first.id : selectedModel,
             decoration: InputDecoration(
-              labelText: l10n.settingsProviderLabel,
+              labelText: l10n.settingsModelSection,
               border: const OutlineInputBorder(),
               prefixIcon: const Icon(Icons.smart_toy_outlined),
             ),
@@ -559,7 +566,7 @@ class _ApiKeyPage extends StatelessWidget {
                 .map((m) => DropdownMenuItem(
                       value: m.id,
                       child: Text(m.name),
-                    ))
+                    ),)
                 .toList(),
             onChanged: (v) {
               if (v != null) {
@@ -613,7 +620,7 @@ class _ApiKeyPage extends StatelessWidget {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.wifi_tethering),
-                  label: const Text('Test Connection'),
+                  label: Text(l10n.settingsTestButton),
                 ),
               ),
             ],
