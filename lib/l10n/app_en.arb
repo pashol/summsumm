@@ -668,5 +668,77 @@
   "langTurkish": "Turkish",
   "@langTurkish": {
     "description": "Language display name"
+  },
+  "onboardingWelcomeTitle": "Summarize Anything, Anywhere",
+  "@onboardingWelcomeTitle": {
+    "description": "Onboarding welcome screen headline"
+  },
+  "onboardingWelcomeSubtitle": "AI-powered summaries from text, voice, and documents",
+  "@onboardingWelcomeSubtitle": {
+    "description": "Onboarding welcome screen subtitle"
+  },
+  "onboardingGetStarted": "Get Started",
+  "@onboardingGetStarted": {
+    "description": "Primary button on onboarding welcome screen"
+  },
+  "onboardingSkipSetup": "Skip Setup",
+  "@onboardingSkipSetup": {
+    "description": "Skip button on onboarding screens"
+  },
+  "onboardingFeaturesTitle": "What You Can Do",
+  "@onboardingFeaturesTitle": {
+    "description": "Onboarding features screen title"
+  },
+  "onboardingOnlineFeatures": "Online Features",
+  "@onboardingOnlineFeatures": {
+    "description": "Title for online features card"
+  },
+  "onboardingOnlineFeaturesDesc": "Text summarization, PDF summaries, cloud transcription — Requires API key",
+  "@onboardingOnlineFeaturesDesc": {
+    "description": "Description for online features card"
+  },
+  "onboardingOfflineFeatures": "Offline Features",
+  "@onboardingOfflineFeatures": {
+    "description": "Title for offline features card"
+  },
+  "onboardingOfflineFeaturesDesc": "Meeting recording, on-device transcription — Works without internet after model download",
+  "@onboardingOfflineFeaturesDesc": {
+    "description": "Description for offline features card"
+  },
+  "onboardingTranscriptionNote": "On-device transcription supports multiple languages. Live transcription works best with English.",
+  "@onboardingTranscriptionNote": {
+    "description": "Note about transcription language support"
+  },
+  "onboardingContinue": "Continue",
+  "@onboardingContinue": {
+    "description": "Continue button on onboarding screens"
+  },
+  "onboardingApiKeyTitle": "Connect Your AI",
+  "@onboardingApiKeyTitle": {
+    "description": "Onboarding API key screen title"
+  },
+  "onboardingApiKeySubtitle": "Add an API key to use AI-powered features. You can skip this and add it later in Settings.",
+  "@onboardingApiKeySubtitle": {
+    "description": "Onboarding API key screen subtitle"
+  },
+  "onboardingSkipForNow": "Skip for Now",
+  "@onboardingSkipForNow": {
+    "description": "Skip API key setup button"
+  },
+  "onboardingQuickStartTitle": "You're Ready!",
+  "@onboardingQuickStartTitle": {
+    "description": "Onboarding quick start screen title"
+  },
+  "onboardingQuickStartOnline": "You're ready to summarize text and PDFs.",
+  "@onboardingQuickStartOnline": {
+    "description": "Quick start message when API key is configured"
+  },
+  "onboardingQuickStartOffline": "You can record meetings and use on-device transcription. Add an API key later for AI features.",
+  "@onboardingQuickStartOffline": {
+    "description": "Quick start message when API key was skipped"
+  },
+  "onboardingGoToSettings": "Go to Settings",
+  "@onboardingGoToSettings": {
+    "description": "Link to settings from onboarding completion"
   }
 }
