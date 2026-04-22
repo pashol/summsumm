@@ -33,15 +33,15 @@ void main() {
     });
 
     test('isModelAvailable returns false when model not downloaded', () async {
-      final available = await manager.isModelAvailable(ModelSize.base);
+      final available = await manager.isModelAvailable(ModelSize.tiny);
       expect(available, false);
     });
 
     test('getModelConfig returns correct paths', () async {
-      final config = await manager.getModelConfig(ModelSize.base);
-      expect(config.encoderPath, contains('tiny.en-encoder.int8.onnx'));
-      expect(config.decoderPath, contains('tiny.en-decoder.int8.onnx'));
-      expect(config.tokensPath, contains('tiny.en-tokens.txt'));
+      final config = await manager.getModelConfig(ModelSize.tiny);
+      expect(config.encoderPath, contains('tiny-encoder.int8.onnx'));
+      expect(config.decoderPath, contains('tiny-decoder.int8.onnx'));
+      expect(config.tokensPath, contains('tiny-tokens.txt'));
     });
   });
 }

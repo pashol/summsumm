@@ -1,19 +1,35 @@
 enum TranscriptionStrategy { cloud, onDevice }
 
-enum ModelSize { base, small, medium }
+enum ModelSize { tiny, base, small }
 
-enum DownloadStatus { pending, downloading, completed, failed }
+enum DownloadStatus { pending, downloading, completed, failed, cancelled }
+
+enum DownloadType { 
+  whisperTiny, 
+  whisperBase, 
+  whisperSmall, 
+  streaming, 
+  segmentation, 
+  embedding 
+}
 
 class DownloadProgress {
-  final ModelSize size;
+  final DownloadType type;
   final double fraction;
   final DownloadStatus status;
 
   const DownloadProgress({
-    required this.size,
+    required this.type,
     required this.fraction,
     required this.status,
   });
+  
+  ModelSize? get modelSize => switch (type) {
+    DownloadType.whisperTiny => ModelSize.tiny,
+    DownloadType.whisperBase => ModelSize.base,
+    DownloadType.whisperSmall => ModelSize.small,
+    _ => null,
+  };
 }
 
 class WhisperModelConfig {

@@ -7,26 +7,45 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:summsumm/models/transcription_config.dart';
 import 'package:summsumm/services/streaming_model_config.dart';
+import 'package:synchronized/synchronized.dart';
 
 class ModelDownloadManager {
   final http.Client _client;
   final _progressController = StreamController<DownloadProgress>.broadcast();
+  final Lock _downloadLock = Lock();
+  final Set<DownloadType> _activeDownloads = {};
+  http.StreamedResponse? _currentResponse;
+  bool _isCancelled = false;
 
   static const _modelUrls = {
-    ModelSize.base: 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-tiny.tar.bz2',
-    ModelSize.small: 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-base.tar.bz2',
-    ModelSize.medium: 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-small.tar.bz2',
+    ModelSize.tiny: 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-tiny.tar.bz2',
+    ModelSize.base: 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-base.tar.bz2',
+    ModelSize.small: 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-small.tar.bz2',
   };
 
   static const _modelNames = {
-    ModelSize.base: 'tiny',
-    ModelSize.small: 'base',
-    ModelSize.medium: 'small',
+    ModelSize.tiny: 'tiny',
+    ModelSize.base: 'base',
+    ModelSize.small: 'small',
+  };
+
+  static DownloadType _modelSizeToType(ModelSize size) => switch (size) {
+    ModelSize.tiny => DownloadType.whisperTiny,
+    ModelSize.base => DownloadType.whisperBase,
+    ModelSize.small => DownloadType.whisperSmall,
   };
 
   ModelDownloadManager({http.Client? client}) : _client = client ?? http.Client();
 
   Stream<DownloadProgress> get progressStream => _progressController.stream;
+  
+  bool get isDownloading => _activeDownloads.isNotEmpty;
+  
+  void cancelDownload() {
+    _isCancelled = true;
+    _currentResponse?.stream.listen(null).cancel();
+    _currentResponse = null;
+  }
 
   Future<String> get _modelsDir async {
     final docsDir = await getApplicationDocumentsDirectory();
@@ -53,54 +72,84 @@ class ModelDownloadManager {
   }
 
   Future<DownloadProgress> downloadModel(ModelSize size) async {
-    final dir = await _modelsDir;
-    final modelName = _modelNames[size]!;
-    final tarPath = '$dir/$modelName.tar.bz2';
-
-    _progressController.add(DownloadProgress(
-      size: size,
-      fraction: 0.0,
-      status: DownloadStatus.downloading,
-    ),);
-
-    try {
-      await _downloadFile(_modelUrls[size]!, tarPath, (fraction) {
-        _progressController.add(DownloadProgress(
-          size: size,
-          fraction: fraction * 0.7,
-          status: DownloadStatus.downloading,
-        ),);
-      });
+    final type = _modelSizeToType(size);
+    
+    if (_activeDownloads.contains(type)) {
+      throw StateError('Model $size is already downloading');
+    }
+    
+    return await _downloadLock.synchronized(() async {
+      _activeDownloads.add(type);
+      _isCancelled = false;
+      
+      final dir = await _modelsDir;
+      final modelName = _modelNames[size]!;
+      final tarPath = '$dir/$modelName.tar.bz2';
 
       _progressController.add(DownloadProgress(
-        size: size,
-        fraction: 0.7,
+        type: type,
+        fraction: 0.0,
         status: DownloadStatus.downloading,
       ),);
 
-      await _extractTarBz2(tarPath, dir, modelName);
+      try {
+        await _downloadFile(_modelUrls[size]!, tarPath, (fraction) {
+          if (_isCancelled) {
+            throw Exception('Download cancelled');
+          }
+          _progressController.add(DownloadProgress(
+            type: type,
+            fraction: fraction * 0.7,
+            status: DownloadStatus.downloading,
+          ),);
+        });
 
-      await File(tarPath).delete();
+        if (_isCancelled) {
+          await File(tarPath).delete();
+          _progressController.add(DownloadProgress(
+            type: type,
+            fraction: 0.0,
+            status: DownloadStatus.cancelled,
+          ),);
+          return DownloadProgress(
+            type: type,
+            fraction: 0.0,
+            status: DownloadStatus.cancelled,
+          );
+        }
 
-      _progressController.add(DownloadProgress(
-        size: size,
-        fraction: 1.0,
-        status: DownloadStatus.completed,
-      ),);
+        _progressController.add(DownloadProgress(
+          type: type,
+          fraction: 0.7,
+          status: DownloadStatus.downloading,
+        ),);
 
-      return DownloadProgress(
-        size: size,
-        fraction: 1.0,
-        status: DownloadStatus.completed,
-      );
-    } catch (e) {
-      _progressController.add(DownloadProgress(
-        size: size,
-        fraction: 0.0,
-        status: DownloadStatus.failed,
-      ),);
-      rethrow;
-    }
+        await _extractTarBz2(tarPath, dir, modelName);
+
+        await File(tarPath).delete();
+
+        _progressController.add(DownloadProgress(
+          type: type,
+          fraction: 1.0,
+          status: DownloadStatus.completed,
+        ),);
+
+        return DownloadProgress(
+          type: type,
+          fraction: 1.0,
+          status: DownloadStatus.completed,
+        );
+      } catch (e) {
+        _progressController.add(DownloadProgress(
+          type: type,
+          fraction: 0.0,
+          status: _isCancelled ? DownloadStatus.cancelled : DownloadStatus.failed,
+        ),);
+        rethrow;
+      } finally {
+        _activeDownloads.remove(type);
+      }
+    });
   }
 
   Future<void> _extractTarBz2(String tarPath, String destDir, String modelName) async {
@@ -182,7 +231,7 @@ class ModelDownloadManager {
 
   Future<void> _downloadFile(String url, String path, void Function(double) onProgress) async {
     final request = http.Request('GET', Uri.parse(url));
-    final response = await _client.send(request);
+    final response = _currentResponse = await _client.send(request);
     
     if (response.statusCode != 200) {
       throw Exception('Download failed: ${response.statusCode}');
@@ -193,15 +242,26 @@ class ModelDownloadManager {
     final sink = file.openWrite();
     var downloadedBytes = 0;
 
-    await for (final chunk in response.stream) {
-      sink.add(chunk);
-      downloadedBytes += chunk.length;
-      if (totalBytes > 0) {
-        onProgress(downloadedBytes / totalBytes);
+    try {
+      await for (final chunk in response.stream) {
+        if (_isCancelled) {
+          await sink.close();
+          throw Exception('Download cancelled');
+        }
+        sink.add(chunk);
+        downloadedBytes += chunk.length;
+        if (totalBytes > 0) {
+          onProgress(downloadedBytes / totalBytes);
+        }
       }
-    }
 
-    await sink.close();
+      await sink.close();
+    } catch (e) {
+      await sink.close();
+      rethrow;
+    } finally {
+      _currentResponse = null;
+    }
   }
 
   Future<Map<ModelSize, bool>> getDownloadedModels() async {
@@ -273,47 +333,77 @@ class ModelDownloadManager {
   }
 
   Future<DownloadProgress> downloadStreamingModel(String language) async {
-    final config = StreamingModelConfigs.forLanguage(language);
-    final dir = await _modelsDir;
-    final tarPath = '$dir/streaming_model.tar.bz2';
-
-    _progressController.add(const DownloadProgress(
-      size: ModelSize.base,
-      fraction: 0.0,
-      status: DownloadStatus.downloading,
-    ),);
-
-    try {
-      await _downloadFile(config.url, tarPath, (fraction) {
-        _progressController.add(DownloadProgress(
-          size: ModelSize.base,
-          fraction: fraction * 0.7,
-          status: DownloadStatus.downloading,
-        ),);
-      });
-
-      await _extractStreamingModel(tarPath, dir, config);
-      await File(tarPath).delete();
-
-      _progressController.add(const DownloadProgress(
-        size: ModelSize.base,
-        fraction: 1.0,
-        status: DownloadStatus.completed,
-      ),);
-
-      return const DownloadProgress(
-        size: ModelSize.base,
-        fraction: 1.0,
-        status: DownloadStatus.completed,
-      );
-    } catch (e) {
-      _progressController.add(const DownloadProgress(
-        size: ModelSize.base,
-        fraction: 0.0,
-        status: DownloadStatus.failed,
-      ),);
-      rethrow;
+    const type = DownloadType.streaming;
+    
+    if (_activeDownloads.contains(type)) {
+      throw StateError('Streaming model is already downloading');
     }
+    
+    return await _downloadLock.synchronized(() async {
+      _activeDownloads.add(type);
+      _isCancelled = false;
+      
+      final config = StreamingModelConfigs.forLanguage(language);
+      final dir = await _modelsDir;
+      final tarPath = '$dir/streaming_model.tar.bz2';
+
+      _progressController.add(const DownloadProgress(
+        type: type,
+        fraction: 0.0,
+        status: DownloadStatus.downloading,
+      ),);
+
+      try {
+        await _downloadFile(config.url, tarPath, (fraction) {
+          if (_isCancelled) {
+            throw Exception('Download cancelled');
+          }
+          _progressController.add(DownloadProgress(
+            type: type,
+            fraction: fraction * 0.7,
+            status: DownloadStatus.downloading,
+          ),);
+        });
+
+        if (_isCancelled) {
+          await File(tarPath).delete();
+          _progressController.add(const DownloadProgress(
+            type: type,
+            fraction: 0.0,
+            status: DownloadStatus.cancelled,
+          ),);
+          return const DownloadProgress(
+            type: type,
+            fraction: 0.0,
+            status: DownloadStatus.cancelled,
+          );
+        }
+
+        await _extractStreamingModel(tarPath, dir, config);
+        await File(tarPath).delete();
+
+        _progressController.add(const DownloadProgress(
+          type: type,
+          fraction: 1.0,
+          status: DownloadStatus.completed,
+        ),);
+
+        return const DownloadProgress(
+          type: type,
+          fraction: 1.0,
+          status: DownloadStatus.completed,
+        );
+      } catch (e) {
+        _progressController.add(DownloadProgress(
+          type: type,
+          fraction: 0.0,
+          status: _isCancelled ? DownloadStatus.cancelled : DownloadStatus.failed,
+        ),);
+        rethrow;
+      } finally {
+        _activeDownloads.remove(type);
+      }
+    });
   }
 
   Future<void> _extractStreamingModel(String tarPath, String destDir, StreamingModelConfig config) async {
@@ -374,27 +464,123 @@ class ModelDownloadManager {
   }
 
   Future<void> downloadEmbeddingModel() async {
-    final dir = await _modelsDir;
-    final modelPath = '$dir/speaker-embedding.onnx';
-    if (await File(modelPath).exists()) return;
+    const type = DownloadType.embedding;
+    
+    if (_activeDownloads.contains(type)) {
+      throw StateError('Embedding model is already downloading');
+    }
+    
+    await _downloadLock.synchronized(() async {
+      _activeDownloads.add(type);
+      _isCancelled = false;
+      
+      final dir = await _modelsDir;
+      final modelPath = '$dir/speaker-embedding.onnx';
+      if (await File(modelPath).exists()) return;
 
-    const url = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx';
-    final outputPath = '$dir/speaker-embedding.onnx';
+      const url = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx';
 
-    await _downloadFile(url, outputPath, (_) {});
+      _progressController.add(const DownloadProgress(
+        type: type,
+        fraction: 0.0,
+        status: DownloadStatus.downloading,
+      ),);
+
+      try {
+        await _downloadFile(url, modelPath, (fraction) {
+          if (_isCancelled) {
+            throw Exception('Download cancelled');
+          }
+          _progressController.add(DownloadProgress(
+            type: type,
+            fraction: fraction,
+            status: DownloadStatus.downloading,
+          ),);
+        });
+
+        _progressController.add(const DownloadProgress(
+          type: type,
+          fraction: 1.0,
+          status: DownloadStatus.completed,
+        ),);
+      } catch (e) {
+        _progressController.add(DownloadProgress(
+          type: type,
+          fraction: 0.0,
+          status: _isCancelled ? DownloadStatus.cancelled : DownloadStatus.failed,
+        ),);
+        rethrow;
+      } finally {
+        _activeDownloads.remove(type);
+      }
+    });
   }
 
   Future<void> downloadSegmentationModel() async {
-    final dir = await _modelsDir;
-    final modelPath = '$dir/sherpa-onnx-pyannote-segmentation-3-0.onnx';
-    if (await File(modelPath).exists()) return;
+    const type = DownloadType.segmentation;
+    
+    if (_activeDownloads.contains(type)) {
+      throw StateError('Segmentation model is already downloading');
+    }
+    
+    await _downloadLock.synchronized(() async {
+      _activeDownloads.add(type);
+      _isCancelled = false;
+      
+      final dir = await _modelsDir;
+      final modelPath = '$dir/sherpa-onnx-pyannote-segmentation-3-0.onnx';
+      if (await File(modelPath).exists()) return;
 
-    const url = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-segmentation-models/sherpa-onnx-pyannote-segmentation-3-0.tar.bz2';
-    final tarPath = '$dir/segmentation.tar.bz2';
+      const url = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-segmentation-models/sherpa-onnx-pyannote-segmentation-3-0.tar.bz2';
+      final tarPath = '$dir/segmentation.tar.bz2';
 
-    await _downloadFile(url, tarPath, (_) {});
-    await _extractSegmentationModel(tarPath, dir);
-    await File(tarPath).delete();
+      _progressController.add(const DownloadProgress(
+        type: type,
+        fraction: 0.0,
+        status: DownloadStatus.downloading,
+      ),);
+
+      try {
+        await _downloadFile(url, tarPath, (fraction) {
+          if (_isCancelled) {
+            throw Exception('Download cancelled');
+          }
+          _progressController.add(DownloadProgress(
+            type: type,
+            fraction: fraction * 0.7,
+            status: DownloadStatus.downloading,
+          ),);
+        });
+
+        if (_isCancelled) {
+          await File(tarPath).delete();
+          _progressController.add(const DownloadProgress(
+            type: type,
+            fraction: 0.0,
+            status: DownloadStatus.cancelled,
+          ),);
+          return;
+        }
+
+        await _extractSegmentationModel(tarPath, dir);
+        await File(tarPath).delete();
+
+        _progressController.add(const DownloadProgress(
+          type: type,
+          fraction: 1.0,
+          status: DownloadStatus.completed,
+        ),);
+      } catch (e) {
+        _progressController.add(DownloadProgress(
+          type: type,
+          fraction: 0.0,
+          status: _isCancelled ? DownloadStatus.cancelled : DownloadStatus.failed,
+        ),);
+        rethrow;
+      } finally {
+        _activeDownloads.remove(type);
+      }
+    });
   }
 
   Future<void> _extractSegmentationModel(String tarPath, String destDir) async {

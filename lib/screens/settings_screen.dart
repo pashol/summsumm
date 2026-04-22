@@ -459,11 +459,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     return progressAsync.when(
                       data: (progress) {
                         if (progress.status == DownloadStatus.downloading) {
+                          final modelName = progress.modelSize?.name ?? progress.type.name;
                           return Column(
                             children: [
                               LinearProgressIndicator(value: progress.fraction),
                               const SizedBox(height: 4),
-                              Text('Downloading ${progress.size.name} model...'),
+                              Text('Downloading $modelName model...'),
                               const SizedBox(height: 8),
                             ],
                           );
@@ -489,19 +490,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             final isSelected = size == settings.onDeviceModelSize;
                             final isActive = isDownloaded && isSelected;
                             final label = switch (size) {
-                              ModelSize.base => 'Tiny',
-                              ModelSize.small => 'Base',
-                              ModelSize.medium => 'Small',
+                              ModelSize.tiny => 'Tiny',
+                              ModelSize.base => 'Base',
+                              ModelSize.small => 'Small',
                             };
                             final sizeLabel = switch (size) {
+                              ModelSize.tiny => '~75MB',
                               ModelSize.base => '~150MB',
                               ModelSize.small => '~500MB',
-                              ModelSize.medium => '~1.5GB',
                             };
                             
                             // Check if this model is currently downloading
                             final isDownloading = progressAsync.valueOrNull?.status == DownloadStatus.downloading &&
-                                progressAsync.valueOrNull?.size == size;
+                                progressAsync.valueOrNull?.modelSize == size;
                             
                             return Card(
                               margin: const EdgeInsets.only(bottom: 8),
