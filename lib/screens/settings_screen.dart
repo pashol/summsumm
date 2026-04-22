@@ -13,6 +13,7 @@ import '../providers/settings_provider.dart';
 import '../services/ai_service.dart';
 import '../utils/localized_strings.dart';
 import '../widgets/glass_card.dart';
+import 'backup_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key, this.isInitialSetup = false});
@@ -704,6 +705,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   onChanged: (v) => notifier.setOnDeviceDiarization(v),
                 ),
               ],
+            ],
+          ),
+          const SizedBox(height: 16),
+          _SectionCard(
+            title: 'Backup & Restore',
+            icon: Icons.cloud_upload_outlined,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.backup),
+                title: const Text('Backup & Restore'),
+                subtitle: const Text('Export or import your data'),
+                trailing: const Icon(Icons.chevron_right),
+                contentPadding: EdgeInsets.zero,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(builder: (_) => const BackupScreen()),
+                  );
+                },
+              ),
             ],
           ),
           const SizedBox(height: 32),
