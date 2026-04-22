@@ -1,3 +1,5 @@
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -17,6 +19,7 @@ import 'providers/settings_provider.dart';
 import 'screens/settings_screen.dart';
 import 'screens/summary_sheet.dart';
 import 'screens/meeting_library_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'services/meeting_repository.dart';
 import 'utils/document_title.dart';
 
@@ -27,6 +30,10 @@ bool isDocumentShare(List<Document> documents) =>
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting();
+
+  // Check if onboarding is completed
+  final prefs = await SharedPreferences.getInstance();
+  final hasCompletedOnboarding = prefs.getBool('has_completed_onboarding') ?? false;
 
   // Retrieve the intent data from the native layer before the UI builds.
   const channel = MethodChannel('app.summsumm/intent');
@@ -99,6 +106,7 @@ void main() async {
 
   final openSettings = action == 'app.summsumm.OPEN_SETTINGS';
   final audioImported = audioDocs.isNotEmpty;
+  final showOnboarding = !hasCompletedOnboarding && !openSettings && otherDocs.isEmpty;
 
   runApp(
     ProviderScope(
@@ -106,6 +114,7 @@ void main() async {
         openSettings: openSettings,
         audioImported: audioImported,
         documents: otherDocs,
+        showOnboarding: showOnboarding,
       ),
     ),
   );
@@ -198,11 +207,13 @@ class SummsummApp extends ConsumerStatefulWidget {
     required this.openSettings,
     required this.audioImported,
     required this.documents,
+    required this.showOnboarding,
   });
 
   final bool openSettings;
   final bool audioImported;
   final List<Document> documents;
+  final bool showOnboarding;
 
   @override
   ConsumerState<SummsummApp> createState() => _SummsummAppState();
@@ -333,11 +344,13 @@ class _SummsummAppState extends ConsumerState<SummsummApp> {
                 textTheme: _buildTextTheme(darkScheme),
               ),
               themeMode: ThemeMode.system,
-              home: widget.openSettings
-                  ? const SettingsScreen(isInitialSetup: true)
-                  : widget.documents.isNotEmpty
-                      ? _SummarySheetHost(documents: widget.documents)
-                      : const MeetingLibraryScreen(),
+              home: widget.showOnboarding
+                  ? const OnboardingScreen()
+                  : widget.openSettings
+                      ? const SettingsScreen(isInitialSetup: true)
+                      : widget.documents.isNotEmpty
+                          ? _SummarySheetHost(documents: widget.documents)
+                          : const MeetingLibraryScreen(),
             );
           },
         );
