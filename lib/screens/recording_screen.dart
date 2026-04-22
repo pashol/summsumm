@@ -128,8 +128,7 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> {
     final service = ref.read(realTimeTranscriptionServiceProvider);
 
     await service.start(
-      modelSize: settings.onDeviceModelSize,
-      diarize: settings.onDeviceDiarization,
+      language: settings.language,
     );
 
     // Listen to transcript stream
