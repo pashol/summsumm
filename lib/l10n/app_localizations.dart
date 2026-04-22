@@ -967,6 +967,186 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Go to Settings'**
   String get onboardingGoToSettings;
+
+  /// Backup screen title
+  ///
+  /// In en, this message translates to:
+  /// **'Backup & Restore'**
+  String get backupTitle;
+
+  /// Export section title
+  ///
+  /// In en, this message translates to:
+  /// **'Export Backup'**
+  String get backupExportTitle;
+
+  /// Import section title
+  ///
+  /// In en, this message translates to:
+  /// **'Restore Backup'**
+  String get backupImportTitle;
+
+  /// Checkbox to include settings in backup
+  ///
+  /// In en, this message translates to:
+  /// **'Include settings'**
+  String get backupIncludeSettings;
+
+  /// Checkbox to include API keys in backup
+  ///
+  /// In en, this message translates to:
+  /// **'Include API keys'**
+  String get backupIncludeApiKeys;
+
+  /// Subtitle explaining API keys requirement
+  ///
+  /// In en, this message translates to:
+  /// **'Requires settings to be included'**
+  String get backupIncludeApiKeysHint;
+
+  /// Checkbox to include meeting data in backup
+  ///
+  /// In en, this message translates to:
+  /// **'Include meeting data'**
+  String get backupIncludeMeetings;
+
+  /// Checkbox to include audio files in backup
+  ///
+  /// In en, this message translates to:
+  /// **'Include audio files'**
+  String get backupIncludeAudio;
+
+  /// Subtitle warning about file size
+  ///
+  /// In en, this message translates to:
+  /// **'Significantly increases file size'**
+  String get backupIncludeAudioHint;
+
+  /// Label for filename input field
+  ///
+  /// In en, this message translates to:
+  /// **'Filename'**
+  String get backupFilename;
+
+  /// Export button label
+  ///
+  /// In en, this message translates to:
+  /// **'Export'**
+  String get backupExportButton;
+
+  /// Import button label
+  ///
+  /// In en, this message translates to:
+  /// **'Select Backup File'**
+  String get backupSelectFile;
+
+  /// Explanation of import behavior
+  ///
+  /// In en, this message translates to:
+  /// **'Select a .summsumm backup file to restore your data. Existing meetings will be skipped (not overwritten).'**
+  String get backupImportHint;
+
+  /// Password dialog title for export
+  ///
+  /// In en, this message translates to:
+  /// **'Set Backup Password'**
+  String get backupSetPassword;
+
+  /// Password dialog title for import
+  ///
+  /// In en, this message translates to:
+  /// **'Enter Backup Password'**
+  String get backupEnterPassword;
+
+  /// Password field label
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get backupPasswordLabel;
+
+  /// Password field hint
+  ///
+  /// In en, this message translates to:
+  /// **'Min 8 characters'**
+  String get backupPasswordHint;
+
+  /// Error when password is too short
+  ///
+  /// In en, this message translates to:
+  /// **'Password must be at least 8 characters'**
+  String get backupPasswordTooShort;
+
+  /// Import success header
+  ///
+  /// In en, this message translates to:
+  /// **'Import successful'**
+  String get backupImportSuccess;
+
+  /// Import result line showing imported count
+  ///
+  /// In en, this message translates to:
+  /// **'Meetings imported: {count}'**
+  String backupMeetingsImported(int count);
+
+  /// Import result line showing skipped count
+  ///
+  /// In en, this message translates to:
+  /// **'Meetings skipped: {count}'**
+  String backupMeetingsSkipped(int count);
+
+  /// Import result line showing settings status
+  ///
+  /// In en, this message translates to:
+  /// **'Settings restored: {value}'**
+  String backupSettingsRestored(String value);
+
+  /// Import result line showing API keys status
+  ///
+  /// In en, this message translates to:
+  /// **'API keys restored: {value}'**
+  String backupApiKeysRestored(String value);
+
+  /// Affirmative value label
+  ///
+  /// In en, this message translates to:
+  /// **'Yes'**
+  String get backupYes;
+
+  /// Negative value label
+  ///
+  /// In en, this message translates to:
+  /// **'No'**
+  String get backupNo;
+
+  /// Snackbar when export fails
+  ///
+  /// In en, this message translates to:
+  /// **'Export failed: {error}'**
+  String backupExportFailed(String error);
+
+  /// Snackbar when import fails
+  ///
+  /// In en, this message translates to:
+  /// **'Import failed: {error}'**
+  String backupImportFailed(String error);
+
+  /// Success snackbar after import
+  ///
+  /// In en, this message translates to:
+  /// **'Imported {imported} meetings, skipped {skipped} duplicates.'**
+  String backupImportedMeetings(int imported, int skipped);
+
+  /// Settings section title for backup
+  ///
+  /// In en, this message translates to:
+  /// **'Backup & Restore'**
+  String get backupSettingsSection;
+
+  /// Settings item subtitle for backup
+  ///
+  /// In en, this message translates to:
+  /// **'Export or import your data'**
+  String get backupSettingsSubtitle;
 }
 
 class _AppLocalizationsDelegate

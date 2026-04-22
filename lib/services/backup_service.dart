@@ -13,6 +13,14 @@ import '../models/meeting.dart';
 import 'meeting_repository.dart';
 import 'secure_storage_service.dart';
 
+class BackupException implements Exception {
+  final String message;
+  const BackupException(this.message);
+  
+  @override
+  String toString() => message;
+}
+
 class ImportResult {
   final int meetingsImported;
   final int meetingsSkipped;
@@ -32,6 +40,8 @@ class ImportResult {
 }
 
 class BackupService {
+  static const _maxAudioFileSize = 100 * 1024 * 1024; // 100 MB per file
+  static const _maxTotalAudioSize = 500 * 1024 * 1024; // 500 MB total
   final MeetingRepository _meetingRepository;
   final SecureStorageService _secureStorage;
   final AppSettings Function() _getSettings;
@@ -80,9 +90,29 @@ class BackupService {
     
     if (includeAudio) {
       audioFiles = {};
+      int totalAudioSize = 0;
       for (final meeting in meetings) {
         if (meeting.audioPath.isNotEmpty && File(meeting.audioPath).existsSync()) {
-          final bytes = await File(meeting.audioPath).readAsBytes();
+          final audioFile = File(meeting.audioPath);
+          final fileSize = audioFile.lengthSync();
+          
+          if (fileSize > _maxAudioFileSize) {
+            throw BackupException(
+              'Audio file for "${meeting.title}" exceeds 100 MB limit '
+              '(${(fileSize / 1024 / 1024).toStringAsFixed(1)} MB). '
+              'Exclude audio files or reduce recording quality.',
+            );
+          }
+          
+          totalAudioSize += fileSize;
+          if (totalAudioSize > _maxTotalAudioSize) {
+            throw const BackupException(
+              'Total audio size exceeds 500 MB limit. '
+              'Exclude audio files or archive some meetings first.',
+            );
+          }
+          
+          final bytes = await audioFile.readAsBytes();
           audioFiles[meeting.id] = base64Encode(bytes);
         }
       }
@@ -227,8 +257,12 @@ class BackupService {
         settingsImported: settingsImported,
         apiKeysImported: apiKeysImported,
       );
+    } on FormatException {
+      return const ImportResult(error: 'Invalid backup file format');
+    } on FileSystemException {
+      return const ImportResult(error: 'Failed to read backup file');
     } catch (e) {
-      return ImportResult(error: 'Import failed: $e');
+      return const ImportResult(error: 'Import failed unexpectedly');
     }
   }
 

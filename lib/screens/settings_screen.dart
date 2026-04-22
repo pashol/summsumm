@@ -709,13 +709,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const SizedBox(height: 16),
           _SectionCard(
-            title: 'Backup & Restore',
+            title: l10n.backupSettingsSection,
             icon: Icons.cloud_upload_outlined,
             children: [
               ListTile(
                 leading: const Icon(Icons.backup),
-                title: const Text('Backup & Restore'),
-                subtitle: const Text('Export or import your data'),
+                title: Text(l10n.backupTitle),
+                subtitle: Text(l10n.backupSettingsSubtitle),
                 trailing: const Icon(Icons.chevron_right),
                 contentPadding: EdgeInsets.zero,
                 onTap: () {

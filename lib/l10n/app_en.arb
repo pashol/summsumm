@@ -740,5 +740,177 @@
   "onboardingGoToSettings": "Go to Settings",
   "@onboardingGoToSettings": {
     "description": "Link to settings from onboarding completion"
+  },
+
+  "backupTitle": "Backup & Restore",
+  "@backupTitle": {
+    "description": "Backup screen title"
+  },
+
+  "backupExportTitle": "Export Backup",
+  "@backupExportTitle": {
+    "description": "Export section title"
+  },
+
+  "backupImportTitle": "Restore Backup",
+  "@backupImportTitle": {
+    "description": "Import section title"
+  },
+
+  "backupIncludeSettings": "Include settings",
+  "@backupIncludeSettings": {
+    "description": "Checkbox to include settings in backup"
+  },
+
+  "backupIncludeApiKeys": "Include API keys",
+  "@backupIncludeApiKeys": {
+    "description": "Checkbox to include API keys in backup"
+  },
+
+  "backupIncludeApiKeysHint": "Requires settings to be included",
+  "@backupIncludeApiKeysHint": {
+    "description": "Subtitle explaining API keys requirement"
+  },
+
+  "backupIncludeMeetings": "Include meeting data",
+  "@backupIncludeMeetings": {
+    "description": "Checkbox to include meeting data in backup"
+  },
+
+  "backupIncludeAudio": "Include audio files",
+  "@backupIncludeAudio": {
+    "description": "Checkbox to include audio files in backup"
+  },
+
+  "backupIncludeAudioHint": "Significantly increases file size",
+  "@backupIncludeAudioHint": {
+    "description": "Subtitle warning about file size"
+  },
+
+  "backupFilename": "Filename",
+  "@backupFilename": {
+    "description": "Label for filename input field"
+  },
+
+  "backupExportButton": "Export",
+  "@backupExportButton": {
+    "description": "Export button label"
+  },
+
+  "backupSelectFile": "Select Backup File",
+  "@backupSelectFile": {
+    "description": "Import button label"
+  },
+
+  "backupImportHint": "Select a .summsumm backup file to restore your data. Existing meetings will be skipped (not overwritten).",
+  "@backupImportHint": {
+    "description": "Explanation of import behavior"
+  },
+
+  "backupSetPassword": "Set Backup Password",
+  "@backupSetPassword": {
+    "description": "Password dialog title for export"
+  },
+
+  "backupEnterPassword": "Enter Backup Password",
+  "@backupEnterPassword": {
+    "description": "Password dialog title for import"
+  },
+
+  "backupPasswordLabel": "Password",
+  "@backupPasswordLabel": {
+    "description": "Password field label"
+  },
+
+  "backupPasswordHint": "Min 8 characters",
+  "@backupPasswordHint": {
+    "description": "Password field hint"
+  },
+
+  "backupPasswordTooShort": "Password must be at least 8 characters",
+  "@backupPasswordTooShort": {
+    "description": "Error when password is too short"
+  },
+
+  "backupImportSuccess": "Import successful",
+  "@backupImportSuccess": {
+    "description": "Import success header"
+  },
+
+  "backupMeetingsImported": "Meetings imported: {count}",
+  "@backupMeetingsImported": {
+    "description": "Import result line showing imported count",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "backupMeetingsSkipped": "Meetings skipped: {count}",
+  "@backupMeetingsSkipped": {
+    "description": "Import result line showing skipped count",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "backupSettingsRestored": "Settings restored: {value}",
+  "@backupSettingsRestored": {
+    "description": "Import result line showing settings status",
+    "placeholders": {
+      "value": { "type": "String" }
+    }
+  },
+
+  "backupApiKeysRestored": "API keys restored: {value}",
+  "@backupApiKeysRestored": {
+    "description": "Import result line showing API keys status",
+    "placeholders": {
+      "value": { "type": "String" }
+    }
+  },
+
+  "backupYes": "Yes",
+  "@backupYes": {
+    "description": "Affirmative value label"
+  },
+
+  "backupNo": "No",
+  "@backupNo": {
+    "description": "Negative value label"
+  },
+
+  "backupExportFailed": "Export failed: {error}",
+  "@backupExportFailed": {
+    "description": "Snackbar when export fails",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+
+  "backupImportFailed": "Import failed: {error}",
+  "@backupImportFailed": {
+    "description": "Snackbar when import fails",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+
+  "backupImportedMeetings": "Imported {imported} meetings, skipped {skipped} duplicates.",
+  "@backupImportedMeetings": {
+    "description": "Success snackbar after import",
+    "placeholders": {
+      "imported": { "type": "int" },
+      "skipped": { "type": "int" }
+    }
+  },
+
+  "backupSettingsSection": "Backup & Restore",
+  "@backupSettingsSection": {
+    "description": "Settings section title for backup"
+  },
+
+  "backupSettingsSubtitle": "Export or import your data",
+  "@backupSettingsSubtitle": {
+    "description": "Settings item subtitle for backup"
   }
 }

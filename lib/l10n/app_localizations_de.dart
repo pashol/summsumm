@@ -484,4 +484,111 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get onboardingGoToSettings => 'Zu den Einstellungen';
+
+  @override
+  String get backupTitle => 'Backup & Wiederherstellung';
+
+  @override
+  String get backupExportTitle => 'Backup exportieren';
+
+  @override
+  String get backupImportTitle => 'Backup wiederherstellen';
+
+  @override
+  String get backupIncludeSettings => 'Einstellungen einbeziehen';
+
+  @override
+  String get backupIncludeApiKeys => 'API-Schlüssel einbeziehen';
+
+  @override
+  String get backupIncludeApiKeysHint =>
+      'Erfordert Einstellungen einzubeziehen';
+
+  @override
+  String get backupIncludeMeetings => 'Meeting-Daten einbeziehen';
+
+  @override
+  String get backupIncludeAudio => 'Audiodateien einbeziehen';
+
+  @override
+  String get backupIncludeAudioHint => 'Erhöht die Dateigröße erheblich';
+
+  @override
+  String get backupFilename => 'Dateiname';
+
+  @override
+  String get backupExportButton => 'Exportieren';
+
+  @override
+  String get backupSelectFile => 'Backupdatei auswählen';
+
+  @override
+  String get backupImportHint =>
+      'Wähle eine .summsumm Backupdatei, um deine Daten wiederherzustellen. Bestehende Meetings werden übersprungen (nicht überschrieben).';
+
+  @override
+  String get backupSetPassword => 'Backup-Passwort festlegen';
+
+  @override
+  String get backupEnterPassword => 'Backup-Passwort eingeben';
+
+  @override
+  String get backupPasswordLabel => 'Passwort';
+
+  @override
+  String get backupPasswordHint => 'Mindestens 8 Zeichen';
+
+  @override
+  String get backupPasswordTooShort =>
+      'Passwort muss mindestens 8 Zeichen haben';
+
+  @override
+  String get backupImportSuccess => 'Import erfolgreich';
+
+  @override
+  String backupMeetingsImported(int count) {
+    return 'Meetings importiert: $count';
+  }
+
+  @override
+  String backupMeetingsSkipped(int count) {
+    return 'Meetings übersprungen: $count';
+  }
+
+  @override
+  String backupSettingsRestored(String value) {
+    return 'Einstellungen wiederhergestellt: $value';
+  }
+
+  @override
+  String backupApiKeysRestored(String value) {
+    return 'API-Schlüssel wiederhergestellt: $value';
+  }
+
+  @override
+  String get backupYes => 'Ja';
+
+  @override
+  String get backupNo => 'Nein';
+
+  @override
+  String backupExportFailed(String error) {
+    return 'Export fehlgeschlagen: $error';
+  }
+
+  @override
+  String backupImportFailed(String error) {
+    return 'Import fehlgeschlagen: $error';
+  }
+
+  @override
+  String backupImportedMeetings(int imported, int skipped) {
+    return '$imported Meetings importiert, $skipped Duplikate übersprungen.';
+  }
+
+  @override
+  String get backupSettingsSection => 'Backup & Wiederherstellung';
+
+  @override
+  String get backupSettingsSubtitle => 'Daten exportieren oder importieren';
 }

@@ -483,4 +483,109 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingGoToSettings => 'Go to Settings';
+
+  @override
+  String get backupTitle => 'Backup & Restore';
+
+  @override
+  String get backupExportTitle => 'Export Backup';
+
+  @override
+  String get backupImportTitle => 'Restore Backup';
+
+  @override
+  String get backupIncludeSettings => 'Include settings';
+
+  @override
+  String get backupIncludeApiKeys => 'Include API keys';
+
+  @override
+  String get backupIncludeApiKeysHint => 'Requires settings to be included';
+
+  @override
+  String get backupIncludeMeetings => 'Include meeting data';
+
+  @override
+  String get backupIncludeAudio => 'Include audio files';
+
+  @override
+  String get backupIncludeAudioHint => 'Significantly increases file size';
+
+  @override
+  String get backupFilename => 'Filename';
+
+  @override
+  String get backupExportButton => 'Export';
+
+  @override
+  String get backupSelectFile => 'Select Backup File';
+
+  @override
+  String get backupImportHint =>
+      'Select a .summsumm backup file to restore your data. Existing meetings will be skipped (not overwritten).';
+
+  @override
+  String get backupSetPassword => 'Set Backup Password';
+
+  @override
+  String get backupEnterPassword => 'Enter Backup Password';
+
+  @override
+  String get backupPasswordLabel => 'Password';
+
+  @override
+  String get backupPasswordHint => 'Min 8 characters';
+
+  @override
+  String get backupPasswordTooShort => 'Password must be at least 8 characters';
+
+  @override
+  String get backupImportSuccess => 'Import successful';
+
+  @override
+  String backupMeetingsImported(int count) {
+    return 'Meetings imported: $count';
+  }
+
+  @override
+  String backupMeetingsSkipped(int count) {
+    return 'Meetings skipped: $count';
+  }
+
+  @override
+  String backupSettingsRestored(String value) {
+    return 'Settings restored: $value';
+  }
+
+  @override
+  String backupApiKeysRestored(String value) {
+    return 'API keys restored: $value';
+  }
+
+  @override
+  String get backupYes => 'Yes';
+
+  @override
+  String get backupNo => 'No';
+
+  @override
+  String backupExportFailed(String error) {
+    return 'Export failed: $error';
+  }
+
+  @override
+  String backupImportFailed(String error) {
+    return 'Import failed: $error';
+  }
+
+  @override
+  String backupImportedMeetings(int imported, int skipped) {
+    return 'Imported $imported meetings, skipped $skipped duplicates.';
+  }
+
+  @override
+  String get backupSettingsSection => 'Backup & Restore';
+
+  @override
+  String get backupSettingsSubtitle => 'Export or import your data';
 }
