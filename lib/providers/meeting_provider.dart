@@ -148,13 +148,58 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
       }
 
       state = meeting.copyWith(
-        transcript: transcript,
+        rawTranscript: transcript,
         status: MeetingStatus.transcribed,
         provider: settings.provider,
+        cleanupEnabled: true,
         clearLastError: true,
         clearTranscriptionStatus: true,
         clearTranscriptionProgress: true,
       );
+      await repository.save(state);
+      ref.read(meetingLibraryProvider.notifier).refresh();
+
+      if (state.cleanupEnabled && state.rawTranscript != null) {
+        state = state.copyWith(
+          status: MeetingStatus.transcribing,
+          transcriptionStatus: 'Cleaning up transcript…',
+        );
+        await repository.save(state);
+        ref.read(meetingLibraryProvider.notifier).refresh();
+
+        try {
+          final aiService = ref.read(aiServiceProvider);
+          final cleaned = StringBuffer();
+          final cleanupStream = aiService.cleanupTranscript(
+            rawTranscript: state.rawTranscript!,
+            provider: settings.provider,
+            apiKey: apiKey,
+            model: settings.activeModel,
+          );
+
+          await for (final chunk in cleanupStream) {
+            cleaned.write(chunk);
+            state = state.copyWith(
+              transcriptionStatus: 'Cleaning up transcript…',
+            );
+            _throttledSave(state);
+          }
+
+          state = state.copyWith(
+            cleanedTranscript: cleaned.toString(),
+            status: MeetingStatus.transcribed,
+            clearTranscriptionStatus: true,
+            clearTranscriptionProgress: true,
+          );
+        } catch (e) {
+          state = state.copyWith(
+            status: MeetingStatus.transcribed,
+            clearTranscriptionStatus: true,
+            clearTranscriptionProgress: true,
+          );
+        }
+      }
+
       await repository.save(state);
       ref.read(meetingLibraryProvider.notifier).refresh();
     } catch (e) {
