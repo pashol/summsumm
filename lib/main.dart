@@ -387,7 +387,7 @@ class _SummarySheetHostState extends State<_SummarySheetHost>
       durationSec: 0,
       audioPath: '',
       title: title,
-      transcript: widget.documents.isNotEmpty ? widget.documents.first.text : '',
+      rawTranscript: widget.documents.isNotEmpty ? widget.documents.first.text : '',
       status: MeetingStatus.summarizing,
       type: MeetingType.document,
     );
@@ -471,7 +471,7 @@ class _DocumentSheetHostState extends State<_DocumentSheetHost> {
       durationSec: 0,
       audioPath: '',
       title: documentTitle(widget.documents),
-      transcript:
+      rawTranscript:
           widget.documents.isNotEmpty ? widget.documents.first.text : '',
       status: MeetingStatus.summarizing,
       type: MeetingType.document,

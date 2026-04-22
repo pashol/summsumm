@@ -92,7 +92,7 @@ void main() {
     test('cleanupTranscript streams cleaned text', () async {
       final mockClient = _MockClient();
       final service = _TestableAiService(mockClient);
-      final raw = 'Um, like, this is a test. Uh, yeah.';
+      const raw = 'Um, like, this is a test. Uh, yeah.';
 
       final futureChunks = service.cleanupTranscript(
         rawTranscript: raw,

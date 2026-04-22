@@ -194,6 +194,43 @@ class AiService {
     }
   }
 
+  Stream<String> cleanupTranscript({
+    required String rawTranscript,
+    required String provider,
+    required String apiKey,
+    required String model,
+    bool diarized = false,
+  }) async* {
+    final prompt = '''Clean and refine the following transcript according to these rules:
+
+- Keep timestamps and speaker labels exactly as they are (format: [hh:mm:ss] Speaker X:).
+- Remove filler words, repetitions, false starts, and spoken-language artifacts.
+- Rewrite all statements in correct written language (keep the original language).
+- Correct grammar, sentence structure, and wording without changing the meaning.
+- Ensure each sentence is clear, complete, and logically structured.
+- Do not summarize or omit any content.
+- Do not add new information or interpretations.
+- Preserve the original order of statements strictly.
+- Keep the wording precise and concise without embellishment.
+
+Optional:
+If a sentence is unclear, rewrite it as close as possible to the intended meaning without guessing.
+
+Transcript:
+$rawTranscript''';
+
+    final messages = [
+      {'role': 'user', 'content': prompt},
+    ];
+
+    yield* streamCompletion(
+      apiKey: apiKey,
+      model: model,
+      messages: messages,
+      provider: provider,
+    );
+  }
+
   static Map<String, int> _maxTokensParam(
     String model,
     bool isOpenAi,
