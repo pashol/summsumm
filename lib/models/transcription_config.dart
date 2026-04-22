@@ -73,3 +73,25 @@ class TranscriptWord {
     required this.endTime,
   });
 }
+
+class StreamingModelConfig {
+  final String name;
+  final String url;
+  final String encoderFile;
+  final String decoderFile;
+  final String joinerFile;
+  final String tokensFile;
+  final int sampleRate;
+  final String language;
+
+  const StreamingModelConfig({
+    required this.name,
+    required this.url,
+    required this.encoderFile,
+    required this.decoderFile,
+    required this.joinerFile,
+    required this.tokensFile,
+    this.sampleRate = 16000,
+    required this.language,
+  });
+}
