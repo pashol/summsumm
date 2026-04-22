@@ -41,6 +41,7 @@ dependencies:
   sherpa_onnx: ^1.11.0
   archive: ^4.0.9
   synchronized: ^3.1.0
+  encrypt: ^5.0.3
 
 dev_dependencies:
   flutter_test:
