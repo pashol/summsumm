@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:summsumm/models/transcription_config.dart';
 import 'package:summsumm/services/on_device_transcription_service.dart';
 
 void main() {

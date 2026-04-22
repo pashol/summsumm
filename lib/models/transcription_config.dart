@@ -16,19 +16,17 @@ class DownloadProgress {
   });
 }
 
-class ModelConfig {
-  final String modelPath;
+class WhisperModelConfig {
+  final String encoderPath;
+  final String decoderPath;
   final String tokensPath;
-  final String? encoderPath;
-  final String? decoderPath;
   final int sampleRate;
   final int featureDim;
 
-  const ModelConfig({
-    required this.modelPath,
+  const WhisperModelConfig({
+    required this.encoderPath,
+    required this.decoderPath,
     required this.tokensPath,
-    this.encoderPath,
-    this.decoderPath,
     this.sampleRate = 16000,
     this.featureDim = 80,
   });
@@ -61,5 +59,17 @@ class SpeakerSegment {
     required this.startTime,
     required this.endTime,
     required this.text,
+  });
+}
+
+class TranscriptWord {
+  final String text;
+  final double startTime;
+  final double endTime;
+
+  const TranscriptWord({
+    required this.text,
+    required this.startTime,
+    required this.endTime,
   });
 }

@@ -39,6 +39,7 @@ dependencies:
   intl: ^0.20.0
   ffmpeg_kit_flutter_new_audio: ^2.0.0
   sherpa_onnx: ^1.11.0
+  archive: ^4.0.9
 
 dev_dependencies:
   flutter_test:

@@ -942,7 +942,7 @@ class _TranscribingIndicatorState extends State<_TranscribingIndicator>
     super.initState();
     _pulseController = AnimationController(
       vsync: this,
-      duration: animDuration(context, const Duration(milliseconds: 1500)),
+      duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
 
     _breathAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(

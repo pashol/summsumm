@@ -22,3 +22,8 @@ final speakerModelAvailabilityProvider = FutureProvider<bool>((ref) async {
   final manager = ref.watch(modelDownloadManagerProvider);
   return manager.isSpeakerModelAvailable();
 });
+
+final downloadedModelsProvider = FutureProvider<Map<ModelSize, bool>>((ref) async {
+  final manager = ref.watch(modelDownloadManagerProvider);
+  return manager.getDownloadedModels();
+});

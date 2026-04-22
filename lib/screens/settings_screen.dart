@@ -431,41 +431,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   await notifier.setTranscriptionStrategy(
                     v ? TranscriptionStrategy.onDevice : TranscriptionStrategy.cloud,
                   );
-                  if (v) {
-                    // Trigger base model download
-                    final manager = ref.read(modelDownloadManagerProvider);
-                    if (!await manager.isModelAvailable(ModelSize.base)) {
-                      manager.downloadModel(ModelSize.base);
-                    }
-                  }
                 },
               ),
               
-              // Model size selector (only when on-device enabled)
+              // Model Management Section (only when on-device enabled)
               if (settings.transcriptionStrategy == TranscriptionStrategy.onDevice) ...[
-                const SizedBox(height: 8),
-                DropdownButtonFormField<ModelSize>(
-                  value: settings.onDeviceModelSize,
-                  decoration: const InputDecoration(
-                    labelText: 'Model size',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.memory_outlined),
+                const SizedBox(height: 16),
+                Text(
+                  'Speech Recognition Models',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
                   ),
-                  items: ModelSize.values.map((size) {
-                    final label = switch (size) {
-                      ModelSize.base => 'Base (~150MB)',
-                      ModelSize.small => 'Small (~500MB)',
-                      ModelSize.medium => 'Medium (~1.5GB)',
-                    };
-                    return DropdownMenuItem(
-                      value: size,
-                      child: Text(label),
-                    );
-                  }).toList(),
-                  onChanged: (v) {
-                    if (v != null) notifier.setOnDeviceModelSize(v);
-                  },
                 ),
+                const SizedBox(height: 4),
+                Text(
+                  'Download a model to use on-device transcription',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 8),
                 
                 // Download progress
                 Consumer(
@@ -476,10 +461,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         if (progress.status == DownloadStatus.downloading) {
                           return Column(
                             children: [
-                              const SizedBox(height: 8),
                               LinearProgressIndicator(value: progress.fraction),
                               const SizedBox(height: 4),
                               Text('Downloading ${progress.size.name} model...'),
+                              const SizedBox(height: 8),
                             ],
                           );
                         }
@@ -490,6 +475,143 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     );
                   },
                 ),
+                
+                Consumer(
+                  builder: (context, ref, child) {
+                    final downloadedAsync = ref.watch(downloadedModelsProvider);
+                    final progressAsync = ref.watch(modelDownloadProgressProvider);
+                    return downloadedAsync.when(
+                      data: (downloaded) {
+                        return Column(
+                          children: downloaded.entries.map((entry) {
+                            final size = entry.key;
+                            final isDownloaded = entry.value;
+                            final isActive = size == settings.onDeviceModelSize;
+                            final label = switch (size) {
+                              ModelSize.base => 'Tiny',
+                              ModelSize.small => 'Base',
+                              ModelSize.medium => 'Small',
+                            };
+                            final sizeLabel = switch (size) {
+                              ModelSize.base => '~150MB',
+                              ModelSize.small => '~500MB',
+                              ModelSize.medium => '~1.5GB',
+                            };
+                            
+                            // Check if this model is currently downloading
+                            final isDownloading = progressAsync.valueOrNull?.status == DownloadStatus.downloading &&
+                                progressAsync.valueOrNull?.size == size;
+                            
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              child: ListTile(
+                                leading: isActive
+                                  ? const Icon(
+                                      Icons.check_circle,
+                                      color: Colors.green,
+                                    )
+                                  : (isDownloaded
+                                      ? IconButton(
+                                          icon: const Icon(
+                                            Icons.circle_outlined,
+                                            color: Colors.grey,
+                                          ),
+                                          onPressed: () => notifier.setOnDeviceModelSize(size),
+                                        )
+                                      : (isDownloading
+                                          ? Icon(
+                                              Icons.downloading,
+                                              color: Theme.of(context).colorScheme.primary,
+                                            )
+                                          : IconButton(
+                                              icon: Icon(
+                                                Icons.download,
+                                                color: Theme.of(context).colorScheme.primary,
+                                              ),
+                                              onPressed: () async {
+                                                final confirmed = await showDialog<bool>(
+                                                  context: context,
+                                                  builder: (context) => AlertDialog(
+                                                    title: const Text('Download Model'),
+                                                    content: Text('Download $label model ($sizeLabel)?\n\nThis may use significant data on metered connections.'),
+                                                    actions: [
+                                                      TextButton(
+                                                        onPressed: () => Navigator.pop(context, false),
+                                                        child: const Text('Cancel'),
+                                                      ),
+                                                      TextButton(
+                                                        onPressed: () => Navigator.pop(context, true),
+                                                        child: const Text('Download'),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                );
+                                                if (confirmed == true) {
+                                                  final manager = ref.read(modelDownloadManagerProvider);
+                                                  await manager.downloadModel(size);
+                                                  ref.invalidate(downloadedModelsProvider);
+                                                }
+                                              },
+                                            ))),
+                                title: Text('$label ($sizeLabel)'),
+                                subtitle: isActive
+                                  ? const Text('Selected', style: TextStyle(color: Colors.green))
+                                  : (isDownloading
+                                      ? const Text('Downloading...', style: TextStyle(color: Colors.blue))
+                                      : null),
+                                trailing: isDownloading
+                                  ? IconButton(
+                                      icon: const Icon(Icons.cancel, color: Colors.orange),
+                                      onPressed: () {
+                                        // TODO: Implement cancel download
+                                        ref.invalidate(downloadedModelsProvider);
+                                      },
+                                    )
+                                  : (isDownloaded
+                                      ? IconButton(
+                                          icon: const Icon(Icons.delete_outline, color: Colors.red),
+                                          onPressed: () async {
+                                            final confirmed = await showDialog<bool>(
+                                              context: context,
+                                              builder: (context) => AlertDialog(
+                                                title: const Text('Delete Model'),
+                                                content: Text('Delete $label model?'),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed: () => Navigator.pop(context, false),
+                                                    child: const Text('Cancel'),
+                                                  ),
+                                                  TextButton(
+                                                    onPressed: () => Navigator.pop(context, true),
+                                                    child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                            if (confirmed == true) {
+                                              final manager = ref.read(modelDownloadManagerProvider);
+                                              await manager.deleteModel(size);
+                                              ref.invalidate(downloadedModelsProvider);
+                                            }
+                                          },
+                                        )
+                                      : null),
+                              ),
+                            );
+                          }).toList(),
+                        );
+                      },
+                      loading: () => const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      error: (_, __) => const Text('Error loading model info'),
+                    );
+                  },
+                ),
+                
+                const SizedBox(height: 16),
                 
                 // Live transcription toggle
                 SwitchListTile(

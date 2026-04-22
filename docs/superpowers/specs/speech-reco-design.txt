@@ -1,0 +1,348 @@
+# On-Device Speech Recognition & Diarization — Design Spec
+**Date**: 2026-04-21
+**Project**: summsumm Flutter App
+**Scope**: Add fully offline transcription + diarization as a drop-in parallel service
+---
+## Overview
+Add a complete on-device speech recognition pipeline using Sherpa-ONNX that operates **independently** from the existing cloud-based transcription flow. The new service supports both **batch offline transcription** (post-recording) and **real-time streaming transcription** (during recording), with speaker diarization in both modes.
+**Guiding principles:**
+- Zero changes to existing cloud workflow — pure drop-in addition
+- Offline-first: works without any internet connection
+- Model files downloaded on-demand, not bundled in APK
+- Upgrade path: base → small → medium model sizes via settings
+- Real-time streaming is a first-class citizen, not an afterthought
+---
+## Architecture
+### Design Principle: Parallel Services
+The on-device pipeline is a **separate, independent service layer**. Existing `VoiceService`, `MeetingNotifier` cloud paths, and all UI flows remain untouched.
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      UI Layer                               │
+│  RecordingScreen │ MeetingDetailScreen │ SettingsScreen    │
+└─────────────────────────────────────────────────────────────┘
+                              │
+┌─────────────────────────────────────────────────────────────┐
+│                   Provider Layer                            │
+│  onDeviceTranscriptionProvider │ modelDownloadProvider      │
+│  realTimeTranscriptionProvider │ transcriptionConfigProvider │
+└─────────────────────────────────────────────────────────────┘
+                              │
+┌─────────────────────────────────────────────────────────────┐
+│                   Service Layer                             │
+│  OnDeviceTranscriptionService                                 │
+│    ├── SherpaAsrEngine (OnlineRecognizer / OfflineRecognizer) │
+│    ├── SherpaDiarizationEngine (speaker embedding + cluster)  │
+│    └── RealTimeTranscriptionService (streaming manager)       │
+│  ModelDownloadManager                                       │
+└─────────────────────────────────────────────────────────────┘
+                              │
+┌─────────────────────────────────────────────────────────────┐
+│                   Model Storage                             │
+│  ~/app_documents/sherpa_models/                             │
+│    ├── whisper-base.onnx (~150MB)                           │
+│    ├── whisper-small.onnx (~500MB)                          │
+│    ├── whisper-medium.onnx (~1.5GB)                         │
+│    └── speaker-embedding.onnx (~30MB)                       │
+└─────────────────────────────────────────────────────────────┘
+```
+### Two Operating Modes
+**1. Batch Offline Mode**
+- Triggered after recording stops (same entry point as cloud transcribe)
+- Full audio file processed in one pass
+- Diarization runs on complete audio
+- Result saved to `Meeting.transcript` identical format to cloud output
+**2. Real-Time Streaming Mode**
+- Triggered when user enables "Live transcription" during recording
+- Audio chunks fed from `flutter_sound` stream to `OnlineRecognizer`
+- Transcript segments emitted as they arrive
+- Diarization runs in sliding windows (~5-10s) with speaker clustering
+- Results displayed live in recording UI
+---
+## Components
+### 1. OnDeviceTranscriptionService
+**Responsibility**: Main orchestrator for all on-device transcription operations.
+**Interface**:
+```dart
+class OnDeviceTranscriptionService {
+  // Batch mode
+  Future<String> transcribeFile(
+    String audioPath, {
+    bool diarize = false,
+    void Function(String status, double? progress)? onProgress,
+  });
+  // Streaming mode
+  Future<Stream<TranscriptSegment>> startStreamingTranscription({
+    bool diarize = false,
+  });
+  Future<void> feedAudioChunk(Uint8List pcm16Data);
+  Future<void> stopStreamingTranscription();
+  // Lifecycle
+  Future<void> initialize();
+  Future<void> dispose();
+  bool get isInitialized;
+}
+```
+**Implementation notes**:
+- Lazy initialization — models loaded only when first transcription requested
+- `transcribeFile` delegates to `SherpaAsrEngine` (offline) + `SherpaDiarizationEngine`
+- `startStreamingTranscription` creates `OnlineRecognizer` instance
+- `feedAudioChunk` accepts raw PCM16 audio at 16kHz mono (same format as `flutter_sound`)
+- All operations run in background isolate to avoid blocking UI
+### 2. SherpaAsrEngine
+**Responsibility**: Wraps Sherpa-ONNX ASR functionality.
+**Interface**:
+```dart
+class SherpaAsrEngine {
+  Future<void> loadModel(ModelConfig config);
+  
+  // Offline (batch)
+  Future<String> transcribe(String audioPath);
+  
+  // Online (streaming)
+  Future<void> createStream();
+  Future<String?> acceptWaveform(Uint8List pcm16Data);
+  Future<String> finalizeStream();
+  void destroyStream();
+}
+```
+**Model configuration**:
+```dart
+class ModelConfig {
+  final String modelPath;      // Path to ONNX model file
+  final String tokensPath;     // Path to tokens.txt
+  final String? encoderPath;   // For encoder-decoder models
+  final String? decoderPath;
+  final int sampleRate;        // 16000
+  final int featureDim;        // 80 (Whisper)
+}
+```
+### 3. SherpaDiarizationEngine
+**Responsibility**: Speaker diarization using ECAPA-TDNN embeddings + clustering.
+**Interface**:
+```dart
+class SherpaDiarizationEngine {
+  Future<void> loadModel(String embeddingModelPath);
+  
+  // Batch mode
+  Future<List<SpeakerSegment>> diarize(
+    String audioPath,
+    List<TranscriptWord> words,
+  );
+  
+  // Streaming mode
+  Future<void> startSession();
+  Future<List<SpeakerSegment>> processWindow(
+    Uint8List pcm16Data,
+    List<TranscriptWord> words,
+  );
+  Future<void> endSession();
+}
+class SpeakerSegment {
+  final String speakerLabel;   // "Speaker 1", "Speaker 2", etc.
+  final double startTime;
+  final double endTime;
+  final String text;
+}
+```
+**Implementation notes**:
+- Uses Sherpa-ONNX speaker embedding model (~30MB)
+- Batch mode: spectral clustering on full audio embeddings
+- Streaming mode: incremental clustering with speaker consistency tracking
+- Output format matches existing diarized transcript format: `[HH:MM:SS] Speaker X: <text>`
+### 4. RealTimeTranscriptionService
+**Responsibility**: Manages streaming transcription lifecycle during recording.
+**Interface**:
+```dart
+class RealTimeTranscriptionService {
+  final StreamController<TranscriptSegment> _segmentController;
+  
+  Future<void> start({bool diarize = false});
+  void onAudioData(Uint8List pcm16Data);
+  Future<void> stop();
+  
+  Stream<TranscriptSegment> get transcriptStream;
+}
+class TranscriptSegment {
+  final String text;
+  final double startTime;
+  final double endTime;
+  final String? speakerLabel;  // null if diarization off
+  final bool isFinal;
+}
+```
+**Integration with RecordingScreen**:
+- `RecordingScreen` checks if real-time transcription is enabled
+- If enabled, starts `RealTimeTranscriptionService` when recording starts
+- Feeds audio chunks from `flutter_sound` stream to service
+- Displays live transcript segments in overlay/bottom sheet
+- On stop, finalizes and saves transcript to meeting (same as batch)
+### 5. ModelDownloadManager
+**Responsibility**: Download and cache ONNX model files.
+**Interface**:
+```dart
+class ModelDownloadManager {
+  Future<bool> isModelAvailable(ModelSize size);
+  Future<DownloadProgress> downloadModel(ModelSize size);
+  Future<void> deleteModel(ModelSize size);
+  Future<String> getModelPath(ModelSize size);
+  
+  Stream<DownloadProgress> get progressStream;
+}
+enum ModelSize { base, small, medium }
+class DownloadProgress {
+  final ModelSize size;
+  final double fraction;  // 0.0 - 1.0
+  final DownloadStatus status;
+}
+enum DownloadStatus { pending, downloading, completed, failed }
+```
+**Download sources**:
+- Models hosted on GitHub Releases or Hugging Face (free CDN)
+- Base model auto-downloaded when user first enables on-device transcription
+- Small/medium available as manual upgrades in settings
+- Download resumes on interruption
+- Models stored in app documents directory, excluded from backup
+---
+## Data Flow
+### Batch Mode Flow
+```
+1. User taps "Transcribe" in MeetingDetailScreen
+2. App checks settings: transcriptionStrategy == onDevice?
+3. If yes: call onDeviceTranscriptionService.transcribeFile()
+4. Service checks if models are downloaded → triggers download if needed
+5. FFmpeg preprocesses audio (same as existing: 16kHz mono)
+6. SherpaAsrEngine transcribes audio → raw text with word timestamps
+7. If diarize: SherpaDiarizationEngine clusters speakers
+8. Format output: "[HH:MM:SS] Speaker X: <text>"
+9. Save to Meeting.transcript, update status to transcribed
+```
+### Real-Time Mode Flow
+```
+1. User enables "Live transcription" in RecordingScreen
+2. onRecordingStart: RealTimeTranscriptionService.start()
+3. Audio chunks from flutter_sound → feedAudioChunk()
+4. SherpaAsrEngine (OnlineRecognizer) processes chunks
+5. Every ~2-3s: emit TranscriptSegment with isFinal=false
+6. If diarize: SherpaDiarizationEngine processes 5-10s windows
+7. Display segments in recording UI overlay
+8. onRecordingStop: finalize stream, save final transcript
+```
+---
+## Settings Integration
+### New Settings Fields
+```dart
+class AppSettings {
+  // ... existing fields ...
+  
+  final TranscriptionStrategy transcriptionStrategy;  // cloud | onDevice
+  final ModelSize onDeviceModelSize;                  // base | small | medium
+  final bool enableRealTimeTranscription;             // default: false
+  final bool onDeviceDiarization;                     // default: true
+}
+enum TranscriptionStrategy { cloud, onDevice }
+```
+### Settings UI
+**New section in SettingsScreen**: "On-Device Transcription"
+- Toggle: "Use on-device transcription" (default: off)
+  - When enabled, shows model download status
+  - Auto-downloads base model if not present
+- Dropdown: "Model size" (base / small / medium)
+  - Shows download size and current status
+  - Disabled if model not downloaded
+- Toggle: "Live transcription during recording" (default: off)
+  - Only enabled if on-device transcription is on
+- Toggle: "Speaker diarization" (default: on)
+### MeetingDetailScreen Changes
+- Transcribe button behavior determined by `transcriptionStrategy`
+- If `onDevice`: use `OnDeviceTranscriptionService` instead of `VoiceService`
+- Diarization switch still available (now works for both cloud and on-device)
+- Progress indicator shows model download if needed
+### RecordingScreen Changes
+- New toggle: "Live transcription" (only visible if on-device enabled)
+- When enabled, shows transcript overlay during recording
+- Uses same `flutter_sound` audio stream — no duplicate recording
+---
+## Error Handling
+### Model Download Errors
+- Network failure: retry with exponential backoff, show snackbar
+- Insufficient storage: show dialog with required space
+- Corrupted model: delete and re-download
+### Transcription Errors
+- Model not loaded: fallback message (shouldn't happen with proper init)
+- Out of memory (large audio + medium model): suggest using smaller model
+- Audio format error: same handling as existing pipeline
+### Real-Time Errors
+- ASR initialization failure: disable live transcription, show toast
+- Audio stream interruption: attempt to restart, log error
+---
+## Performance Considerations
+### Memory
+- Whisper base: ~300MB RAM during inference
+- Whisper small: ~800MB RAM
+- Whisper medium: ~2GB RAM (may fail on low-end devices)
+- Speaker embedding: ~100MB RAM
+- **Recommendation**: Default to base, warn on small/medium selection for <4GB RAM devices
+### Battery
+- Batch mode: heavy CPU usage for duration of transcription
+- Real-time mode: sustained moderate CPU usage during recording
+- **Mitigation**: Run in background isolate, allow OS thermal throttling
+### Storage
+- Base model: ~150MB
+- Small model: ~500MB
+- Medium model: ~1.5GB
+- Speaker model: ~30MB
+- Total (base + speaker): ~180MB
+---
+## Testing Strategy
+### Unit Tests
+- `ModelDownloadManager`: download, resume, corruption detection
+- `SherpaAsrEngine`: mock ONNX runtime, verify output format
+- `SherpaDiarizationEngine`: mock embeddings, verify clustering
+### Integration Tests
+- End-to-end batch transcription with sample audio
+- Real-time transcription with simulated audio stream
+- Model download → transcription flow
+### Manual Tests
+- Long audio files (>1 hour)
+- Low-end devices (2GB RAM)
+- Airplane mode (fully offline)
+- Multiple speakers (diarization accuracy)
+---
+## File Impact Summary
+| Layer | New Files | Modified Files |
+|---|---|---|
+| Services | `on_device_transcription_service.dart`, `sherpa_asr_engine.dart`, `sherpa_diarization_engine.dart`, `real_time_transcription_service.dart`, `model_download_manager.dart` | — |
+| Providers | `on_device_transcription_provider.dart`, `model_download_provider.dart`, `transcription_config_provider.dart` | — |
+| Models | `transcription_config.dart` | `app_settings.dart` |
+| Screens | — | `settings_screen.dart`, `meeting_detail_screen.dart`, `recording_screen.dart` |
+| pubspec | — | Add `sherpa_onnx` dependency |
+---
+## Dependencies
+```yaml
+dependencies:
+  # ... existing ...
+  sherpa_onnx: ^1.11.0  # or latest
+  path_provider: ^2.1.0  # already present
+  http: ^1.3.0           # already present (for model download)
+```
+---
+## Risks & Mitigations
+| Risk | Likelihood | Impact | Mitigation |
+|---|---|---|---|
+| Sherpa-ONNX Flutter plugin has Android-only support | Medium | High | Verify iOS support before commit; if missing, document Android-only |
+| Model download too slow/unreliable | Medium | Medium | Use multiple mirrors, resume support, pre-download in settings |
+| Medium model crashes on low-RAM devices | High | Medium | Detect RAM at runtime, restrict model selection |
+| Real-time diarization too slow for live use | Medium | High | Make diarization optional in real-time mode; post-process after recording |
+| Plugin API changes break build | Low | High | Pin exact version, monitor changelog |
+---
+## Future Enhancements
+- VAD (Voice Activity Detection) for smarter real-time chunking
+- Custom vocabulary / fine-tuned models for domain-specific terms
+- Model quantization (INT8) for faster inference
+- Multi-language model support
+- Speaker identification (name speakers after training)
+---
+## Open Questions
+1. **iOS support**: Does `sherpa_onnx` Flutter plugin support iOS? If not, is Android-only acceptable for MVP?
+2. **Model hosting**: Where to host ONNX files? GitHub Releases, Hugging Face, or custom CDN?
+3. **Real-time diarization accuracy**: Should we ship real-time without diarization first, then add it?

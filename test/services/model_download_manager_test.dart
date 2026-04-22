@@ -37,9 +37,11 @@ void main() {
       expect(available, false);
     });
 
-    test('getModelPath returns correct path', () async {
-      final path = await manager.getModelPath(ModelSize.base);
-      expect(path, contains('whisper-base.onnx'));
+    test('getModelConfig returns correct paths', () async {
+      final config = await manager.getModelConfig(ModelSize.base);
+      expect(config.encoderPath, contains('tiny.en-encoder.int8.onnx'));
+      expect(config.decoderPath, contains('tiny.en-decoder.int8.onnx'));
+      expect(config.tokensPath, contains('tiny.en-tokens.txt'));
     });
   });
 }
