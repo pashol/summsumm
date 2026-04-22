@@ -662,6 +662,42 @@ abstract class AppLocalizations {
   /// **'Failed to start recording: {error}'**
   String recordingFailedStart(String error);
 
+  /// Dialog title for enabling live transcription
+  ///
+  /// In en, this message translates to:
+  /// **'Live Transcription'**
+  String get liveTranscriptionTitle;
+
+  /// Dialog content asking user to enable live transcription
+  ///
+  /// In en, this message translates to:
+  /// **'Transcribe speech in real-time while recording?\n\nThis uses more battery but lets you see text appear as you speak.'**
+  String get liveTranscriptionPrompt;
+
+  /// Button to confirm enabling live transcription
+  ///
+  /// In en, this message translates to:
+  /// **'Yes'**
+  String get liveTranscriptionYes;
+
+  /// Button to decline live transcription
+  ///
+  /// In en, this message translates to:
+  /// **'No'**
+  String get liveTranscriptionNo;
+
+  /// Snackbar when live transcription fails to start
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to start live transcription: {error}'**
+  String liveTranscriptionFailed(String error);
+
+  /// Text for live recording indicator
+  ///
+  /// In en, this message translates to:
+  /// **'LIVE'**
+  String get liveIndicator;
+
   /// Archived meetings screen title
   ///
   /// In en, this message translates to:

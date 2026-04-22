@@ -319,6 +319,27 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get liveTranscriptionTitle => 'Live-Transkription';
+
+  @override
+  String get liveTranscriptionPrompt =>
+      'Sprache in Echtzeit während der Aufnahme transkribieren?\n\nDies verbraucht mehr Akku, aber du siehst den Text während du sprichst.';
+
+  @override
+  String get liveTranscriptionYes => 'Ja';
+
+  @override
+  String get liveTranscriptionNo => 'Nein';
+
+  @override
+  String liveTranscriptionFailed(String error) {
+    return 'Live-Transkription fehlgeschlagen: $error';
+  }
+
+  @override
+  String get liveIndicator => 'LIVE';
+
+  @override
   String get archiveTitle => 'Archivierte Meetings';
 
   @override

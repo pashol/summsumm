@@ -2,7 +2,7 @@ enum TranscriptionStrategy { cloud, onDevice }
 
 enum ModelSize { tiny, base, small }
 
-enum DownloadStatus { pending, downloading, completed, failed, cancelled }
+enum DownloadStatus { pending, downloading, extracting, completed, failed, cancelled }
 
 enum DownloadType { 
   whisperTiny, 
@@ -62,6 +62,20 @@ class TranscriptSegment {
     this.speakerLabel,
     required this.isFinal,
   });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TranscriptSegment &&
+          runtimeType == other.runtimeType &&
+          text == other.text &&
+          startTime == other.startTime &&
+          endTime == other.endTime &&
+          speakerLabel == other.speakerLabel &&
+          isFinal == other.isFinal;
+
+  @override
+  int get hashCode => Object.hash(text, startTime, endTime, speakerLabel, isFinal);
 }
 
 class SpeakerSegment {

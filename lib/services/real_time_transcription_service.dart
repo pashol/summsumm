@@ -121,6 +121,9 @@ class RealTimeTranscriptionService {
     _isRunning = false;
     _buffer.clear();
 
+    // Dispose engine to allow re-initialization on next start
+    _asrEngine.dispose();
+
     return _fullTranscript.trim();
   }
 

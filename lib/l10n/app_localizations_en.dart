@@ -318,6 +318,27 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get liveTranscriptionTitle => 'Live Transcription';
+
+  @override
+  String get liveTranscriptionPrompt =>
+      'Transcribe speech in real-time while recording?\n\nThis uses more battery but lets you see text appear as you speak.';
+
+  @override
+  String get liveTranscriptionYes => 'Yes';
+
+  @override
+  String get liveTranscriptionNo => 'No';
+
+  @override
+  String liveTranscriptionFailed(String error) {
+    return 'Failed to start live transcription: $error';
+  }
+
+  @override
+  String get liveIndicator => 'LIVE';
+
+  @override
   String get archiveTitle => 'Archived Meetings';
 
   @override

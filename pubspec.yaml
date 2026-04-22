@@ -49,13 +49,6 @@ dev_dependencies:
   riverpod_generator: ^2.6.3
   riverpod_lint: ^2.6.3
   custom_lint: ^0.7.0
-  flutter_native_splash: ^2.4.0
-
-flutter_native_splash:
-  color: "#ffffff"
-  image: img/Heart.png
-  android: true
-  ios: true
 
 flutter:
   uses-material-design: true

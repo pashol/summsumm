@@ -464,7 +464,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             children: [
                               LinearProgressIndicator(value: progress.fraction),
                               const SizedBox(height: 4),
-                              Text('Downloading $modelName model...'),
+                              Text('Downloading $modelName model... ${(progress.fraction * 100).toStringAsFixed(0)}%'),
+                              const SizedBox(height: 8),
+                            ],
+                          );
+                        } else if (progress.status == DownloadStatus.extracting) {
+                          final modelName = progress.modelSize?.name ?? progress.type.name;
+                          return Column(
+                            children: [
+                              const LinearProgressIndicator(),
+                              const SizedBox(height: 4),
+                              Text('Extracting $modelName model...'),
                               const SizedBox(height: 8),
                             ],
                           );
@@ -503,6 +513,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             // Check if this model is currently downloading
                             final isDownloading = progressAsync.valueOrNull?.status == DownloadStatus.downloading &&
                                 progressAsync.valueOrNull?.modelSize == size;
+                            final isExtracting = progressAsync.valueOrNull?.status == DownloadStatus.extracting &&
+                                progressAsync.valueOrNull?.modelSize == size;
+                            final isBusy = isDownloading || isExtracting;
                             
                             return Card(
                               margin: const EdgeInsets.only(bottom: 8),
@@ -520,9 +533,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                           ),
                                           onPressed: () => notifier.setOnDeviceModelSize(size),
                                         )
-                                      : (isDownloading
+                                      : (isBusy
                                           ? Icon(
-                                              Icons.downloading,
+                                              isExtracting ? Icons.archive : Icons.downloading,
                                               color: Theme.of(context).colorScheme.primary,
                                             )
                                           : IconButton(
@@ -553,10 +566,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                                   final scaffoldMessenger = ScaffoldMessenger.of(context);
                                                   
                                                   try {
-                                                    // Download main ASR model
                                                     await manager.downloadModel(size);
+                                                    ref.invalidate(downloadedModelsProvider);
                                                     
-                                                    // Download streaming model
                                                     if (!await manager.isStreamingModelAvailable('English')) {
                                                       scaffoldMessenger.showSnackBar(
                                                         const SnackBar(content: Text('Downloading streaming model...')),
@@ -564,7 +576,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                                       await manager.downloadStreamingModel('English');
                                                     }
                                                     
-                                                    // Download segmentation model
                                                     if (!await manager.isSegmentationModelAvailable()) {
                                                       scaffoldMessenger.showSnackBar(
                                                         const SnackBar(content: Text('Downloading speaker segmentation model...')),
@@ -572,7 +583,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                                       await manager.downloadSegmentationModel();
                                                     }
                                                     
-                                                    // Download embedding model
                                                     if (!await manager.isEmbeddingModelAvailable()) {
                                                       scaffoldMessenger.showSnackBar(
                                                         const SnackBar(content: Text('Downloading speaker embedding model...')),
@@ -602,14 +612,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                 title: Text('$label ($sizeLabel)'),
                                 subtitle: isActive
                                   ? const Text('Selected', style: TextStyle(color: Colors.green))
-                                  : (isDownloading
-                                      ? const Text('Downloading...', style: TextStyle(color: Colors.blue))
+                                  : (isBusy
+                                      ? Text(isExtracting ? 'Extracting...' : 'Downloading...', style: const TextStyle(color: Colors.blue))
                                       : null),
-                                trailing: isDownloading
+                                trailing: isBusy
                                   ? IconButton(
                                       icon: const Icon(Icons.cancel, color: Colors.orange),
                                       onPressed: () {
-                                        // TODO: Implement cancel download
+                                        ref.read(modelDownloadManagerProvider).cancelDownload();
                                         ref.invalidate(downloadedModelsProvider);
                                       },
                                     )

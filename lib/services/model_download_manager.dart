@@ -121,7 +121,7 @@ class ModelDownloadManager {
         _progressController.add(DownloadProgress(
           type: type,
           fraction: 0.7,
-          status: DownloadStatus.downloading,
+          status: DownloadStatus.extracting,
         ),);
 
         await _extractTarBz2(tarPath, dir, modelName);
@@ -379,6 +379,12 @@ class ModelDownloadManager {
           );
         }
 
+        _progressController.add(const DownloadProgress(
+          type: type,
+          fraction: 0.7,
+          status: DownloadStatus.extracting,
+        ),);
+
         await _extractStreamingModel(tarPath, dir, config);
         await File(tarPath).delete();
 
@@ -561,6 +567,12 @@ class ModelDownloadManager {
           ),);
           return;
         }
+
+        _progressController.add(const DownloadProgress(
+          type: type,
+          fraction: 0.7,
+          status: DownloadStatus.extracting,
+        ),);
 
         await _extractSegmentationModel(tarPath, dir);
         await File(tarPath).delete();

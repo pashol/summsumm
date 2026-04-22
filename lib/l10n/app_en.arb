@@ -496,6 +496,39 @@
     }
   },
 
+  "liveTranscriptionTitle": "Live Transcription",
+  "@liveTranscriptionTitle": {
+    "description": "Dialog title for enabling live transcription"
+  },
+
+  "liveTranscriptionPrompt": "Transcribe speech in real-time while recording?\n\nThis uses more battery but lets you see text appear as you speak.",
+  "@liveTranscriptionPrompt": {
+    "description": "Dialog content asking user to enable live transcription"
+  },
+
+  "liveTranscriptionYes": "Yes",
+  "@liveTranscriptionYes": {
+    "description": "Button to confirm enabling live transcription"
+  },
+
+  "liveTranscriptionNo": "No",
+  "@liveTranscriptionNo": {
+    "description": "Button to decline live transcription"
+  },
+
+  "liveTranscriptionFailed": "Failed to start live transcription: {error}",
+  "@liveTranscriptionFailed": {
+    "description": "Snackbar when live transcription fails to start",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+
+  "liveIndicator": "LIVE",
+  "@liveIndicator": {
+    "description": "Text for live recording indicator"
+  },
+
   "archiveTitle": "Archived Meetings",
   "@archiveTitle": {
     "description": "Archived meetings screen title"

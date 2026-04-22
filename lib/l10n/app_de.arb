@@ -101,6 +101,13 @@
   "recordingMicPermission": "Mikrofonberechtigung ist zum Aufnehmen erforderlich",
   "recordingFailedStart": "Aufnahme fehlgeschlagen: {error}",
 
+  "liveTranscriptionTitle": "Live-Transkription",
+  "liveTranscriptionPrompt": "Sprache in Echtzeit während der Aufnahme transkribieren?\n\nDies verbraucht mehr Akku, aber du siehst den Text während du sprichst.",
+  "liveTranscriptionYes": "Ja",
+  "liveTranscriptionNo": "Nein",
+  "liveTranscriptionFailed": "Live-Transkription fehlgeschlagen: {error}",
+  "liveIndicator": "LIVE",
+
   "archiveTitle": "Archivierte Meetings",
   "archiveError": "Fehler: {error}",
   "archiveNoMeetings": "Keine archivierten Meetings",
