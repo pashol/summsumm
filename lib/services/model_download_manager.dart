@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:summsumm/models/transcription_config.dart';
+import 'package:summsumm/services/streaming_model_config.dart';
 
 class ModelDownloadManager {
   final http.Client _client;
@@ -60,7 +61,7 @@ class ModelDownloadManager {
       size: size,
       fraction: 0.0,
       status: DownloadStatus.downloading,
-    ));
+    ),);
 
     try {
       await _downloadFile(_modelUrls[size]!, tarPath, (fraction) {
@@ -68,14 +69,14 @@ class ModelDownloadManager {
           size: size,
           fraction: fraction * 0.7,
           status: DownloadStatus.downloading,
-        ));
+        ),);
       });
 
       _progressController.add(DownloadProgress(
         size: size,
         fraction: 0.7,
         status: DownloadStatus.downloading,
-      ));
+      ),);
 
       await _extractTarBz2(tarPath, dir, modelName);
 
@@ -85,7 +86,7 @@ class ModelDownloadManager {
         size: size,
         fraction: 1.0,
         status: DownloadStatus.completed,
-      ));
+      ),);
 
       return DownloadProgress(
         size: size,
@@ -97,7 +98,7 @@ class ModelDownloadManager {
         size: size,
         fraction: 0.0,
         status: DownloadStatus.failed,
-      ));
+      ),);
       rethrow;
     }
   }
@@ -255,6 +256,160 @@ class ModelDownloadManager {
   Future<String> getSpeakerModelPath() async {
     final dir = await _modelsDir;
     return '$dir/speaker-embedding.onnx';
+  }
+
+  // Streaming model methods
+  Future<bool> isStreamingModelAvailable(String language) async {
+    final config = StreamingModelConfigs.forLanguage(language);
+    final dir = await _modelsDir;
+    final encoder = File('$dir/${config.encoderFile}');
+    final decoder = File('$dir/${config.decoderFile}');
+    final joiner = File('$dir/${config.joinerFile}');
+    final tokens = File('$dir/${config.tokensFile}');
+    return await encoder.exists() &&
+        await decoder.exists() &&
+        await joiner.exists() &&
+        await tokens.exists();
+  }
+
+  Future<DownloadProgress> downloadStreamingModel(String language) async {
+    final config = StreamingModelConfigs.forLanguage(language);
+    final dir = await _modelsDir;
+    final tarPath = '$dir/streaming_model.tar.bz2';
+
+    _progressController.add(const DownloadProgress(
+      size: ModelSize.base,
+      fraction: 0.0,
+      status: DownloadStatus.downloading,
+    ),);
+
+    try {
+      await _downloadFile(config.url, tarPath, (fraction) {
+        _progressController.add(DownloadProgress(
+          size: ModelSize.base,
+          fraction: fraction * 0.7,
+          status: DownloadStatus.downloading,
+        ),);
+      });
+
+      await _extractStreamingModel(tarPath, dir, config);
+      await File(tarPath).delete();
+
+      _progressController.add(const DownloadProgress(
+        size: ModelSize.base,
+        fraction: 1.0,
+        status: DownloadStatus.completed,
+      ),);
+
+      return const DownloadProgress(
+        size: ModelSize.base,
+        fraction: 1.0,
+        status: DownloadStatus.completed,
+      );
+    } catch (e) {
+      _progressController.add(const DownloadProgress(
+        size: ModelSize.base,
+        fraction: 0.0,
+        status: DownloadStatus.failed,
+      ),);
+      rethrow;
+    }
+  }
+
+  Future<void> _extractStreamingModel(String tarPath, String destDir, StreamingModelConfig config) async {
+    await compute(_extractStreamingInIsolate, {
+      'tarPath': tarPath,
+      'destDir': destDir,
+      'config': config,
+    });
+  }
+
+  static void _extractStreamingInIsolate(Map<String, dynamic> args) {
+    final tarPath = args['tarPath'] as String;
+    final destDir = args['destDir'] as String;
+    final config = args['config'] as StreamingModelConfig;
+
+    final bytes = File(tarPath).readAsBytesSync();
+    final bz2Decoder = BZip2Decoder();
+    final tarBytes = bz2Decoder.decodeBytes(bytes);
+    final tarArchive = TarDecoder().decodeBytes(tarBytes);
+
+    for (final entry in tarArchive) {
+      if (!entry.isFile) continue;
+
+      final fileName = p.basename(entry.name);
+
+      if (fileName == config.encoderFile) {
+        File('$destDir/${config.encoderFile}').writeAsBytesSync(entry.content as List<int>);
+      } else if (fileName == config.decoderFile) {
+        File('$destDir/${config.decoderFile}').writeAsBytesSync(entry.content as List<int>);
+      } else if (fileName == config.joinerFile) {
+        File('$destDir/${config.joinerFile}').writeAsBytesSync(entry.content as List<int>);
+      } else if (fileName == config.tokensFile) {
+        File('$destDir/${config.tokensFile}').writeAsBytesSync(entry.content as List<int>);
+      }
+    }
+  }
+
+  Future<Map<String, String>> getStreamingModelPaths(String language) async {
+    final config = StreamingModelConfigs.forLanguage(language);
+    final dir = await _modelsDir;
+    return {
+      'encoder': '$dir/${config.encoderFile}',
+      'decoder': '$dir/${config.decoderFile}',
+      'joiner': '$dir/${config.joinerFile}',
+      'tokens': '$dir/${config.tokensFile}',
+    };
+  }
+
+  // Diarization model methods
+  Future<bool> isSegmentationModelAvailable() async {
+    final dir = await _modelsDir;
+    return await File('$dir/sherpa-onnx-pyannote-segmentation-3-0.onnx').exists();
+  }
+
+  Future<bool> isEmbeddingModelAvailable() async {
+    final dir = await _modelsDir;
+    return await File('$dir/speaker-embedding.onnx').exists();
+  }
+
+  Future<void> downloadSegmentationModel() async {
+    final dir = await _modelsDir;
+    final modelPath = '$dir/sherpa-onnx-pyannote-segmentation-3-0.onnx';
+    if (await File(modelPath).exists()) return;
+
+    const url = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-segmentation-models/sherpa-onnx-pyannote-segmentation-3-0.tar.bz2';
+    final tarPath = '$dir/segmentation.tar.bz2';
+
+    await _downloadFile(url, tarPath, (_) {});
+    await _extractSegmentationModel(tarPath, dir);
+    await File(tarPath).delete();
+  }
+
+  Future<void> _extractSegmentationModel(String tarPath, String destDir) async {
+    await compute(_extractSegmentationInIsolate, {
+      'tarPath': tarPath,
+      'destDir': destDir,
+    });
+  }
+
+  static void _extractSegmentationInIsolate(Map<String, dynamic> args) {
+    final tarPath = args['tarPath'] as String;
+    final destDir = args['destDir'] as String;
+
+    final bytes = File(tarPath).readAsBytesSync();
+    final bz2Decoder = BZip2Decoder();
+    final tarBytes = bz2Decoder.decodeBytes(bytes);
+    final tarArchive = TarDecoder().decodeBytes(tarBytes);
+
+    for (final entry in tarArchive) {
+      if (!entry.isFile) continue;
+      final fileName = p.basename(entry.name);
+      if (fileName == 'model.onnx') {
+        File('$destDir/sherpa-onnx-pyannote-segmentation-3-0.onnx').writeAsBytesSync(entry.content as List<int>);
+        break;
+      }
+    }
   }
 
   void dispose() {
