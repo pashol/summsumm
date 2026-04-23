@@ -24,6 +24,7 @@ class Document {
   });
 
   bool get isAudio => type == 'audio' && path != null;
-  bool get isPdf => uri != null && uri!.isNotEmpty && type != 'audio';
+  bool get isBackup => type == 'backup';
+  bool get isPdf => uri != null && uri!.isNotEmpty && type != 'audio' && type != 'backup';
   bool get hasError => error != null && error!.isNotEmpty;
 }

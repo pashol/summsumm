@@ -106,14 +106,16 @@ void main() async {
 
   final openSettings = action == 'app.summsumm.OPEN_SETTINGS';
   final audioImported = audioDocs.isNotEmpty;
-  final showOnboarding = !hasCompletedOnboarding && !openSettings && otherDocs.isEmpty;
+  final backupDocs = otherDocs.where((d) => d.type == 'backup').toList();
+  final nonBackupDocs = otherDocs.where((d) => d.type != 'backup').toList();
+  final showOnboarding = !hasCompletedOnboarding && !openSettings && nonBackupDocs.isEmpty && backupDocs.isEmpty;
 
   runApp(
     ProviderScope(
       child: SummsummApp(
         openSettings: openSettings,
         audioImported: audioImported,
-        documents: otherDocs,
+        documents: nonBackupDocs,
         showOnboarding: showOnboarding,
       ),
     ),

@@ -205,16 +205,13 @@ class AiService {
 
 - Keep timestamps and speaker labels exactly as they are (format: [hh:mm:ss] Speaker X:).
 - Remove filler words, repetitions, false starts, and spoken-language artifacts.
-- Rewrite all statements in correct written language (keep the original language).
+- Keep the original language
 - Correct grammar, sentence structure, and wording without changing the meaning.
 - Ensure each sentence is clear, complete, and logically structured.
 - Do not summarize or omit any content.
 - Do not add new information or interpretations.
 - Preserve the original order of statements strictly.
 - Keep the wording precise and concise without embellishment.
-
-Optional:
-If a sentence is unclear, rewrite it as close as possible to the intended meaning without guessing.
 
 Transcript:
 $rawTranscript''';

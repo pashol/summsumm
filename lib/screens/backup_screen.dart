@@ -35,7 +35,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
 
   String _defaultFilename() {
     final now = DateTime.now();
-    return 'summsumm_backup_${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}_backup';
   }
 
   @override
@@ -83,8 +83,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
 
   Future<void> _import() async {
     final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['summsumm'],
+      type: FileType.any,
     );
     if (result == null || result.files.single.path == null) return;
 

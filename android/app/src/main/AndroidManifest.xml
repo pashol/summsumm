@@ -90,6 +90,27 @@
             <data android:mimeType="audio/*" />
         </intent-filter>
 
+        <!-- Backup file share (single) -->
+        <intent-filter>
+            <action android:name="android.intent.action.SEND" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <data android:mimeType="application/octet-stream" />
+        </intent-filter>
+
+        <!-- Backup file share (multiple) -->
+        <intent-filter>
+            <action android:name="android.intent.action.SEND_MULTIPLE" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <data android:mimeType="application/octet-stream" />
+        </intent-filter>
+
+        <!-- Open backup file directly from file manager -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <data android:mimeType="application/octet-stream" />
+        </intent-filter>
+
         <!-- Settings shortcut -->
             <intent-filter>
                 <action android:name="app.summsumm.OPEN_SETTINGS" />

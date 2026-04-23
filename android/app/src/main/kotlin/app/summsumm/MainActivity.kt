@@ -237,9 +237,17 @@ class MainActivity : FlutterActivity() {
         val action = intent.action ?: return null
         val documents = mutableListOf<Map<String, Any?>>()
 
-        if (Intent.ACTION_VIEW == action && intent.type == "application/pdf") {
-            val uri = intent.data
-            uri?.let { addPdfDocument(it, documents) }
+        if (Intent.ACTION_VIEW == action) {
+            when (intent.type) {
+                "application/pdf" -> {
+                    val uri = intent.data
+                    uri?.let { addPdfDocument(it, documents) }
+                }
+                "application/octet-stream" -> {
+                    val uri = intent.data
+                    uri?.let { addBackupDocument(it, documents) }
+                }
+            }
         } else if (Intent.ACTION_SEND == action) {
             when {
                 intent.type == "text/plain" -> {
@@ -253,6 +261,10 @@ class MainActivity : FlutterActivity() {
                 intent.type == "application/pdf" -> {
                     val uri = getParcelableExtraCompat(intent, Intent.EXTRA_STREAM)
                     uri?.let { addPdfDocument(it, documents) }
+                }
+                intent.type == "application/octet-stream" -> {
+                    val uri = getParcelableExtraCompat(intent, Intent.EXTRA_STREAM)
+                    uri?.let { addBackupDocument(it, documents) }
                 }
             }
         } else if (Intent.ACTION_SEND_MULTIPLE == action) {
@@ -268,6 +280,10 @@ class MainActivity : FlutterActivity() {
                 intent.type == "application/pdf" -> {
                     val uris = getParcelableArrayListExtraCompat(intent, Intent.EXTRA_STREAM)
                     uris?.forEach { uri -> addPdfDocument(uri, documents) }
+                }
+                intent.type == "application/octet-stream" -> {
+                    val uris = getParcelableArrayListExtraCompat(intent, Intent.EXTRA_STREAM)
+                    uris?.forEach { uri -> addBackupDocument(uri, documents) }
                 }
             }
         } else if (Intent.ACTION_PROCESS_TEXT == action) {
@@ -296,6 +312,18 @@ class MainActivity : FlutterActivity() {
         }
 
         documents.add(mapOf(
+            "uri" to uri.toString(),
+            "name" to fileName,
+            "size" to fileSize
+        ))
+    }
+
+    private fun addBackupDocument(uri: Uri, documents: MutableList<Map<String, Any?>>) {
+        val fileName = getFileName(uri)
+        val fileSize = getFileSize(uri)
+
+        documents.add(mapOf(
+            "type" to "backup",
             "uri" to uri.toString(),
             "name" to fileName,
             "size" to fileSize
