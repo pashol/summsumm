@@ -7,6 +7,7 @@ import '../providers/settings_provider.dart';
 import '../utils/localized_strings.dart';
 import '../widgets/glass_card.dart';
 import 'backup_screen.dart';
+import 'settings/app_language_screen.dart';
 import 'settings/summary_language_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -77,29 +78,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             title: l10n.settingsAppLanguageLabel,
             icon: Icons.translate_outlined,
             children: [
-              DropdownButtonFormField<String?>(
-                initialValue: settings.localeOverride,
-                decoration: InputDecoration(
-                  labelText: l10n.settingsAppLanguageLabel,
-                  border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.language_outlined),
+              ListTile(
+                leading: const Icon(Icons.translate),
+                title: Text(l10n.settingsAppLanguageLabel),
+                subtitle: Text(
+                  settings.localeOverride == null
+                      ? l10n.settingsSystemDefault
+                      : settings.localeOverride == 'en'
+                          ? l10n.langEnglish
+                          : l10n.langGerman,
                 ),
-                items: [
-                  DropdownMenuItem<String?>(
-                    value: null,
-                    child: Text(l10n.settingsSystemDefault),
-                  ),
-                  DropdownMenuItem<String?>(
-                    value: 'en',
-                    child: Text(l10n.langEnglish),
-                  ),
-                  DropdownMenuItem<String?>(
-                    value: 'de',
-                    child: Text(l10n.langGerman),
-                  ),
-                ],
-                onChanged: (v) {
-                  ref.read(settingsProvider.notifier).setLocaleOverride(v);
+                trailing: const Icon(Icons.chevron_right),
+                contentPadding: EdgeInsets.zero,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(builder: (_) => const AppLanguageScreen()),
+                  );
                 },
               ),
             ],
