@@ -904,6 +904,81 @@
     }
   },
 
+  "settingsAiModelsSection": "AI & Models",
+  "@settingsAiModelsSection": {
+    "description": "Settings hub section title for AI and models"
+  },
+
+  "settingsTranscriptionSection": "Transcription",
+  "@settingsTranscriptionSection": {
+    "description": "Settings hub section title for transcription"
+  },
+
+  "settingsOutputSection": "Output",
+  "@settingsOutputSection": {
+    "description": "Settings hub section title for output settings"
+  },
+
+  "settingsAppSection": "App",
+  "@settingsAppSection": {
+    "description": "Settings hub section title for app settings"
+  },
+
+  "settingsAiModelsRow": "AI & Models",
+  "@settingsAiModelsRow": {
+    "description": "Settings hub row title for AI models"
+  },
+
+  "settingsApiConnectionRow": "API Connection",
+  "@settingsApiConnectionRow": {
+    "description": "Settings hub row title for API connection"
+  },
+
+  "settingsTranscriptionRow": "Transcription",
+  "@settingsTranscriptionRow": {
+    "description": "Settings hub row title for transcription"
+  },
+
+  "settingsSummaryLanguageRow": "Summary & Language",
+  "@settingsSummaryLanguageRow": {
+    "description": "Settings hub row title for summary and language"
+  },
+
+  "settingsTtsRow": "Text-to-Speech",
+  "@settingsTtsRow": {
+    "description": "Settings hub row title for text-to-speech"
+  },
+
+  "settingsAppLanguageRow": "App Language",
+  "@settingsAppLanguageRow": {
+    "description": "Settings hub row title for app language"
+  },
+
+  "settingsBackupRestoreRow": "Backup & Restore",
+  "@settingsBackupRestoreRow": {
+    "description": "Settings hub row title for backup and restore"
+  },
+
+  "settingsConfigured": "Configured",
+  "@settingsConfigured": {
+    "description": "API key status when key is present"
+  },
+
+  "settingsNotConfigured": "Not configured",
+  "@settingsNotConfigured": {
+    "description": "API key status when key is missing"
+  },
+
+  "settingsOnDevice": "On-device",
+  "@settingsOnDevice": {
+    "description": "Transcription strategy label for on-device"
+  },
+
+  "settingsCloud": "Cloud",
+  "@settingsCloud": {
+    "description": "Transcription strategy label for cloud"
+  },
+
   "backupSettingsSection": "Backup & Restore",
   "@backupSettingsSection": {
     "description": "Settings section title for backup"

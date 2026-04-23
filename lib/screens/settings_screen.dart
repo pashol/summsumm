@@ -7,8 +7,12 @@ import '../providers/settings_provider.dart';
 import '../utils/localized_strings.dart';
 import '../widgets/glass_card.dart';
 import 'backup_screen.dart';
+import 'settings/ai_models_screen.dart';
+import 'settings/api_connection_screen.dart';
 import 'settings/app_language_screen.dart';
 import 'settings/summary_language_screen.dart';
+import 'settings/transcription_settings_screen.dart';
+import 'settings/tts_settings_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key, this.isInitialSetup = false});
@@ -20,10 +24,13 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  String? _apiKeyStatus;
+
   @override
   void initState() {
     super.initState();
     if (!widget.isInitialSetup) _offerShortcut();
+    _loadApiKeyStatus();
   }
 
   Future<void> _offerShortcut() async {
@@ -31,6 +38,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       const channel = MethodChannel('app.summsumm/intent');
       await channel.invokeMethod('offerSettingsShortcut');
     } catch (_) {}
+  }
+
+  Future<void> _loadApiKeyStatus() async {
+    final settings = ref.read(settingsProvider);
+    final notifier = ref.read(settingsProvider.notifier);
+    final key = await notifier.getApiKey(settings.provider);
+    final status = (key != null && key.isNotEmpty)
+        ? AppLocalizations.of(context)!.settingsConfigured
+        : AppLocalizations.of(context)!.settingsNotConfigured;
+    if (mounted) {
+      setState(() => _apiKeyStatus = status);
+    }
   }
 
   @override
@@ -47,9 +66,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         automaticallyImplyLeading: !widget.isInitialSetup,
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         children: [
           if (widget.isInitialSetup) ...[
+            const SizedBox(height: 16),
             GlassCard(
               color: cs.primaryContainer,
               child: Padding(
@@ -70,46 +90,68 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
           ],
 
-
-          _SectionCard(
-            title: l10n.settingsAppLanguageLabel,
-            icon: Icons.translate_outlined,
+          // Section: AI & Models
+          _SettingsSection(
+            title: l10n.settingsAiModelsSection,
             children: [
-              ListTile(
-                leading: const Icon(Icons.translate),
-                title: Text(l10n.settingsAppLanguageLabel),
-                subtitle: Text(
-                  settings.localeOverride == null
-                      ? l10n.settingsSystemDefault
-                      : settings.localeOverride == 'en'
-                          ? l10n.langEnglish
-                          : l10n.langGerman,
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                contentPadding: EdgeInsets.zero,
+              _SettingsRow(
+                icon: Icons.psychology,
+                title: l10n.settingsAiModelsRow,
+                subtitle: settings.activeModel.isEmpty
+                    ? settings.provider.toUpperCase()
+                    : '${settings.provider.toUpperCase()} — ${settings.activeModel}',
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute<void>(builder: (_) => const AppLanguageScreen()),
+                    MaterialPageRoute<void>(builder: (_) => const AiModelsScreen()),
+                  );
+                },
+              ),
+              const Divider(height: 1, indent: 16, endIndent: 16),
+              _SettingsRow(
+                icon: Icons.key,
+                title: l10n.settingsApiConnectionRow,
+                subtitle: _apiKeyStatus ?? '',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(builder: (_) => const ApiConnectionScreen()),
                   );
                 },
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          _SectionCard(
-            title: l10n.settingsSummarySection,
-            icon: Icons.summarize_outlined,
+
+          // Section: Transcription
+          _SettingsSection(
+            title: l10n.settingsTranscriptionSection,
             children: [
-              ListTile(
-                leading: const Icon(Icons.summarize),
-                title: Text(l10n.settingsSummarySection),
-                subtitle: Text('${settings.summaryStyle}, ${localizedLanguageName(context, settings.language)}'),
-                trailing: const Icon(Icons.chevron_right),
-                contentPadding: EdgeInsets.zero,
+              _SettingsRow(
+                icon: Icons.phone,
+                title: l10n.settingsTranscriptionRow,
+                subtitle: settings.transcriptionStrategy.name == 'onDevice'
+                    ? l10n.settingsOnDevice
+                    : l10n.settingsCloud,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(builder: (_) => const TranscriptionSettingsScreen()),
+                  );
+                },
+              ),
+            ],
+          ),
+
+          // Section: Output
+          _SettingsSection(
+            title: l10n.settingsOutputSection,
+            children: [
+              _SettingsRow(
+                icon: Icons.summarize,
+                title: l10n.settingsSummaryLanguageRow,
+                subtitle: '${settings.summaryStyle}, ${localizedLanguageName(context, settings.language)}',
                 onTap: () {
                   Navigator.push(
                     context,
@@ -117,21 +159,45 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   );
                 },
               ),
+              const Divider(height: 1, indent: 16, endIndent: 16),
+              _SettingsRow(
+                icon: Icons.record_voice_over,
+                title: l10n.settingsTtsRow,
+                subtitle: '${settings.ttsSpeed}x',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(builder: (_) => const TtsSettingsScreen()),
+                  );
+                },
+              ),
             ],
           ),
-          const SizedBox(height: 16),
 
-
-          _SectionCard(
-            title: l10n.backupSettingsSection,
-            icon: Icons.cloud_upload_outlined,
+          // Section: App
+          _SettingsSection(
+            title: l10n.settingsAppSection,
             children: [
-              ListTile(
-                leading: const Icon(Icons.backup),
-                title: Text(l10n.backupTitle),
-                subtitle: Text(l10n.backupSettingsSubtitle),
-                trailing: const Icon(Icons.chevron_right),
-                contentPadding: EdgeInsets.zero,
+              _SettingsRow(
+                icon: Icons.translate,
+                title: l10n.settingsAppLanguageRow,
+                subtitle: settings.localeOverride == null
+                    ? l10n.settingsSystemDefault
+                    : settings.localeOverride == 'en'
+                        ? l10n.langEnglish
+                        : l10n.langGerman,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(builder: (_) => const AppLanguageScreen()),
+                  );
+                },
+              ),
+              const Divider(height: 1, indent: 16, endIndent: 16),
+              _SettingsRow(
+                icon: Icons.backup,
+                title: l10n.settingsBackupRestoreRow,
+                subtitle: '',
                 onTap: () {
                   Navigator.push(
                     context,
@@ -141,6 +207,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ],
           ),
+
           const SizedBox(height: 32),
         ],
       ),
@@ -148,53 +215,72 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 }
 
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({
-    required this.title,
-    required this.icon,
-    required this.children,
-  });
+class _SettingsSection extends StatelessWidget {
+  const _SettingsSection({required this.title, required this.children});
 
   final String title;
-  final IconData icon;
   final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    return GlassCard(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: cs.primaryContainer,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(icon, size: 18, color: cs.onPrimaryContainer),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  title,
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w600),
-                ),
-              ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 24),
+        Padding(
+          padding: const EdgeInsets.only(left: 16, bottom: 8),
+          child: Text(
+            title,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onSurface,
             ),
-            const SizedBox(height: 16),
-            ...children,
-          ],
+          ),
         ),
-      ),
+        GlassCard(
+          child: Column(
+            children: children,
+          ),
+        ),
+      ],
     );
   }
 }
 
+class _SettingsRow extends StatelessWidget {
+  const _SettingsRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
 
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      leading: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: cs.primaryContainer,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, size: 18, color: cs.onPrimaryContainer),
+      ),
+      title: Text(title),
+      subtitle: subtitle.isNotEmpty ? Text(subtitle) : null,
+      trailing: Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
+      onTap: onTap,
+    );
+  }
+}
