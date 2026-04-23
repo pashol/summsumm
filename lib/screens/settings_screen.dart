@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:summsumm/l10n/app_localizations.dart';
 
+import '../models/summary_style.dart';
+import '../models/transcription_config.dart';
 import '../providers/settings_provider.dart';
 import '../utils/localized_strings.dart';
 import '../widgets/glass_card.dart';
@@ -100,8 +102,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 icon: Icons.psychology,
                 title: l10n.settingsAiModelsRow,
                 subtitle: settings.activeModel.isEmpty
-                    ? settings.provider.toUpperCase()
-                    : '${settings.provider.toUpperCase()} — ${settings.activeModel}',
+                    ? (settings.provider == 'openrouter' ? l10n.settingsOpenRouter : l10n.settingsOpenAi)
+                    : '${settings.provider == 'openrouter' ? l10n.settingsOpenRouter : l10n.settingsOpenAi} — ${settings.activeModel}',
                 onTap: () {
                   Navigator.push(
                     context,
@@ -131,7 +133,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _SettingsRow(
                 icon: Icons.phone,
                 title: l10n.settingsTranscriptionRow,
-                subtitle: settings.transcriptionStrategy.name == 'onDevice'
+                subtitle: settings.transcriptionStrategy == TranscriptionStrategy.onDevice
                     ? l10n.settingsOnDevice
                     : l10n.settingsCloud,
                 onTap: () {
@@ -151,7 +153,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _SettingsRow(
                 icon: Icons.summarize,
                 title: l10n.settingsSummaryLanguageRow,
-                subtitle: '${settings.summaryStyle}, ${localizedLanguageName(context, settings.language)}',
+                subtitle: '${SummaryStyle.values.byName(settings.summaryStyle).localizedTitle(context)}, ${localizedLanguageName(context, settings.language)}',
                 onTap: () {
                   Navigator.push(
                     context,
