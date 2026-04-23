@@ -2,13 +2,17 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:summsumm/l10n/app_localizations.dart';
 import 'package:summsumm/providers/backup_service_provider.dart';
+import 'package:summsumm/services/backup_destination.dart';
 import 'package:summsumm/services/backup_service.dart';
 import 'package:summsumm/widgets/glass_card.dart';
+
+enum _BackupMode { share, saveToDevice }
 
 class BackupScreen extends ConsumerStatefulWidget {
   const BackupScreen({super.key});
@@ -26,6 +30,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
   bool _isExporting = false;
   bool _isImporting = false;
   ImportResult? _lastImportResult;
+  _BackupMode _backupMode = _BackupMode.share;
 
   @override
   void initState() {
@@ -49,34 +54,71 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     if (password == null || password.isEmpty) return;
 
     setState(() => _isExporting = true);
-    try {
-      final service = ref.read(backupServiceProvider);
-      final tempDir = await getTemporaryDirectory();
-      
-      final file = await service.export(
-        password: password,
-        includeSettings: _includeSettings,
-        includeApiKeys: _includeApiKeys && _includeSettings,
-        includeMeetings: _includeMeetings,
-        includeAudio: _includeAudio && _includeMeetings,
-        filename: _filenameCtrl.text,
-        outputDir: tempDir.path,
-      );
 
-      if (mounted) {
-        await Share.shareXFiles(
-          [XFile(file.path)],
-          subject: 'Summsumm Backup',
+    const platform = MethodChannel('app.summsumm/intent');
+
+    try {
+      if (_backupMode == _BackupMode.saveToDevice) {
+        platform.invokeMethod('startBackupForeground');
+      }
+
+      final service = ref.read(backupServiceProvider);
+
+      if (_backupMode == _BackupMode.share) {
+        final tempDir = await getTemporaryDirectory();
+        final file = await service.export(
+          password: password,
+          includeSettings: _includeSettings,
+          includeApiKeys: _includeApiKeys && _includeSettings,
+          includeMeetings: _includeMeetings,
+          includeAudio: _includeAudio && _includeMeetings,
+          filename: _filenameCtrl.text,
+          outputDir: tempDir.path,
         );
+
+        if (mounted) {
+          await Share.shareXFiles(
+            [XFile(file.path)],
+            subject: 'Summsumm Backup',
+          );
+        }
+      } else {
+        final backupFile = await BackupDestination.getBackupFile('${_filenameCtrl.text}.summsumm');
+        await service.saveToFile(
+          password: password,
+          includeSettings: _includeSettings,
+          includeApiKeys: _includeApiKeys && _includeSettings,
+          includeMeetings: _includeMeetings,
+          includeAudio: _includeAudio && _includeMeetings,
+          outputPath: backupFile.path,
+        );
+
+        if (mounted) {
+          final l10n = AppLocalizations.of(context)!;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.backupSavedToDownloads),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.backupExportFailed(e.toString()))),
+          SnackBar(
+            content: Text(_backupMode == _BackupMode.share
+                ? l10n.backupExportFailed(e.toString())
+                : l10n.backupSaveFailed),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
         );
       }
     } finally {
+      if (_backupMode == _BackupMode.saveToDevice) {
+        platform.invokeMethod('stopBackupForeground');
+      }
       if (mounted) setState(() => _isExporting = false);
     }
   }
@@ -290,6 +332,30 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                         border: const OutlineInputBorder(),
                         suffixText: '.summsumm',
                       ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      l10n.backupModeLabel,
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    SegmentedButton<_BackupMode>(
+                      segments: [
+                        ButtonSegment(
+                          value: _BackupMode.share,
+                          label: Text(l10n.backupModeShare),
+                          icon: const Icon(Icons.share, size: 18),
+                        ),
+                        ButtonSegment(
+                          value: _BackupMode.saveToDevice,
+                          label: Text(l10n.backupModeSave),
+                          icon: const Icon(Icons.save, size: 18),
+                        ),
+                      ],
+                      selected: {_backupMode},
+                      onSelectionChanged: (Set<_BackupMode> selection) {
+                        setState(() => _backupMode = selection.first);
+                      },
                     ),
                     const SizedBox(height: 16),
                     SizedBox(
