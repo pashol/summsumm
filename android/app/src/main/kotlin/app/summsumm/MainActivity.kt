@@ -122,6 +122,20 @@ class MainActivity : FlutterActivity() {
                             result.error("INVALID_PATH", "Path is null", null)
                         }
                     }
+                    "startBackupForeground" -> {
+                        val intent = Intent(this, BackupForegroundService::class.java)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            startForegroundService(intent)
+                        } else {
+                            startService(intent)
+                        }
+                        result.success(null)
+                    }
+                    "stopBackupForeground" -> {
+                        val intent = Intent(this, BackupForegroundService::class.java)
+                        stopService(intent)
+                        result.success(null)
+                    }
                     else -> result.notImplemented()
                 }
             }
