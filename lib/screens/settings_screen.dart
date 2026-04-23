@@ -36,7 +36,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final settings = ref.watch(settingsProvider);
-    final notifier = ref.read(settingsProvider.notifier);
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
@@ -126,33 +125,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          _SectionCard(
-            title: l10n.settingsTtsSection,
-            icon: Icons.record_voice_over_outlined,
-            children: [
-              Slider(
-                value: settings.ttsSpeed,
-                min: 0.5,
-                max: 2.0,
-                divisions: 15,
-                label: '${settings.ttsSpeed.toStringAsFixed(1)}×',
-                onChanged: notifier.setTtsSpeed,
-                onChangeEnd: (_) => notifier.persistSettings(),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('0.5×', style: theme.textTheme.bodySmall),
-                  Text(
-                    '${settings.ttsSpeed.toStringAsFixed(1)}×',
-                    style: theme.textTheme.titleSmall,
-                  ),
-                  Text('2.0×', style: theme.textTheme.bodySmall),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
+
 
           _SectionCard(
             title: l10n.backupSettingsSection,
