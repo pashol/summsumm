@@ -201,5 +201,47 @@
   "settingsOnDevice": "On-Device",
   "settingsCloud": "Cloud",
   "backupSettingsSection": "Backup & Wiederherstellung",
-  "backupSettingsSubtitle": "Daten exportieren oder importieren"
+  "backupSettingsSubtitle": "Daten exportieren oder importieren",
+  "settingsAboutSection": "Über",
+  "settingsAboutRow": "Über",
+  "aboutTitle": "Über",
+  "aboutVersion": "Version",
+  "aboutGitHub": "GitHub",
+  "aboutGitHubSubtitle": "Quellcode anzeigen",
+  "aboutDonate": "Entwicklung unterstützen",
+  "aboutDonateSubtitle": "Kauf mir einen Kaffee auf Ko-fi",
+  "aboutSponsor": "GitHub Sponsors",
+  "aboutSponsorSubtitle": "Auf GitHub sponsoren",
+
+  "backupShare": "Backupdatei teilen",
+  "@backupShare": {
+    "description": "Share option for backup export"
+  },
+
+  "backupSaveToDevice": "Auf Gerät speichern",
+  "@backupSaveToDevice": {
+    "description": "Save option for backup export"
+  },
+
+  "backupSavedToDownloads": "Backup in Downloads gespeichert",
+  "@backupSavedToDownloads": {
+    "description": "Success message when backup saved to Downloads"
+  },
+
+  "backupSaveFailed": "Backup konnte nicht gespeichert werden",
+  "@backupSaveFailed": {
+    "description": "Error message when saving backup fails"
+  },
+
+  "backupModeLabel": "Wie möchtest du exportieren?",
+  "@backupModeLabel": {
+    "description": "Label for backup destination picker"
+  },
+
+  "backupModeShare": "Teilen",
+  "@backupModeShare": {
+    "description": "Share mode option"
+  },
+
+  "backupModeSave": "In Downloads speichern"
 }

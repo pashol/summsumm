@@ -1136,6 +1136,96 @@ abstract class AppLocalizations {
   /// **'Imported {imported} meetings, skipped {skipped} duplicates.'**
   String backupImportedMeetings(int imported, int skipped);
 
+  /// Settings hub section title for AI and models
+  ///
+  /// In en, this message translates to:
+  /// **'AI & Models'**
+  String get settingsAiModelsSection;
+
+  /// Settings hub section title for transcription
+  ///
+  /// In en, this message translates to:
+  /// **'Transcription'**
+  String get settingsTranscriptionSection;
+
+  /// Settings hub section title for output settings
+  ///
+  /// In en, this message translates to:
+  /// **'Output'**
+  String get settingsOutputSection;
+
+  /// Settings hub section title for app settings
+  ///
+  /// In en, this message translates to:
+  /// **'App'**
+  String get settingsAppSection;
+
+  /// Settings hub row title for AI models
+  ///
+  /// In en, this message translates to:
+  /// **'AI & Models'**
+  String get settingsAiModelsRow;
+
+  /// Settings hub row title for API connection
+  ///
+  /// In en, this message translates to:
+  /// **'API Connection'**
+  String get settingsApiConnectionRow;
+
+  /// Settings hub row title for transcription
+  ///
+  /// In en, this message translates to:
+  /// **'Transcription'**
+  String get settingsTranscriptionRow;
+
+  /// Settings hub row title for summary and language
+  ///
+  /// In en, this message translates to:
+  /// **'Summary & Language'**
+  String get settingsSummaryLanguageRow;
+
+  /// Settings hub row title for text-to-speech
+  ///
+  /// In en, this message translates to:
+  /// **'Text-to-Speech'**
+  String get settingsTtsRow;
+
+  /// Settings hub row title for app language
+  ///
+  /// In en, this message translates to:
+  /// **'App Language'**
+  String get settingsAppLanguageRow;
+
+  /// Settings hub row title for backup and restore
+  ///
+  /// In en, this message translates to:
+  /// **'Backup & Restore'**
+  String get settingsBackupRestoreRow;
+
+  /// API key status when key is present
+  ///
+  /// In en, this message translates to:
+  /// **'Configured'**
+  String get settingsConfigured;
+
+  /// API key status when key is missing
+  ///
+  /// In en, this message translates to:
+  /// **'Not configured'**
+  String get settingsNotConfigured;
+
+  /// Transcription strategy label for on-device
+  ///
+  /// In en, this message translates to:
+  /// **'On-device'**
+  String get settingsOnDevice;
+
+  /// Transcription strategy label for cloud
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud'**
+  String get settingsCloud;
+
   /// Settings section title for backup
   ///
   /// In en, this message translates to:
@@ -1147,6 +1237,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Export or import your data'**
   String get backupSettingsSubtitle;
+
+  /// Settings section title for about
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get settingsAboutSection;
+
+  /// Settings item title for about
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get settingsAboutRow;
+
+  /// About screen title
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get aboutTitle;
+
+  /// Version label on about screen
+  ///
+  /// In en, this message translates to:
+  /// **'Version'**
+  String get aboutVersion;
+
+  /// GitHub link title
+  ///
+  /// In en, this message translates to:
+  /// **'GitHub'**
+  String get aboutGitHub;
+
+  /// GitHub link subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'View source code'**
+  String get aboutGitHubSubtitle;
+
+  /// Donation link title
+  ///
+  /// In en, this message translates to:
+  /// **'Support Development'**
+  String get aboutDonate;
+
+  /// Donation link subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Buy me a coffee on Ko-fi'**
+  String get aboutDonateSubtitle;
+
+  /// GitHub Sponsors link title
+  ///
+  /// In en, this message translates to:
+  /// **'GitHub Sponsors'**
+  String get aboutSponsor;
+
+  /// GitHub Sponsors link subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Sponsor on GitHub'**
+  String get aboutSponsorSubtitle;
+
+  /// Share option for backup export
+  ///
+  /// In en, this message translates to:
+  /// **'Share backup file'**
+  String get backupShare;
+
+  /// Save option for backup export
+  ///
+  /// In en, this message translates to:
+  /// **'Save to device'**
+  String get backupSaveToDevice;
+
+  /// Success message when backup saved to Downloads
+  ///
+  /// In en, this message translates to:
+  /// **'Backup saved to Downloads'**
+  String get backupSavedToDownloads;
+
+  /// Error message when saving backup fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to save backup'**
+  String get backupSaveFailed;
+
+  /// Label for backup destination picker
+  ///
+  /// In en, this message translates to:
+  /// **'How would you like to export?'**
+  String get backupModeLabel;
+
+  /// Share mode option
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get backupModeShare;
+
+  /// No description provided for @backupModeSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save to Downloads'**
+  String get backupModeSave;
 }
 
 class _AppLocalizationsDelegate

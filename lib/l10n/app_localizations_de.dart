@@ -587,8 +587,104 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get settingsAiModelsSection => 'KI & Modelle';
+
+  @override
+  String get settingsTranscriptionSection => 'Transkription';
+
+  @override
+  String get settingsOutputSection => 'Ausgabe';
+
+  @override
+  String get settingsAppSection => 'App';
+
+  @override
+  String get settingsAiModelsRow => 'KI & Modelle';
+
+  @override
+  String get settingsApiConnectionRow => 'API-Verbindung';
+
+  @override
+  String get settingsTranscriptionRow => 'Transkription';
+
+  @override
+  String get settingsSummaryLanguageRow => 'Zusammenfassung & Sprache';
+
+  @override
+  String get settingsTtsRow => 'Text-to-Speech';
+
+  @override
+  String get settingsAppLanguageRow => 'App-Sprache';
+
+  @override
+  String get settingsBackupRestoreRow => 'Backup & Wiederherstellung';
+
+  @override
+  String get settingsConfigured => 'Konfiguriert';
+
+  @override
+  String get settingsNotConfigured => 'Nicht konfiguriert';
+
+  @override
+  String get settingsOnDevice => 'On-Device';
+
+  @override
+  String get settingsCloud => 'Cloud';
+
+  @override
   String get backupSettingsSection => 'Backup & Wiederherstellung';
 
   @override
   String get backupSettingsSubtitle => 'Daten exportieren oder importieren';
+
+  @override
+  String get settingsAboutSection => 'Über';
+
+  @override
+  String get settingsAboutRow => 'Über';
+
+  @override
+  String get aboutTitle => 'Über';
+
+  @override
+  String get aboutVersion => 'Version';
+
+  @override
+  String get aboutGitHub => 'GitHub';
+
+  @override
+  String get aboutGitHubSubtitle => 'Quellcode anzeigen';
+
+  @override
+  String get aboutDonate => 'Entwicklung unterstützen';
+
+  @override
+  String get aboutDonateSubtitle => 'Kauf mir einen Kaffee auf Ko-fi';
+
+  @override
+  String get aboutSponsor => 'GitHub Sponsors';
+
+  @override
+  String get aboutSponsorSubtitle => 'Auf GitHub sponsoren';
+
+  @override
+  String get backupShare => 'Backupdatei teilen';
+
+  @override
+  String get backupSaveToDevice => 'Auf Gerät speichern';
+
+  @override
+  String get backupSavedToDownloads => 'Backup in Downloads gespeichert';
+
+  @override
+  String get backupSaveFailed => 'Backup konnte nicht gespeichert werden';
+
+  @override
+  String get backupModeLabel => 'Wie möchtest du exportieren?';
+
+  @override
+  String get backupModeShare => 'Teilen';
+
+  @override
+  String get backupModeSave => 'In Downloads speichern';
 }

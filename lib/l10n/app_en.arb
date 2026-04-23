@@ -987,5 +987,87 @@
   "backupSettingsSubtitle": "Export or import your data",
   "@backupSettingsSubtitle": {
     "description": "Settings item subtitle for backup"
-  }
+  },
+
+  "settingsAboutSection": "About",
+  "@settingsAboutSection": {
+    "description": "Settings section title for about"
+  },
+
+  "settingsAboutRow": "About",
+  "@settingsAboutRow": {
+    "description": "Settings item title for about"
+  },
+
+  "aboutTitle": "About",
+  "@aboutTitle": {
+    "description": "About screen title"
+  },
+
+  "aboutVersion": "Version",
+  "@aboutVersion": {
+    "description": "Version label on about screen"
+  },
+
+  "aboutGitHub": "GitHub",
+  "@aboutGitHub": {
+    "description": "GitHub link title"
+  },
+
+  "aboutGitHubSubtitle": "View source code",
+  "@aboutGitHubSubtitle": {
+    "description": "GitHub link subtitle"
+  },
+
+  "aboutDonate": "Support Development",
+  "@aboutDonate": {
+    "description": "Donation link title"
+  },
+
+  "aboutDonateSubtitle": "Buy me a coffee on Ko-fi",
+  "@aboutDonateSubtitle": {
+    "description": "Donation link subtitle"
+  },
+
+  "aboutSponsor": "GitHub Sponsors",
+  "@aboutSponsor": {
+    "description": "GitHub Sponsors link title"
+  },
+
+  "aboutSponsorSubtitle": "Sponsor on GitHub",
+  "@aboutSponsorSubtitle": {
+    "description": "GitHub Sponsors link subtitle"
+  },
+
+  "backupShare": "Share backup file",
+  "@backupShare": {
+    "description": "Share option for backup export"
+  },
+
+  "backupSaveToDevice": "Save to device",
+  "@backupSaveToDevice": {
+    "description": "Save option for backup export"
+  },
+
+  "backupSavedToDownloads": "Backup saved to Downloads",
+  "@backupSavedToDownloads": {
+    "description": "Success message when backup saved to Downloads"
+  },
+
+  "backupSaveFailed": "Failed to save backup",
+  "@backupSaveFailed": {
+    "description": "Error message when saving backup fails"
+  },
+
+  "backupModeLabel": "How would you like to export?",
+  "@backupModeLabel": {
+    "description": "Label for backup destination picker"
+  },
+
+  "backupModeShare": "Share",
+  "@backupModeShare": {
+    "description": "Share mode option"
+  },
+
+  "backupModeSave": "Save to Downloads"
 }
