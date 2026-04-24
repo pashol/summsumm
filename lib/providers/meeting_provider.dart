@@ -11,7 +11,9 @@ import 'package:summsumm/models/transcription_config.dart';
 import 'package:summsumm/services/processing_service.dart';
 import 'package:summsumm/services/voice_service.dart';
 import 'package:summsumm/providers/on_device_transcription_provider.dart';
-
+import '../models/custom_prompt.dart';
+import '../utils/prompt_resolver.dart';
+import 'package:collection/collection.dart';
 final voiceServiceProvider = Provider<VoiceService>((ref) => VoiceService());
 final aiServiceProvider = Provider<AiService>((ref) => AiService());
 final processingServiceProvider = Provider<ProcessingService>((ref) => ProcessingService());
@@ -421,16 +423,23 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
   }
 
   String _promptForStyle(SummaryStyle style, MeetingType type, String langSuffixText) {
-    switch (style) {
-      case SummaryStyle.concise:
-        return 'You are an expert summarizer. Produce a brief summary with 3-5 bullet points covering only the key points. Do not elaborate. Do not wrap output in a code block.$langSuffixText';
-      case SummaryStyle.brief:
-        return 'You are an expert document summarizer. Write a short paragraph summarizing the key points of this document. Do not use bullet points or headers. Do not wrap output in a code block.$langSuffixText';
-      case SummaryStyle.detailed:
-        return 'You are an expert summarizer. Produce a comprehensive summary with thorough coverage of each topic. Include context and reasoning. Use ## headers for topics, paragraphs for detail. Do not wrap output in a code block.$langSuffixText';
-      case SummaryStyle.structured:
-        return 'You are an expert meeting summarizer. Extract: 1. Key decisions made 2. Action items with owners 3. Open questions 4. Important context. Use markdown headers and bullet points. Do not wrap output in a code block. Be concise and factual.$langSuffixText';
+    final settings = ref.read(settingsProvider);
+
+    // Check if a custom prompt is selected
+    CustomPrompt? selectedCustom;
+    if (settings.selectedCustomPromptId != null) {
+      selectedCustom = settings.customPrompts.firstWhereOrNull(
+        (p) => p.id == settings.selectedCustomPromptId,
+      );
     }
+
+    final basePrompt = PromptResolver.resolve(
+      style: style,
+      customPrompt: selectedCustom,
+      settings: settings,
+    );
+
+    return '$basePrompt$langSuffixText';
   }
 
   Future<void> retry() async {
