@@ -14,6 +14,7 @@ import 'settings/api_connection_screen.dart';
 import 'settings/app_language_screen.dart';
 import 'settings/summary_language_screen.dart';
 import 'settings/transcription_settings_screen.dart';
+import 'settings/prompt_editor_screen.dart';
 import 'settings/tts_settings_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -152,12 +153,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             children: [
               _SettingsRow(
                 icon: Icons.summarize,
-                title: l10n.settingsSummaryLanguageRow,
+                title: 'Summary',
                 subtitle: '${SummaryStyle.values.byName(settings.summaryStyle).localizedTitle(context)}, ${localizedLanguageName(context, settings.language)}',
                 onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute<void>(builder: (_) => const SummaryLanguageScreen()),
+                  );
+                },
+              ),
+              const Divider(height: 1, indent: 16, endIndent: 16),
+              _SettingsRow(
+                icon: Icons.edit_note,
+                title: 'Prompts',
+                subtitle: '${settings.promptOverrides.length} edited, ${settings.customPrompts.length} custom',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(builder: (_) => const PromptEditorScreen()),
                   );
                 },
               ),
