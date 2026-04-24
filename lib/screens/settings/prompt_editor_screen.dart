@@ -57,122 +57,31 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
   }
 
   Future<void> _showAddCustomPromptSheet() async {
-    final nameController = TextEditingController();
-    final textController = TextEditingController();
-
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-            left: 16,
-            right: 16,
-            top: 16,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Add Custom Prompt',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Name',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: textController,
-                maxLines: 6,
-                decoration: const InputDecoration(
-                  labelText: 'Prompt text',
-                  border: OutlineInputBorder(),
-                  alignLabelWithHint: true,
-                ),
-              ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: () {
-                  final name = nameController.text.trim();
-                  final text = textController.text.trim();
-                  if (name.isNotEmpty && text.isNotEmpty) {
-                    ref.read(settingsProvider.notifier).addCustomPrompt(name, text);
-                    Navigator.pop(context);
-                  }
-                },
-                child: const Text('Save'),
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
+        return _CustomPromptSheet(
+          onSave: (name, text) {
+            ref.read(settingsProvider.notifier).addCustomPrompt(name, text);
+          },
         );
       },
     );
   }
 
   Future<void> _showEditCustomPromptSheet(CustomPrompt prompt) async {
-    final nameController = TextEditingController(text: prompt.name);
-    final textController = TextEditingController(text: prompt.text);
-
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-            left: 16,
-            right: 16,
-            top: 16,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Edit Custom Prompt',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Name',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: textController,
-                maxLines: 6,
-                decoration: const InputDecoration(
-                  labelText: 'Prompt text',
-                  border: OutlineInputBorder(),
-                  alignLabelWithHint: true,
-                ),
-              ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: () {
-                  final name = nameController.text.trim();
-                  final text = textController.text.trim();
-                  if (name.isNotEmpty && text.isNotEmpty) {
-                    ref.read(settingsProvider.notifier).updateCustomPrompt(prompt.id, name: name, text: text);
-                    Navigator.pop(context);
-                  }
-                },
-                child: const Text('Save'),
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
+        return _CustomPromptSheet(
+          initialName: prompt.name,
+          initialText: prompt.text,
+          title: 'Edit Custom Prompt',
+          onSave: (name, text) {
+            ref.read(settingsProvider.notifier).updateCustomPrompt(prompt.id, name: name, text: text);
+          },
         );
       },
     );
@@ -199,8 +108,96 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
 
     if (confirmed == true) {
       ref.read(settingsProvider.notifier).deleteCustomPrompt(prompt.id);
+  }
+}
+
+class _CustomPromptSheet extends StatefulWidget {
+  final String? initialName;
+  final String? initialText;
+  final String title;
+  final void Function(String name, String text) onSave;
+
+  const _CustomPromptSheet({
+    this.initialName,
+    this.initialText,
+    this.title = 'Add Custom Prompt',
+    required this.onSave,
+  });
+
+  @override
+  State<_CustomPromptSheet> createState() => _CustomPromptSheetState();
+}
+
+class _CustomPromptSheetState extends State<_CustomPromptSheet> {
+  late final _nameController = TextEditingController(text: widget.initialName);
+  late final _textController = TextEditingController(text: widget.initialText);
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _textController.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final name = _nameController.text.trim();
+    final text = _textController.text.trim();
+    if (name.isNotEmpty && text.isNotEmpty) {
+      widget.onSave(name, text);
+      Navigator.pop(context);
     }
   }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        left: 16,
+        right: 16,
+        top: 16,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            widget.title,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _nameController,
+            decoration: const InputDecoration(
+              labelText: 'Name',
+              border: OutlineInputBorder(),
+            ),
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _textController,
+            maxLines: 6,
+            decoration: const InputDecoration(
+              labelText: 'Prompt text',
+              border: OutlineInputBorder(),
+              alignLabelWithHint: true,
+            ),
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _save(),
+          ),
+          const SizedBox(height: 16),
+          FilledButton(
+            onPressed: _save,
+            child: const Text('Save'),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -242,6 +239,7 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
                         .toList(),
                     onChanged: (style) {
                       if (style != null) {
+                        _debounceTimer?.cancel();
                         setState(() {
                           _selectedStyle = style;
                         });
