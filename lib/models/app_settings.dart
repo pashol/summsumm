@@ -1,4 +1,8 @@
 import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
+
+import 'custom_prompt.dart';
 import 'transcription_config.dart';
 
 class AppSettings {
@@ -19,6 +23,8 @@ class AppSettings {
   final String streamingModelLanguage;
   final bool compressAudioStorage;
   final Map<String, String> promptOverrides;
+  final List<CustomPrompt> customPrompts;
+  final String? selectedCustomPromptId;
 
   const AppSettings({
     required this.provider,
@@ -38,6 +44,8 @@ class AppSettings {
     this.streamingModelLanguage = 'English',
     this.compressAudioStorage = false,
     this.promptOverrides = const {},
+    this.customPrompts = const [],
+    this.selectedCustomPromptId,
   });
 
   const AppSettings.defaults()
@@ -59,6 +67,8 @@ class AppSettings {
           streamingModelLanguage: 'English',
           compressAudioStorage: false,
           promptOverrides: const {},
+          customPrompts: const [],
+          selectedCustomPromptId: null,
         );
 
   AppSettings copyWith({
@@ -79,6 +89,8 @@ class AppSettings {
     String? streamingModelLanguage,
     bool? compressAudioStorage,
     Map<String, String>? promptOverrides,
+    List<CustomPrompt>? customPrompts,
+    String? selectedCustomPromptId,
   }) =>
       AppSettings(
         provider: provider ?? this.provider,
@@ -98,6 +110,8 @@ class AppSettings {
         streamingModelLanguage: streamingModelLanguage ?? this.streamingModelLanguage,
         compressAudioStorage: compressAudioStorage ?? this.compressAudioStorage,
         promptOverrides: promptOverrides ?? this.promptOverrides,
+        customPrompts: customPrompts ?? this.customPrompts,
+        selectedCustomPromptId: selectedCustomPromptId ?? this.selectedCustomPromptId,
       );
 
   Map<String, dynamic> toJson() => {
@@ -118,6 +132,8 @@ class AppSettings {
         'streamingModelLanguage': streamingModelLanguage,
         'compressAudioStorage': compressAudioStorage,
         'promptOverrides': promptOverrides,
+        'customPrompts': customPrompts.map((p) => p.toJson()).toList(),
+        'selectedCustomPromptId': selectedCustomPromptId,
       };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
@@ -146,6 +162,11 @@ class AppSettings {
               (k, v) => MapEntry(k, v as String),
             ) ??
             const {},
+        customPrompts: (json['customPrompts'] as List<dynamic>?)
+            ?.map((e) => CustomPrompt.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+            const [],
+        selectedCustomPromptId: json['selectedCustomPromptId'] as String?,
       );
 
   String get activeModel =>
@@ -176,7 +197,9 @@ class AppSettings {
         other.onDeviceDiarization == onDeviceDiarization &&
         other.streamingModelLanguage == streamingModelLanguage &&
         other.compressAudioStorage == compressAudioStorage &&
-        other.promptOverrides == promptOverrides;
+        other.promptOverrides == promptOverrides &&
+        listEquals(other.customPrompts, customPrompts) &&
+        other.selectedCustomPromptId == selectedCustomPromptId;
   }
 
   @override
@@ -198,6 +221,8 @@ class AppSettings {
         streamingModelLanguage,
         compressAudioStorage,
         promptOverrides,
+        Object.hashAll(customPrompts),
+        selectedCustomPromptId,
       );
 }
 
