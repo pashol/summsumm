@@ -687,4 +687,75 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get backupModeSave => 'In Downloads speichern';
+
+  @override
+  String get promptEditorTitle => 'Zusammenfassungs-Prompts';
+
+  @override
+  String get defaultPromptSection => 'Standard-Prompt';
+
+  @override
+  String get customPromptsSection => 'Benutzerdefinierte Prompts';
+
+  @override
+  String get summaryStyleLabel => 'Zusammenfassungsstil';
+
+  @override
+  String get promptTextLabel => 'Prompt-Text';
+
+  @override
+  String get resetToDefault => 'Auf Standard zurücksetzen';
+
+  @override
+  String get addPrompt => 'Prompt hinzufügen';
+
+  @override
+  String get noCustomPrompts =>
+      'Noch keine benutzerdefinierten Prompts. Tippe auf +, um einen zu erstellen.';
+
+  @override
+  String get newPromptTitle => 'Neuer benutzerdefinierter Prompt';
+
+  @override
+  String get editPromptTitle => 'Benutzerdefinierten Prompt bearbeiten';
+
+  @override
+  String get promptNameLabel => 'Name';
+
+  @override
+  String get promptNameRequired => 'Bitte gib einen Namen ein';
+
+  @override
+  String get promptTextRequired => 'Bitte gib einen Prompt-Text ein';
+
+  @override
+  String get create => 'Erstellen';
+
+  @override
+  String get save => 'Speichern';
+
+  @override
+  String get cancel => 'Abbrechen';
+
+  @override
+  String get delete => 'Löschen';
+
+  @override
+  String get deletePromptTitle => 'Prompt löschen';
+
+  @override
+  String get deletePromptMessage =>
+      'Möchtest du diesen benutzerdefinierten Prompt wirklich löschen?';
+
+  @override
+  String get settingsSummaryRow => 'Zusammenfassung';
+
+  @override
+  String get settingsPromptsRow => 'Prompts';
+
+  @override
+  String get edited => 'bearbeitet';
+
+  @override
+  String get custom => 'benutzerdefiniert';
 }

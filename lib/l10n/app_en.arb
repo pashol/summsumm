@@ -1069,5 +1069,120 @@
     "description": "Share mode option"
   },
 
-  "backupModeSave": "Save to Downloads"
+  "backupModeSave": "Save to Downloads",
+
+  "promptEditorTitle": "Summary Prompts",
+  "@promptEditorTitle": {
+    "description": "Prompt editor screen title"
+  },
+
+  "defaultPromptSection": "Default Prompt",
+  "@defaultPromptSection": {
+    "description": "Section title for default prompt editor"
+  },
+
+  "customPromptsSection": "Custom Prompts",
+  "@customPromptsSection": {
+    "description": "Section title for custom prompts list"
+  },
+
+  "summaryStyleLabel": "Summary Style",
+  "@summaryStyleLabel": {
+    "description": "Label for summary style dropdown"
+  },
+
+  "promptTextLabel": "Prompt Text",
+  "@promptTextLabel": {
+    "description": "Label for prompt text input field"
+  },
+
+  "resetToDefault": "Reset to Default",
+  "@resetToDefault": {
+    "description": "Button to reset prompt to default"
+  },
+
+  "addPrompt": "Add Prompt",
+  "@addPrompt": {
+    "description": "Button/label to add a custom prompt"
+  },
+
+  "noCustomPrompts": "No custom prompts yet. Tap + to create one.",
+  "@noCustomPrompts": {
+    "description": "Empty state message for custom prompts list"
+  },
+
+  "newPromptTitle": "New Custom Prompt",
+  "@newPromptTitle": {
+    "description": "Sheet title for creating a new custom prompt"
+  },
+
+  "editPromptTitle": "Edit Custom Prompt",
+  "@editPromptTitle": {
+    "description": "Sheet title for editing a custom prompt"
+  },
+
+  "promptNameLabel": "Name",
+  "@promptNameLabel": {
+    "description": "Label for prompt name input field"
+  },
+
+  "promptNameRequired": "Please enter a name",
+  "@promptNameRequired": {
+    "description": "Validation error when prompt name is empty"
+  },
+
+  "promptTextRequired": "Please enter prompt text",
+  "@promptTextRequired": {
+    "description": "Validation error when prompt text is empty"
+  },
+
+  "create": "Create",
+  "@create": {
+    "description": "Create button label"
+  },
+
+  "save": "Save",
+  "@save": {
+    "description": "Save button label"
+  },
+
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Cancel button label"
+  },
+
+  "delete": "Delete",
+  "@delete": {
+    "description": "Delete button label"
+  },
+
+  "deletePromptTitle": "Delete Prompt",
+  "@deletePromptTitle": {
+    "description": "Dialog title for deleting a prompt"
+  },
+
+  "deletePromptMessage": "Are you sure you want to delete this custom prompt?",
+  "@deletePromptMessage": {
+    "description": "Dialog content for deleting a prompt"
+  },
+
+  "settingsSummaryRow": "Summary",
+  "@settingsSummaryRow": {
+    "description": "Settings row title for summary settings"
+  },
+
+  "settingsPromptsRow": "Prompts",
+  "@settingsPromptsRow": {
+    "description": "Settings row title for prompt editor"
+  },
+
+  "edited": "edited",
+  "@edited": {
+    "description": "Label for edited prompts count"
+  },
+
+  "custom": "custom",
+  "@custom": {
+    "description": "Label for custom prompts count"
+  }
 }

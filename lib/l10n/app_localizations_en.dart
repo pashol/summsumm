@@ -684,4 +684,74 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backupModeSave => 'Save to Downloads';
+
+  @override
+  String get promptEditorTitle => 'Summary Prompts';
+
+  @override
+  String get defaultPromptSection => 'Default Prompt';
+
+  @override
+  String get customPromptsSection => 'Custom Prompts';
+
+  @override
+  String get summaryStyleLabel => 'Summary Style';
+
+  @override
+  String get promptTextLabel => 'Prompt Text';
+
+  @override
+  String get resetToDefault => 'Reset to Default';
+
+  @override
+  String get addPrompt => 'Add Prompt';
+
+  @override
+  String get noCustomPrompts => 'No custom prompts yet. Tap + to create one.';
+
+  @override
+  String get newPromptTitle => 'New Custom Prompt';
+
+  @override
+  String get editPromptTitle => 'Edit Custom Prompt';
+
+  @override
+  String get promptNameLabel => 'Name';
+
+  @override
+  String get promptNameRequired => 'Please enter a name';
+
+  @override
+  String get promptTextRequired => 'Please enter prompt text';
+
+  @override
+  String get create => 'Create';
+
+  @override
+  String get save => 'Save';
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
+  String get delete => 'Delete';
+
+  @override
+  String get deletePromptTitle => 'Delete Prompt';
+
+  @override
+  String get deletePromptMessage =>
+      'Are you sure you want to delete this custom prompt?';
+
+  @override
+  String get settingsSummaryRow => 'Summary';
+
+  @override
+  String get settingsPromptsRow => 'Prompts';
+
+  @override
+  String get edited => 'edited';
+
+  @override
+  String get custom => 'custom';
 }

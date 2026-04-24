@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:summsumm/l10n/app_localizations.dart';
 
 import '../../models/custom_prompt.dart';
 import '../../models/summary_style.dart';
@@ -71,6 +72,7 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
   }
 
   Future<void> _showEditCustomPromptSheet(CustomPrompt prompt) async {
+    final l10n = AppLocalizations.of(context)!;
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -78,7 +80,7 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
         return _CustomPromptSheet(
           initialName: prompt.name,
           initialText: prompt.text,
-          title: 'Edit Custom Prompt',
+          title: l10n.editPromptTitle,
           onSave: (name, text) {
             ref.read(settingsProvider.notifier).updateCustomPrompt(prompt.id, name: name, text: text);
           },
@@ -88,19 +90,20 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
   }
 
   Future<void> _confirmDelete(CustomPrompt prompt) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Prompt'),
-        content: Text('Are you sure you want to delete "${prompt.name}"?'),
+        title: Text(l10n.deletePromptTitle),
+        content: Text(l10n.deletePromptMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -113,12 +116,13 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final settings = ref.watch(settingsProvider);
     final hasOverride = settings.promptOverrides.containsKey(_selectedStyle.name);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Summary Prompts'),
+        title: Text(l10n.promptEditorTitle),
       ),
       body: ListView(
         padding: EdgeInsets.only(
@@ -128,7 +132,7 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
         ),
         children: [
           const SizedBox(height: 8),
-          const _SectionTitle(title: 'Default Prompt'),
+          _SectionTitle(title: l10n.defaultPromptSection),
           GlassCard(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -137,9 +141,9 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
                 children: [
                   DropdownButtonFormField<SummaryStyle>(
                     initialValue: _selectedStyle,
-                    decoration: const InputDecoration(
-                      labelText: 'Style',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: l10n.summaryStyleLabel,
+                      border: const OutlineInputBorder(),
                     ),
                     items: SummaryStyle.values
                         .map(
@@ -163,9 +167,9 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
                   TextField(
                     controller: _promptController,
                     maxLines: 8,
-                    decoration: const InputDecoration(
-                      labelText: 'Prompt text',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: l10n.promptTextLabel,
+                      border: const OutlineInputBorder(),
                       alignLabelWithHint: true,
                     ),
                     onChanged: _onPromptChanged,
@@ -177,7 +181,7 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
                       child: TextButton.icon(
                         onPressed: _resetPrompt,
                         icon: const Icon(Icons.restore),
-                        label: const Text('Reset to default'),
+                        label: Text(l10n.resetToDefault),
                       ),
                     ),
                   ],
@@ -188,7 +192,7 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
           const SizedBox(height: 24),
           Row(
             children: [
-              const _SectionTitle(title: 'Custom Prompts'),
+              _SectionTitle(title: l10n.customPromptsSection),
               const Spacer(),
               IconButton(
                 icon: const Icon(Icons.add),
@@ -202,7 +206,7 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
                 padding: const EdgeInsets.all(24),
                 child: Center(
                   child: Text(
-                    'No custom prompts yet',
+                    l10n.noCustomPrompts,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
@@ -268,13 +272,13 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
 class _CustomPromptSheet extends StatefulWidget {
   final String? initialName;
   final String? initialText;
-  final String title;
+  final String? title;
   final void Function(String name, String text) onSave;
 
   const _CustomPromptSheet({
     this.initialName,
     this.initialText,
-    this.title = 'Add Custom Prompt',
+    this.title,
     required this.onSave,
   });
 
@@ -304,6 +308,7 @@ class _CustomPromptSheetState extends State<_CustomPromptSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom + 16,
@@ -316,15 +321,15 @@ class _CustomPromptSheetState extends State<_CustomPromptSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            widget.title,
+            widget.title ?? l10n.newPromptTitle,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 16),
           TextField(
             controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Name',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.promptNameLabel,
+              border: const OutlineInputBorder(),
             ),
             textInputAction: TextInputAction.next,
           ),
@@ -332,9 +337,9 @@ class _CustomPromptSheetState extends State<_CustomPromptSheet> {
           TextField(
             controller: _textController,
             maxLines: 6,
-            decoration: const InputDecoration(
-              labelText: 'Prompt text',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.promptTextLabel,
+              border: const OutlineInputBorder(),
               alignLabelWithHint: true,
             ),
             textInputAction: TextInputAction.done,
@@ -343,7 +348,7 @@ class _CustomPromptSheetState extends State<_CustomPromptSheet> {
           const SizedBox(height: 16),
           FilledButton(
             onPressed: _save,
-            child: const Text('Save'),
+            child: Text(l10n.save),
           ),
           const SizedBox(height: 8),
         ],

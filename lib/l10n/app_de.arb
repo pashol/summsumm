@@ -243,5 +243,120 @@
     "description": "Share mode option"
   },
 
-  "backupModeSave": "In Downloads speichern"
+  "backupModeSave": "In Downloads speichern",
+
+  "promptEditorTitle": "Zusammenfassungs-Prompts",
+  "@promptEditorTitle": {
+    "description": "Prompt editor screen title"
+  },
+
+  "defaultPromptSection": "Standard-Prompt",
+  "@defaultPromptSection": {
+    "description": "Section title for default prompt editor"
+  },
+
+  "customPromptsSection": "Benutzerdefinierte Prompts",
+  "@customPromptsSection": {
+    "description": "Section title for custom prompts list"
+  },
+
+  "summaryStyleLabel": "Zusammenfassungsstil",
+  "@summaryStyleLabel": {
+    "description": "Label for summary style dropdown"
+  },
+
+  "promptTextLabel": "Prompt-Text",
+  "@promptTextLabel": {
+    "description": "Label for prompt text input field"
+  },
+
+  "resetToDefault": "Auf Standard zurücksetzen",
+  "@resetToDefault": {
+    "description": "Button to reset prompt to default"
+  },
+
+  "addPrompt": "Prompt hinzufügen",
+  "@addPrompt": {
+    "description": "Button/label to add a custom prompt"
+  },
+
+  "noCustomPrompts": "Noch keine benutzerdefinierten Prompts. Tippe auf +, um einen zu erstellen.",
+  "@noCustomPrompts": {
+    "description": "Empty state message for custom prompts list"
+  },
+
+  "newPromptTitle": "Neuer benutzerdefinierter Prompt",
+  "@newPromptTitle": {
+    "description": "Sheet title for creating a new custom prompt"
+  },
+
+  "editPromptTitle": "Benutzerdefinierten Prompt bearbeiten",
+  "@editPromptTitle": {
+    "description": "Sheet title for editing a custom prompt"
+  },
+
+  "promptNameLabel": "Name",
+  "@promptNameLabel": {
+    "description": "Label for prompt name input field"
+  },
+
+  "promptNameRequired": "Bitte gib einen Namen ein",
+  "@promptNameRequired": {
+    "description": "Validation error when prompt name is empty"
+  },
+
+  "promptTextRequired": "Bitte gib einen Prompt-Text ein",
+  "@promptTextRequired": {
+    "description": "Validation error when prompt text is empty"
+  },
+
+  "create": "Erstellen",
+  "@create": {
+    "description": "Create button label"
+  },
+
+  "save": "Speichern",
+  "@save": {
+    "description": "Save button label"
+  },
+
+  "cancel": "Abbrechen",
+  "@cancel": {
+    "description": "Cancel button label"
+  },
+
+  "delete": "Löschen",
+  "@delete": {
+    "description": "Delete button label"
+  },
+
+  "deletePromptTitle": "Prompt löschen",
+  "@deletePromptTitle": {
+    "description": "Dialog title for deleting a prompt"
+  },
+
+  "deletePromptMessage": "Möchtest du diesen benutzerdefinierten Prompt wirklich löschen?",
+  "@deletePromptMessage": {
+    "description": "Dialog content for deleting a prompt"
+  },
+
+  "settingsSummaryRow": "Zusammenfassung",
+  "@settingsSummaryRow": {
+    "description": "Settings row title for summary settings"
+  },
+
+  "settingsPromptsRow": "Prompts",
+  "@settingsPromptsRow": {
+    "description": "Settings row title for prompt editor"
+  },
+
+  "edited": "bearbeitet",
+  "@edited": {
+    "description": "Label for edited prompts count"
+  },
+
+  "custom": "benutzerdefiniert",
+  "@custom": {
+    "description": "Label for custom prompts count"
+  }
 }

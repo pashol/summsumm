@@ -153,7 +153,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             children: [
               _SettingsRow(
                 icon: Icons.summarize,
-                title: 'Summary',
+                title: l10n.settingsSummaryRow,
                 subtitle: '${SummaryStyle.values.byName(settings.summaryStyle).localizedTitle(context)}, ${localizedLanguageName(context, settings.language)}',
                 onTap: () {
                   Navigator.push(
@@ -165,8 +165,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const Divider(height: 1, indent: 16, endIndent: 16),
               _SettingsRow(
                 icon: Icons.edit_note,
-                title: 'Prompts',
-                subtitle: '${settings.promptOverrides.length} edited, ${settings.customPrompts.length} custom',
+                title: l10n.settingsPromptsRow,
+                subtitle: '${settings.promptOverrides.length} ${l10n.edited}, ${settings.customPrompts.length} ${l10n.custom}',
                 onTap: () {
                   Navigator.push(
                     context,

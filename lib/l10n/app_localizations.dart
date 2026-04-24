@@ -1339,6 +1339,144 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Save to Downloads'**
   String get backupModeSave;
+
+  /// Prompt editor screen title
+  ///
+  /// In en, this message translates to:
+  /// **'Summary Prompts'**
+  String get promptEditorTitle;
+
+  /// Section title for default prompt editor
+  ///
+  /// In en, this message translates to:
+  /// **'Default Prompt'**
+  String get defaultPromptSection;
+
+  /// Section title for custom prompts list
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Prompts'**
+  String get customPromptsSection;
+
+  /// Label for summary style dropdown
+  ///
+  /// In en, this message translates to:
+  /// **'Summary Style'**
+  String get summaryStyleLabel;
+
+  /// Label for prompt text input field
+  ///
+  /// In en, this message translates to:
+  /// **'Prompt Text'**
+  String get promptTextLabel;
+
+  /// Button to reset prompt to default
+  ///
+  /// In en, this message translates to:
+  /// **'Reset to Default'**
+  String get resetToDefault;
+
+  /// Button/label to add a custom prompt
+  ///
+  /// In en, this message translates to:
+  /// **'Add Prompt'**
+  String get addPrompt;
+
+  /// Empty state message for custom prompts list
+  ///
+  /// In en, this message translates to:
+  /// **'No custom prompts yet. Tap + to create one.'**
+  String get noCustomPrompts;
+
+  /// Sheet title for creating a new custom prompt
+  ///
+  /// In en, this message translates to:
+  /// **'New Custom Prompt'**
+  String get newPromptTitle;
+
+  /// Sheet title for editing a custom prompt
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Custom Prompt'**
+  String get editPromptTitle;
+
+  /// Label for prompt name input field
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get promptNameLabel;
+
+  /// Validation error when prompt name is empty
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a name'**
+  String get promptNameRequired;
+
+  /// Validation error when prompt text is empty
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter prompt text'**
+  String get promptTextRequired;
+
+  /// Create button label
+  ///
+  /// In en, this message translates to:
+  /// **'Create'**
+  String get create;
+
+  /// Save button label
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get save;
+
+  /// Cancel button label
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancel;
+
+  /// Delete button label
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get delete;
+
+  /// Dialog title for deleting a prompt
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Prompt'**
+  String get deletePromptTitle;
+
+  /// Dialog content for deleting a prompt
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this custom prompt?'**
+  String get deletePromptMessage;
+
+  /// Settings row title for summary settings
+  ///
+  /// In en, this message translates to:
+  /// **'Summary'**
+  String get settingsSummaryRow;
+
+  /// Settings row title for prompt editor
+  ///
+  /// In en, this message translates to:
+  /// **'Prompts'**
+  String get settingsPromptsRow;
+
+  /// Label for edited prompts count
+  ///
+  /// In en, this message translates to:
+  /// **'edited'**
+  String get edited;
+
+  /// Label for custom prompts count
+  ///
+  /// In en, this message translates to:
+  /// **'custom'**
+  String get custom;
 }
 
 class _AppLocalizationsDelegate
