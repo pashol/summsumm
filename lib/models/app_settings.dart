@@ -18,6 +18,7 @@ class AppSettings {
   final bool onDeviceDiarization;
   final String streamingModelLanguage;
   final bool compressAudioStorage;
+  final Map<String, String> promptOverrides;
 
   const AppSettings({
     required this.provider,
@@ -36,26 +37,29 @@ class AppSettings {
     this.onDeviceDiarization = true,
     this.streamingModelLanguage = 'English',
     this.compressAudioStorage = false,
+    this.promptOverrides = const {},
   });
 
-  factory AppSettings.defaults() => const AppSettings(
-        provider: 'openrouter',
-        openrouterModel: '',
-        openaiModel: '',
-        language: 'Same as input',
-        summaryStyle: 'structured',
-        ttsSpeed: 1.0,
-        openaiKey: '',
-        openrouterKey: '',
-        debugMode: false,
-        localeOverride: null,
-        transcriptionStrategy: TranscriptionStrategy.cloud,
-        onDeviceModelSize: ModelSize.tiny,
-        enableRealTimeTranscription: false,
-        onDeviceDiarization: true,
-        streamingModelLanguage: 'English',
-        compressAudioStorage: false,
-      );
+  const AppSettings.defaults()
+      : this(
+          provider: 'openrouter',
+          openrouterModel: '',
+          openaiModel: '',
+          language: 'Same as input',
+          summaryStyle: 'structured',
+          ttsSpeed: 1.0,
+          openaiKey: '',
+          openrouterKey: '',
+          debugMode: false,
+          localeOverride: null,
+          transcriptionStrategy: TranscriptionStrategy.cloud,
+          onDeviceModelSize: ModelSize.tiny,
+          enableRealTimeTranscription: false,
+          onDeviceDiarization: true,
+          streamingModelLanguage: 'English',
+          compressAudioStorage: false,
+          promptOverrides: const {},
+        );
 
   AppSettings copyWith({
     String? provider,
@@ -74,6 +78,7 @@ class AppSettings {
     bool? onDeviceDiarization,
     String? streamingModelLanguage,
     bool? compressAudioStorage,
+    Map<String, String>? promptOverrides,
   }) =>
       AppSettings(
         provider: provider ?? this.provider,
@@ -92,6 +97,7 @@ class AppSettings {
         onDeviceDiarization: onDeviceDiarization ?? this.onDeviceDiarization,
         streamingModelLanguage: streamingModelLanguage ?? this.streamingModelLanguage,
         compressAudioStorage: compressAudioStorage ?? this.compressAudioStorage,
+        promptOverrides: promptOverrides ?? this.promptOverrides,
       );
 
   Map<String, dynamic> toJson() => {
@@ -111,6 +117,7 @@ class AppSettings {
         'onDeviceDiarization': onDeviceDiarization,
         'streamingModelLanguage': streamingModelLanguage,
         'compressAudioStorage': compressAudioStorage,
+        'promptOverrides': promptOverrides,
       };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) => AppSettings(
@@ -135,6 +142,10 @@ class AppSettings {
         onDeviceDiarization: json['onDeviceDiarization'] as bool? ?? true,
         streamingModelLanguage: json['streamingModelLanguage'] as String? ?? 'English',
         compressAudioStorage: json['compressAudioStorage'] as bool? ?? false,
+        promptOverrides: (json['promptOverrides'] as Map<String, dynamic>?)?.map(
+              (k, v) => MapEntry(k, v as String),
+            ) ??
+            const {},
       );
 
   String get activeModel =>
@@ -164,7 +175,8 @@ class AppSettings {
         other.enableRealTimeTranscription == enableRealTimeTranscription &&
         other.onDeviceDiarization == onDeviceDiarization &&
         other.streamingModelLanguage == streamingModelLanguage &&
-        other.compressAudioStorage == compressAudioStorage;
+        other.compressAudioStorage == compressAudioStorage &&
+        other.promptOverrides == promptOverrides;
   }
 
   @override
@@ -185,6 +197,7 @@ class AppSettings {
         onDeviceDiarization,
         streamingModelLanguage,
         compressAudioStorage,
+        promptOverrides,
       );
 }
 
