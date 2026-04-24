@@ -185,7 +185,11 @@ class Settings extends _$Settings {
 
   Future<void> deleteCustomPrompt(String id) async {
     final nextPrompts = state.customPrompts.where((p) => p.id != id).toList();
-    final next = state.copyWith(customPrompts: nextPrompts);
+    final next = state.copyWith(
+      customPrompts: nextPrompts,
+      selectedCustomPromptId:
+          state.selectedCustomPromptId == id ? null : state.selectedCustomPromptId,
+    );
     state = next;
     await _persist(next);
   }
