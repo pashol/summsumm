@@ -159,7 +159,7 @@ class AppSettings {
         streamingModelLanguage: json['streamingModelLanguage'] as String? ?? 'English',
         compressAudioStorage: json['compressAudioStorage'] as bool? ?? false,
         promptOverrides: (json['promptOverrides'] as Map<String, dynamic>?)?.map(
-              (k, v) => MapEntry(k, v as String),
+              (k, v) => MapEntry(k, v?.toString() ?? ''),
             ) ??
             const {},
         customPrompts: (json['customPrompts'] as List<dynamic>?)
