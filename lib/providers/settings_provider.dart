@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
 import '../models/app_settings.dart';
 import '../models/custom_prompt.dart';
@@ -162,7 +163,7 @@ class Settings extends _$Settings {
   }
 
   Future<String> addCustomPrompt(String name, String text) async {
-    final id = DateTime.now().millisecondsSinceEpoch.toString();
+    final id = const Uuid().v4();
     final prompt = CustomPrompt(id: id, name: name, text: text);
     final nextPrompts = [...state.customPrompts, prompt];
     final next = state.copyWith(customPrompts: nextPrompts);

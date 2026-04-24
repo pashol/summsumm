@@ -28,7 +28,11 @@ class SummaryLanguageScreen extends ConsumerWidget {
         title: Text(l10n.settingsSummarySection),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          bottom: MediaQuery.of(context).padding.bottom + 16,
+        ),
         children: [
           DropdownButtonFormField<String>(
             initialValue: _getSelectedValue(settings),
