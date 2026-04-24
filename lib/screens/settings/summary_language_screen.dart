@@ -10,6 +10,13 @@ import '../../utils/localized_strings.dart';
 class SummaryLanguageScreen extends ConsumerWidget {
   const SummaryLanguageScreen({super.key});
 
+  String _getSelectedValue(AppSettings settings) {
+    if (settings.selectedCustomPromptId != null) {
+      return 'custom:${settings.selectedCustomPromptId}';
+    }
+    return settings.summaryStyle;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
@@ -24,17 +31,29 @@ class SummaryLanguageScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(16),
         children: [
           DropdownButtonFormField<String>(
-            initialValue: settings.summaryStyle,
+            initialValue: _getSelectedValue(settings),
             decoration: InputDecoration(
               labelText: l10n.settingsStyleLabel,
               border: const OutlineInputBorder(),
               prefixIcon: const Icon(Icons.format_list_bulleted_outlined),
             ),
-            items: SummaryStyle.values
-                .map((s) => DropdownMenuItem(value: s.name, child: Text(s.localizedTitle(context))))
-                .toList(),
+            items: [
+              ...SummaryStyle.values.map((s) => DropdownMenuItem(value: s.name, child: Text(s.localizedTitle(context)))),
+              if (settings.customPrompts.isNotEmpty) ...[
+                const DropdownMenuItem(enabled: false, child: Divider()),
+                ...settings.customPrompts.map((p) => DropdownMenuItem(value: 'custom:${p.id}', child: Text(p.name))),
+              ],
+            ],
             onChanged: (v) {
-              if (v != null) notifier.setSummaryStyle(v);
+              if (v != null) {
+                if (v.startsWith('custom:')) {
+                  final id = v.substring(7);
+                  notifier.setSelectedCustomPrompt(id);
+                } else {
+                  notifier.setSummaryStyle(v);
+                  notifier.setSelectedCustomPrompt(null);
+                }
+              }
             },
           ),
           const SizedBox(height: 12),
