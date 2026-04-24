@@ -3,6 +3,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/app_settings.dart';
+import '../models/custom_prompt.dart';
 import '../models/transcription_config.dart';
 import '../services/secure_storage_service.dart';
 
@@ -140,6 +141,57 @@ class Settings extends _$Settings {
 
   Future<void> setCompressAudioStorage(bool enabled) async {
     final next = state.copyWith(compressAudioStorage: enabled);
+    state = next;
+    await _persist(next);
+  }
+
+  Future<void> setPromptOverride(String style, String text) async {
+    final nextOverrides = Map<String, String>.from(state.promptOverrides);
+    nextOverrides[style] = text;
+    final next = state.copyWith(promptOverrides: nextOverrides);
+    state = next;
+    await _persist(next);
+  }
+
+  Future<void> resetPromptOverride(String style) async {
+    final nextOverrides = Map<String, String>.from(state.promptOverrides);
+    nextOverrides.remove(style);
+    final next = state.copyWith(promptOverrides: nextOverrides);
+    state = next;
+    await _persist(next);
+  }
+
+  Future<String> addCustomPrompt(String name, String text) async {
+    final id = DateTime.now().millisecondsSinceEpoch.toString();
+    final prompt = CustomPrompt(id: id, name: name, text: text);
+    final nextPrompts = [...state.customPrompts, prompt];
+    final next = state.copyWith(customPrompts: nextPrompts);
+    state = next;
+    await _persist(next);
+    return id;
+  }
+
+  Future<void> updateCustomPrompt(String id, {String? name, String? text}) async {
+    final nextPrompts = state.customPrompts.map((p) {
+      if (p.id == id) {
+        return p.copyWith(name: name ?? p.name, text: text ?? p.text);
+      }
+      return p;
+    }).toList();
+    final next = state.copyWith(customPrompts: nextPrompts);
+    state = next;
+    await _persist(next);
+  }
+
+  Future<void> deleteCustomPrompt(String id) async {
+    final nextPrompts = state.customPrompts.where((p) => p.id != id).toList();
+    final next = state.copyWith(customPrompts: nextPrompts);
+    state = next;
+    await _persist(next);
+  }
+
+  Future<void> setSelectedCustomPrompt(String? id) async {
+    final next = state.copyWith(selectedCustomPromptId: id);
     state = next;
     await _persist(next);
   }
