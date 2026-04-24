@@ -16,7 +16,7 @@ void main() {
     });
 
     test('returns override when promptOverrides has entry', () {
-      final settings = AppSettings.defaults().copyWith(
+      final settings = const AppSettings.defaults().copyWith(
         promptOverrides: {'concise': 'Custom concise prompt'},
       );
       final result = PromptResolver.resolve(
@@ -41,7 +41,7 @@ void main() {
     });
 
     test('custom prompt takes priority over style override', () {
-      final settings = AppSettings.defaults().copyWith(
+      final settings = const AppSettings.defaults().copyWith(
         promptOverrides: {'concise': 'Override'},
       );
       const custom = CustomPrompt(
