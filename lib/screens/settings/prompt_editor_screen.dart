@@ -1,0 +1,375 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../models/custom_prompt.dart';
+import '../../models/summary_style.dart';
+import '../../providers/settings_provider.dart';
+import '../../utils/prompt_resolver.dart';
+import '../../widgets/glass_card.dart';
+
+class PromptEditorScreen extends ConsumerStatefulWidget {
+  const PromptEditorScreen({super.key});
+
+  @override
+  ConsumerState<PromptEditorScreen> createState() => _PromptEditorScreenState();
+}
+
+class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
+  SummaryStyle _selectedStyle = SummaryStyle.structured;
+  final _promptController = TextEditingController();
+  Timer? _debounceTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPromptForStyle();
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    _promptController.dispose();
+    super.dispose();
+  }
+
+  void _loadPromptForStyle() {
+    final settings = ref.read(settingsProvider);
+    final text = PromptResolver.resolve(style: _selectedStyle, settings: settings);
+    _promptController.text = text;
+  }
+
+  void _onPromptChanged(String text) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      final notifier = ref.read(settingsProvider.notifier);
+      notifier.setPromptOverride(_selectedStyle.name, text);
+    });
+  }
+
+  void _resetPrompt() {
+    final notifier = ref.read(settingsProvider.notifier);
+    notifier.resetPromptOverride(_selectedStyle.name);
+    final settings = ref.read(settingsProvider);
+    final text = PromptResolver.resolve(style: _selectedStyle, settings: settings);
+    _promptController.text = text;
+  }
+
+  Future<void> _showAddCustomPromptSheet() async {
+    final nameController = TextEditingController();
+    final textController = TextEditingController();
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+            left: 16,
+            right: 16,
+            top: 16,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Add Custom Prompt',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Name',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: textController,
+                maxLines: 6,
+                decoration: const InputDecoration(
+                  labelText: 'Prompt text',
+                  border: OutlineInputBorder(),
+                  alignLabelWithHint: true,
+                ),
+              ),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: () {
+                  final name = nameController.text.trim();
+                  final text = textController.text.trim();
+                  if (name.isNotEmpty && text.isNotEmpty) {
+                    ref.read(settingsProvider.notifier).addCustomPrompt(name, text);
+                    Navigator.pop(context);
+                  }
+                },
+                child: const Text('Save'),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showEditCustomPromptSheet(CustomPrompt prompt) async {
+    final nameController = TextEditingController(text: prompt.name);
+    final textController = TextEditingController(text: prompt.text);
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+            left: 16,
+            right: 16,
+            top: 16,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Edit Custom Prompt',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Name',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: textController,
+                maxLines: 6,
+                decoration: const InputDecoration(
+                  labelText: 'Prompt text',
+                  border: OutlineInputBorder(),
+                  alignLabelWithHint: true,
+                ),
+              ),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: () {
+                  final name = nameController.text.trim();
+                  final text = textController.text.trim();
+                  if (name.isNotEmpty && text.isNotEmpty) {
+                    ref.read(settingsProvider.notifier).updateCustomPrompt(prompt.id, name: name, text: text);
+                    Navigator.pop(context);
+                  }
+                },
+                child: const Text('Save'),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _confirmDelete(CustomPrompt prompt) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Prompt'),
+        content: Text('Are you sure you want to delete "${prompt.name}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      ref.read(settingsProvider.notifier).deleteCustomPrompt(prompt.id);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = ref.watch(settingsProvider);
+    final hasOverride = settings.promptOverrides.containsKey(_selectedStyle.name);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Summary Prompts'),
+      ),
+      body: ListView(
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          bottom: MediaQuery.of(context).padding.bottom + 16,
+        ),
+        children: [
+          const SizedBox(height: 8),
+          const _SectionTitle(title: 'Default Prompt'),
+          GlassCard(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  DropdownButtonFormField<SummaryStyle>(
+                    initialValue: _selectedStyle,
+                    decoration: const InputDecoration(
+                      labelText: 'Style',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: SummaryStyle.values
+                        .map(
+                          (s) => DropdownMenuItem(
+                            value: s,
+                            child: Text(s.displayName),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (style) {
+                      if (style != null) {
+                        setState(() {
+                          _selectedStyle = style;
+                        });
+                        _loadPromptForStyle();
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _promptController,
+                    maxLines: 8,
+                    decoration: const InputDecoration(
+                      labelText: 'Prompt text',
+                      border: OutlineInputBorder(),
+                      alignLabelWithHint: true,
+                    ),
+                    onChanged: _onPromptChanged,
+                  ),
+                  if (hasOverride) ...[
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: _resetPrompt,
+                        icon: const Icon(Icons.restore),
+                        label: const Text('Reset to default'),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              const _SectionTitle(title: 'Custom Prompts'),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.add),
+                onPressed: _showAddCustomPromptSheet,
+              ),
+            ],
+          ),
+          if (settings.customPrompts.isEmpty)
+            GlassCard(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Center(
+                  child: Text(
+                    'No custom prompts yet',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                ),
+              ),
+            )
+          else
+            ...settings.customPrompts.map(
+              (prompt) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: GlassCard(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                prompt.name,
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.edit, size: 20),
+                              onPressed: () => _showEditCustomPromptSheet(prompt),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, size: 20),
+                              onPressed: () => _confirmDelete(prompt),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          prompt.text,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showAddCustomPromptSheet,
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 16, bottom: 8),
+      child: Text(
+        title,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+      ),
+    );
+  }
+}
