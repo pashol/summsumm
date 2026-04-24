@@ -108,96 +108,8 @@ class _PromptEditorScreenState extends ConsumerState<PromptEditorScreen> {
 
     if (confirmed == true) {
       ref.read(settingsProvider.notifier).deleteCustomPrompt(prompt.id);
-  }
-}
-
-class _CustomPromptSheet extends StatefulWidget {
-  final String? initialName;
-  final String? initialText;
-  final String title;
-  final void Function(String name, String text) onSave;
-
-  const _CustomPromptSheet({
-    this.initialName,
-    this.initialText,
-    this.title = 'Add Custom Prompt',
-    required this.onSave,
-  });
-
-  @override
-  State<_CustomPromptSheet> createState() => _CustomPromptSheetState();
-}
-
-class _CustomPromptSheetState extends State<_CustomPromptSheet> {
-  late final _nameController = TextEditingController(text: widget.initialName);
-  late final _textController = TextEditingController(text: widget.initialText);
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _textController.dispose();
-    super.dispose();
-  }
-
-  void _save() {
-    final name = _nameController.text.trim();
-    final text = _textController.text.trim();
-    if (name.isNotEmpty && text.isNotEmpty) {
-      widget.onSave(name, text);
-      Navigator.pop(context);
     }
   }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-        left: 16,
-        right: 16,
-        top: 16,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            widget.title,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Name',
-              border: OutlineInputBorder(),
-            ),
-            textInputAction: TextInputAction.next,
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _textController,
-            maxLines: 6,
-            decoration: const InputDecoration(
-              labelText: 'Prompt text',
-              border: OutlineInputBorder(),
-              alignLabelWithHint: true,
-            ),
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _save(),
-          ),
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: _save,
-            child: const Text('Save'),
-          ),
-          const SizedBox(height: 8),
-        ],
-      ),
-    );
-  }
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -348,6 +260,93 @@ class _CustomPromptSheetState extends State<_CustomPromptSheet> {
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddCustomPromptSheet,
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+class _CustomPromptSheet extends StatefulWidget {
+  final String? initialName;
+  final String? initialText;
+  final String title;
+  final void Function(String name, String text) onSave;
+
+  const _CustomPromptSheet({
+    this.initialName,
+    this.initialText,
+    this.title = 'Add Custom Prompt',
+    required this.onSave,
+  });
+
+  @override
+  State<_CustomPromptSheet> createState() => _CustomPromptSheetState();
+}
+
+class _CustomPromptSheetState extends State<_CustomPromptSheet> {
+  late final _nameController = TextEditingController(text: widget.initialName);
+  late final _textController = TextEditingController(text: widget.initialText);
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _textController.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final name = _nameController.text.trim();
+    final text = _textController.text.trim();
+    if (name.isNotEmpty && text.isNotEmpty) {
+      widget.onSave(name, text);
+      Navigator.pop(context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        left: 16,
+        right: 16,
+        top: 16,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            widget.title,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _nameController,
+            decoration: const InputDecoration(
+              labelText: 'Name',
+              border: OutlineInputBorder(),
+            ),
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _textController,
+            maxLines: 6,
+            decoration: const InputDecoration(
+              labelText: 'Prompt text',
+              border: OutlineInputBorder(),
+              alignLabelWithHint: true,
+            ),
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _save(),
+          ),
+          const SizedBox(height: 16),
+          FilledButton(
+            onPressed: _save,
+            child: const Text('Save'),
+          ),
+          const SizedBox(height: 8),
+        ],
       ),
     );
   }
