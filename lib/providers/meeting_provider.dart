@@ -478,6 +478,7 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
   }
 
   Future<void> resetTranscription() async {
+    if (_isPlaceholder) return;
     final meeting = state;
     final repository = ref.read(meetingRepositoryProvider);
 
@@ -485,15 +486,18 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
       clearRawTranscript: true,
       clearCleanedTranscript: true,
       clearSpeakerSegments: true,
+      clearTranscriptionLog: true,
       summaries: [],
       status: MeetingStatus.recorded,
       clearLastError: true,
       clearTranscriptionStatus: true,
       clearTranscriptionProgress: true,
       clearProvider: true,
+      wasLiveTranscribed: false,
     );
     await repository.save(state);
     ref.read(meetingLibraryProvider.notifier).refresh();
+    ref.read(archivedMeetingsProvider.notifier).refresh();
   }
 
   Future<void> rename(String newTitle) async {

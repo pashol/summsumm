@@ -24,8 +24,10 @@ void main() {
   });
 
   group('langSuffix', () {
-    test('returns empty for Same as input', () {
-      expect(langSuffix('Same as input', 'Summary'), '');
+    test('returns suffix for Same as input', () {
+      final result = langSuffix('Same as input', 'Summary');
+      expect(result, contains('same language'));
+      expect(result, contains('IMPORTANT'));
     });
 
     test('returns suffix for other languages', () {
