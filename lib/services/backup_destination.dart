@@ -1,26 +1,37 @@
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 class BackupDestination {
-  static Future<String?> getDownloadsPath() async {
-    if (Platform.isAndroid) {
-      final dirs = await getExternalStorageDirectories(
-        type: StorageDirectory.downloads,
-      );
-      if (dirs != null && dirs.isNotEmpty) {
-        return dirs.first.path;
-      }
-      final extDir = await getExternalStorageDirectory();
-      if (extDir != null) {
-        return p.join(p.dirname(extDir.path), 'Download');
-      }
-    } else if (Platform.isIOS) {
-      final dir = await getApplicationDocumentsDirectory();
-      return dir.path;
+  static const _platform = MethodChannel('app.summsumm/intent');
+
+  /// Returns a temp directory for saving backup before copying to public Downloads.
+  static Future<String> getTempBackupDir() async {
+    final tempDir = await getTemporaryDirectory();
+    final backupDir = Directory(p.join(tempDir.path, 'backups'));
+    await backupDir.create(recursive: true);
+    return backupDir.path;
+  }
+
+  /// Saves the backup file to the public Downloads folder using MediaStore.
+  /// Returns the public URI of the saved file.
+  static Future<String> saveToPublicDownloads({
+    required String sourcePath,
+    required String displayName,
+  }) async {
+    final publicUri = await _platform.invokeMethod<String>(
+      'saveToPublicDownloads',
+      {
+        'sourcePath': sourcePath,
+        'displayName': displayName,
+      },
+    );
+    if (publicUri == null) {
+      throw Exception('Failed to save to public Downloads');
     }
-    return null;
+    return publicUri;
   }
 
   static String generateFilename() {
@@ -30,15 +41,5 @@ class BackupDestination {
     final timeStr =
         '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
     return '${dateStr}_${timeStr}_backup.summsumm';
-  }
-
-  static Future<File> getBackupFile([String? customName]) async {
-    final downloadsPath = await getDownloadsPath();
-    if (downloadsPath == null) {
-      throw Exception('Could not access Downloads folder');
-    }
-    final filename = customName ?? generateFilename();
-    final file = File(p.join(downloadsPath, filename));
-    return file;
   }
 }

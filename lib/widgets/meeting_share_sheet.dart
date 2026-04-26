@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/meeting.dart';
+import '../services/pdf_export_service.dart';
 
 class MeetingShareSheet extends StatelessWidget {
   final Meeting meeting;
@@ -43,6 +44,18 @@ class MeetingShareSheet extends StatelessWidget {
               title: Text(l10n.shareSummary),
               onTap: () => _shareText(context, meeting.summary!),
             ),
+          if (meeting.summaries.isNotEmpty)
+            ListTile(
+              leading: const Icon(Icons.picture_as_pdf_outlined),
+              title: Text(l10n.exportSummaryPdf),
+              onTap: () => _exportSummaryPdf(context),
+            ),
+          if (meeting.transcript != null)
+            ListTile(
+              leading: const Icon(Icons.picture_as_pdf_outlined),
+              title: Text(l10n.exportTranscriptPdf),
+              onTap: () => _exportTranscriptPdf(context),
+            ),
           const SizedBox(height: 8),
         ],
       ),
@@ -70,6 +83,40 @@ class MeetingShareSheet extends StatelessWidget {
   Future<void> _shareText(BuildContext context, String text) async {
     Navigator.pop(context);
     await Share.share(text, subject: meeting.title);
+  }
+
+  Future<void> _exportSummaryPdf(BuildContext context) async {
+    Navigator.pop(context);
+    try {
+      final path = await PdfExportService.exportSummary(meeting);
+      await Share.shareXFiles(
+        [XFile(path)],
+        subject: '${meeting.title} - Summary',
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to export PDF: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _exportTranscriptPdf(BuildContext context) async {
+    Navigator.pop(context);
+    try {
+      final path = await PdfExportService.exportTranscript(meeting);
+      await Share.shareXFiles(
+        [XFile(path)],
+        subject: '${meeting.title} - Transcript',
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to export PDF: $e')),
+        );
+      }
+    }
   }
 }
 

@@ -10,17 +10,22 @@ Ever wanted to quickly summarize articles, emails, or lengthy texts without leav
 
 ### Text Summarization
 - **Share-menu summarization**: Select text in any app and share to summsumm for instant AI summaries
+- **PDF summarization**: Summarize PDF documents directly — AI processes the file inline and generates summaries
+- **PDF follow-up**: Ask questions about uploaded PDFs — chat history and file data are re-sent for contextual answers
 - **Dual AI providers**: Choose between OpenRouter's diverse model selection or OpenAI's GPT models
 - **Text-to-Speech**: Listen to summaries on the go with built-in TTS support — perfect for multitasking
-- **Fact Check mode**: Verify claims with the investigative journalist AI prompt that identifies TRUE/FALSE/UNVERIFIED claims
+- **Fact Check mode**: Verify claims with the investigative journalist AI prompt that identifies TRUE/FALSE/UNVERIFIED claims with emoji prefixes
 - **Streaming summaries**: Watch summaries generate in real-time
-- **Voice Input**: Long-press the send button to record a follow-up question. The app will transcribe your voice using OpenAI Whisper (if OpenAI API key is configured), Voxtral (if OpenRouter API key is configured), or local speech-to-text as fallback.
+- **Voice Input**: Long-press the send button to record a follow-up question. The app transcribes using OpenAI Whisper (if OpenAI API key), Voxtral (if OpenRouter API key), or local speech-to-text as fallback.
 - **Customizable**: Select your preferred AI model and adjust summarization style
 
 ### Meeting Mode (Offline-First)
 - **Record meetings**: Capture audio even when offline
 - **Background recording**: Continues while screen is off (foreground service)
 - **Transcribe later**: Process recordings when network is available
+- **On-Device Transcription**: Offline speech-to-text using Sherpa-ONNX Whisper models — no internet required after initial model download
+- **Speaker Diarization**: Automatically identify different speakers in meeting recordings
+- **Real-time transcription**: Live transcript display during active recording
 - **Summarize**: Generate concise meeting notes with action items
 - **Library**: Browse all recorded meetings in one place
 
@@ -32,7 +37,7 @@ Ever wanted to quickly summarize articles, emails, or lengthy texts without leav
 4. Enter your API key:
    - **OpenRouter**: Get a free key from [openrouter.ai](https://openrouter.ai)
    - **OpenAI**: Get a key from [platform.openai.com](https://platform.openai.com)
-5. Optionally customize the AI model and TTS settings
+5. Optionally customize the AI model, TTS settings, and transcription preferences
 
 ## Usage
 
@@ -47,11 +52,17 @@ Ever wanted to quickly summarize articles, emails, or lengthy texts without leav
 1. Select text in any app
 2. Tap the "Summarize" option in the popup menu
 
+#### PDF Summarization
+1. Launch summsumm directly (no share intent)
+2. Tap the file icon to import a PDF
+3. View the AI-generated summary
+4. Ask follow-up questions in the chat
+
 ### Meeting Recording
 1. Launch the app directly (no share intent)
 2. Tap the mic button to start recording
 3. Stop via notification or in-app button
-4. Transcribe and summarize when online
+4. Transcribe and summarize when online (or on-device for offline)
 
 #### Transcription Statuses
 When transcribing a meeting, you'll see these status indicators:
@@ -64,6 +75,13 @@ When transcribing a meeting, you'll see these status indicators:
 | **Analyzing** | Detecting speech segments and splitting audio at natural pauses |
 | **Transcribing** | Sending audio chunks to AI for speech-to-text conversion |
 | **Finalizing** | Merging chunk transcripts, fixing timestamps, and ensuring consistent speaker labels |
+
+#### On-Device Transcription
+1. Go to Settings → Transcription Strategy
+2. Select "On-Device" (requires one-time model download)
+3. Choose model size: Base (~75MB), Small (~150MB), or Medium (~450MB)
+4. Optionally enable Speaker Diarization for speaker identification
+5. Transcribe recordings without internet
 
 ## Building from Source
 
@@ -96,6 +114,8 @@ flutter build apk --release
 - **Storage**: SharedPreferences + flutter_secure_storage
 - **TTS**: flutter_tts
 - **Audio**: flutter_sound for recording/playback
+- **FFmpeg**: ffmpeg_kit for audio preprocessing
+- **On-Device ASR**: Sherpa-ONNX for offline transcription
 - **Connectivity**: connectivity_plus for offline detection
 
 ## Project Structure
@@ -128,7 +148,12 @@ lib/
 │   ├── secure_storage_service.dart
 │   ├── voice_service.dart
 │   ├── meeting_repository.dart
-│   └── recording_service.dart
+│   ├── recording_service.dart
+│   ├── on_device_transcription_service.dart
+│   ├── real_time_transcription_service.dart
+│   ├── model_download_manager.dart
+│   ├── sherpa_asr_engine.dart
+│   └── sherpa_diarization_engine.dart
 └── widgets/             # Reusable widgets
     ├── glass_card.dart
     └── neumorphic_button.dart
@@ -147,6 +172,7 @@ lib/
 - API keys are stored securely using encrypted storage
 - No data is collected or sent to external servers (except to your chosen AI provider)
 - Text is processed only for summarization and never stored
+- On-device transcription keeps audio completely local
 
 ## License
 

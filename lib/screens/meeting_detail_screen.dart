@@ -17,6 +17,7 @@ import 'package:summsumm/providers/meeting_provider.dart';
 import 'package:summsumm/providers/settings_provider.dart';
 import 'package:summsumm/utils/localized_strings.dart';
 import 'package:summsumm/widgets/meeting_share_sheet.dart';
+import 'package:summsumm/services/audio_player_service.dart';
 
 class MeetingDetailScreen extends ConsumerStatefulWidget {
   final String meetingId;
@@ -37,6 +38,13 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
   late final TabController _tabController;
   final TextEditingController _chatInputController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
+  final ScrollController _chipScrollController = ScrollController();
+  final AudioPlayerService _audioPlayer = AudioPlayerService();
+  bool _isPlaying = false;
+  Duration _audioPosition = Duration.zero;
+  Duration _audioDuration = Duration.zero;
+  bool _audioFileExists = false;
+  int? _previousSummaryCount;
 
   static bool get _isDesktop =>
       Platform.isWindows || Platform.isMacOS || Platform.isLinux;
@@ -45,16 +53,44 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _initAudio();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(meetingLibraryProvider.notifier).refresh();
     });
   }
 
+  Future<void> _initAudio() async {
+    await _audioPlayer.init();
+    _audioPlayer.isPlayingStream.listen((playing) {
+      if (mounted) setState(() => _isPlaying = playing);
+    });
+    _audioPlayer.positionStream.listen((pos) {
+      if (mounted) setState(() => _audioPosition = pos);
+    });
+    _audioPlayer.durationStream.listen((dur) {
+      if (mounted) setState(() => _audioDuration = dur);
+    });
+  }
+
+  Future<void> _toggleAudio(String path) async {
+    if (_isPlaying) {
+      await _audioPlayer.pause();
+    } else {
+      if (_audioPosition > Duration.zero && _audioPosition < _audioDuration) {
+        await _audioPlayer.resume();
+      } else {
+        await _audioPlayer.play(path);
+      }
+    }
+  }
+
   @override
   void dispose() {
+    _audioPlayer.dispose();
     _tabController.dispose();
     _chatInputController.dispose();
     _chatScrollController.dispose();
+    _chipScrollController.dispose();
     super.dispose();
   }
 
@@ -78,6 +114,32 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
     ref.listen(meetingChatProvider(widget.meetingId), (_, __) {
       _scrollChatToBottom();
     });
+    // Auto-select and scroll to newest chip when a summary is added
+    final summaryCount = meeting.summaries.length;
+    if (_previousSummaryCount != null &&
+        summaryCount > _previousSummaryCount!) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() => _activeSummaryIndex = summaryCount - 1);
+          if (_chipScrollController.hasClients) {
+            _chipScrollController.animateTo(
+              _chipScrollController.position.maxScrollExtent,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+            );
+          }
+        }
+      });
+    }
+    _previousSummaryCount = summaryCount;
+    // Check audio file existence
+    if (meeting.type == MeetingType.meeting &&
+        meeting.audioPath.isNotEmpty &&
+        !_audioFileExists) {
+      File(meeting.audioPath).exists().then((exists) {
+        if (mounted && exists) setState(() => _audioFileExists = true);
+      });
+    }
     return Scaffold(
       appBar: AppBar(
         title: Text(meeting.title),
@@ -122,50 +184,112 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
               ],
             ),
           ),
+          if (_audioFileExists && (_isPlaying || _audioPosition > Duration.zero))
+            _buildAudioPlayerBar(),
         ],
       ),
     );
   }
 
   Widget _buildMetadata(Meeting meeting, AppLocalizations l10n) {
+    final showAudioButton = meeting.type == MeetingType.meeting &&
+        _audioFileExists;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (meeting.type == MeetingType.meeting)
-              _MetadataRow(
-                icon: Icons.timer_outlined,
-                label: l10n.meetingDetailDuration,
-                value: _formatDuration(meeting.durationSec),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (meeting.type == MeetingType.meeting)
+                    _MetadataRow(
+                      icon: Icons.timer_outlined,
+                      label: l10n.meetingDetailDuration,
+                      value: _formatDuration(meeting.durationSec),
+                    ),
+                  _MetadataRow(
+                    icon: Icons.calendar_today,
+                    label: l10n.meetingDetailRecorded,
+                    value: _formatDateTime(context, meeting.createdAt),
+                  ),
+                  if (meeting.provider != null)
+                    _MetadataRow(
+                      icon: Icons.transcribe,
+                      label: l10n.meetingDetailTranscribedBy,
+                      value: meeting.provider!,
+                    ),
+                  if (meeting.lastError != null) ...[
+                    const SizedBox(height: 8),
+                    MaterialBanner(
+                      content: Text(meeting.lastError!),
+                      leading: Icon(
+                        Icons.error_outline,
+                        color: Theme.of(context).colorScheme.onErrorContainer,
+                      ),
+                      backgroundColor:
+                          Theme.of(context).colorScheme.errorContainer,
+                      actions: const [SizedBox.shrink()],
+                    ),
+                  ],
+                ],
               ),
-            _MetadataRow(
-              icon: Icons.calendar_today,
-              label: l10n.meetingDetailRecorded,
-              value: _formatDateTime(context, meeting.createdAt),
             ),
-            if (meeting.provider != null)
-              _MetadataRow(
-                icon: Icons.transcribe,
-                label: l10n.meetingDetailTranscribedBy,
-                value: meeting.provider!,
+            if (showAudioButton)
+              IconButton(
+                icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow),
+                onPressed: () => _toggleAudio(meeting.audioPath),
+                tooltip: _isPlaying ? 'Pause' : 'Play',
               ),
-            if (meeting.lastError != null) ...[
-              const SizedBox(height: 8),
-              MaterialBanner(
-                content: Text(meeting.lastError!),
-                leading: Icon(
-                  Icons.error_outline,
-                  color: Theme.of(context).colorScheme.onErrorContainer,
-                ),
-                backgroundColor:
-                    Theme.of(context).colorScheme.errorContainer,
-                actions: const [SizedBox.shrink()],
-              ),
-            ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildAudioPlayerBar() {
+    final cs = Theme.of(context).colorScheme;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final progress = _audioDuration.inMilliseconds > 0
+        ? _audioPosition.inMilliseconds / _audioDuration.inMilliseconds
+        : 0.0;
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(16, 8, 16, bottomPadding + 8),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        border: Border(
+          top: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5)),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Slider(
+            value: progress.clamp(0.0, 1.0),
+            onChanged: (value) {
+              final pos = Duration(
+                milliseconds: (value * _audioDuration.inMilliseconds).round(),
+              );
+              _audioPlayer.seek(pos);
+            },
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                _formatDuration(_audioPosition.inSeconds),
+                style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+              ),
+              Text(
+                _formatDuration(_audioDuration.inSeconds),
+                style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -368,40 +492,46 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
 
   Widget _buildChipRow(Meeting meeting, MeetingNotifier? provider, AppLocalizations l10n) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 4,
-        children: [
-          ...List.generate(meeting.summaries.length, (index) {
-            final summary = meeting.summaries[index];
-            final styleCount = meeting.summaries
-                .where((s) => s.style == summary.style)
-                .toList();
-            final styleIndex = styleCount.indexOf(summary);
-            final styleTitle = summary.style.localizedTitle(context);
-            final chipLabel = styleCount.length > 1
-                ? '$styleTitle ${styleIndex + 1}'
-                : styleTitle;
+      padding: const EdgeInsets.only(left: 16, top: 8, bottom: 8),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            ...List.generate(meeting.summaries.length, (index) {
+              final summary = meeting.summaries[index];
+              final styleCount = meeting.summaries
+                  .where((s) => s.style == summary.style)
+                  .toList();
+              final styleIndex = styleCount.indexOf(summary);
+              final styleTitle = summary.style.localizedTitle(context);
+              final chipLabel = styleCount.length > 1
+                  ? '$styleTitle ${styleIndex + 1}'
+                  : styleTitle;
 
-            return ChoiceChip(
-              label: Text(chipLabel),
-              selected: index == _activeSummaryIndex,
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  showCheckmark: false,
+                  label: Text(chipLabel),
+                  selected: index == _activeSummaryIndex,
+                  onSelected: (_) {
+                    HapticFeedback.lightImpact();
+                    setState(() => _activeSummaryIndex = index);
+                  },
+                ),
+              );
+            }),
+            ChoiceChip(
+              showCheckmark: false,
+              label: const Icon(Icons.add, size: 18),
+              selected: _showAddControls,
               onSelected: (_) {
-                HapticFeedback.lightImpact();
-                setState(() => _activeSummaryIndex = index);
-              },
-            );
-          }),
-          ChoiceChip(
-            label: const Icon(Icons.add, size: 18),
-            selected: _showAddControls,
-            onSelected: (_) {
-                HapticFeedback.lightImpact();
-                setState(() => _showAddControls = !_showAddControls);
-              },
-          ),
-        ],
+                  HapticFeedback.lightImpact();
+                  setState(() => _showAddControls = !_showAddControls);
+                },
+            ),
+          ],
+        ),
       ),
     );
   }

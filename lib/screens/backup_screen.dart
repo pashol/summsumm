@@ -1,14 +1,12 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:summsumm/l10n/app_localizations.dart';
+import 'package:summsumm/providers/backup_progress_provider.dart';
 import 'package:summsumm/providers/backup_service_provider.dart';
-import 'package:summsumm/services/backup_destination.dart';
 import 'package:summsumm/services/backup_service.dart';
 import 'package:summsumm/widgets/glass_card.dart';
 
@@ -27,7 +25,6 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
   bool _includeMeetings = true;
   bool _includeAudio = false;
   final _filenameCtrl = TextEditingController();
-  bool _isExporting = false;
   bool _isImporting = false;
   ImportResult? _lastImportResult;
   _BackupMode _backupMode = _BackupMode.share;
@@ -50,77 +47,28 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
   }
 
   Future<void> _export() async {
+    final notificationStatus = await Permission.notification.request();
+    if (!notificationStatus.isGranted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.backupNotificationPermission)),
+        );
+      }
+      return;
+    }
+
     final password = await _showPasswordDialog(isExport: true);
     if (password == null || password.isEmpty) return;
 
-    setState(() => _isExporting = true);
-
-    const platform = MethodChannel('app.summsumm/intent');
-
-    try {
-      if (_backupMode == _BackupMode.saveToDevice) {
-        platform.invokeMethod('startBackupForeground');
-      }
-
-      final service = ref.read(backupServiceProvider);
-
-      if (_backupMode == _BackupMode.share) {
-        final tempDir = await getTemporaryDirectory();
-        final file = await service.export(
+    ref.read(backupProgressProvider.notifier).startExport(
           password: password,
           includeSettings: _includeSettings,
           includeApiKeys: _includeApiKeys && _includeSettings,
           includeMeetings: _includeMeetings,
           includeAudio: _includeAudio && _includeMeetings,
           filename: _filenameCtrl.text,
-          outputDir: tempDir.path,
+          saveToDevice: _backupMode == _BackupMode.saveToDevice,
         );
-
-        if (mounted) {
-          await Share.shareXFiles(
-            [XFile(file.path)],
-            subject: 'Summsumm Backup',
-          );
-        }
-      } else {
-        final backupFile = await BackupDestination.getBackupFile('${_filenameCtrl.text}.summsumm');
-        await service.saveToFile(
-          password: password,
-          includeSettings: _includeSettings,
-          includeApiKeys: _includeApiKeys && _includeSettings,
-          includeMeetings: _includeMeetings,
-          includeAudio: _includeAudio && _includeMeetings,
-          outputPath: backupFile.path,
-        );
-
-        if (mounted) {
-          final l10n = AppLocalizations.of(context)!;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l10n.backupSavedToDownloads),
-              backgroundColor: Theme.of(context).colorScheme.primary,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_backupMode == _BackupMode.share
-                ? l10n.backupExportFailed(e.toString())
-                : l10n.backupSaveFailed),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-    } finally {
-      if (_backupMode == _BackupMode.saveToDevice) {
-        platform.invokeMethod('stopBackupForeground');
-      }
-      if (mounted) setState(() => _isExporting = false);
-    }
   }
 
   Future<void> _import() async {
@@ -140,7 +88,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     try {
       final service = ref.read(backupServiceProvider);
       final file = File(result.files.single.path!);
-      
+
       final importResult = await service.import(
         password: password,
         file: file,
@@ -149,7 +97,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
         final theme = Theme.of(context);
-        
+
         setState(() => _lastImportResult = importResult);
         if (importResult.success) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -186,7 +134,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final ctrl = TextEditingController();
-    
+
     return showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
@@ -236,13 +184,19 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final backupProgress = ref.watch(backupProgressProvider);
+    final isExporting = backupProgress.status == BackupStatus.running;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.backupTitle),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          bottom: MediaQuery.of(context).padding.bottom + 16,
+        ),
         children: [
           Semantics(
             container: true,
@@ -278,91 +232,169 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    Semantics(
-                      container: true,
-                      child: CheckboxListTile(
-                        title: Text(l10n.backupIncludeSettings),
-                        value: _includeSettings,
-                        onChanged: (v) => setState(() => _includeSettings = v ?? true),
-                        contentPadding: EdgeInsets.zero,
-                        dense: true,
-                      ),
-                    ),
-                    Semantics(
-                      container: true,
-                      child: CheckboxListTile(
-                        title: Text(l10n.backupIncludeApiKeys),
-                        subtitle: Text(l10n.backupIncludeApiKeysHint),
-                        value: _includeApiKeys && _includeSettings,
-                        onChanged: _includeSettings
-                            ? (v) => setState(() => _includeApiKeys = v ?? false)
-                            : null,
-                        contentPadding: EdgeInsets.zero,
-                        dense: true,
-                      ),
-                    ),
-                    Semantics(
-                      container: true,
-                      child: CheckboxListTile(
-                        title: Text(l10n.backupIncludeMeetings),
-                        value: _includeMeetings,
-                        onChanged: (v) => setState(() => _includeMeetings = v ?? true),
-                        contentPadding: EdgeInsets.zero,
-                        dense: true,
-                      ),
-                    ),
-                    Semantics(
-                      container: true,
-                      child: CheckboxListTile(
-                        title: Text(l10n.backupIncludeAudio),
-                        subtitle: Text(l10n.backupIncludeAudioHint),
-                        value: _includeAudio && _includeMeetings,
-                        onChanged: _includeMeetings
-                            ? (v) => setState(() => _includeAudio = v ?? false)
-                            : null,
-                        contentPadding: EdgeInsets.zero,
-                        dense: true,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _filenameCtrl,
-                      decoration: InputDecoration(
-                        labelText: l10n.backupFilename,
-                        border: const OutlineInputBorder(),
-                        suffixText: '.summsumm',
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      l10n.backupModeLabel,
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    SegmentedButton<_BackupMode>(
-                      segments: [
-                        ButtonSegment(
-                          value: _BackupMode.share,
-                          label: Text(l10n.backupModeShare),
-                          icon: const Icon(Icons.share, size: 18),
+                    if (backupProgress.status == BackupStatus.running) ...[
+                      LinearProgressIndicator(value: backupProgress.progress),
+                      const SizedBox(height: 8),
+                      Text(
+                        l10n.backupRunning,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
                         ),
-                        ButtonSegment(
-                          value: _BackupMode.saveToDevice,
-                          label: Text(l10n.backupModeSave),
-                          icon: const Icon(Icons.save, size: 18),
+                      ),
+                      const SizedBox(height: 8),
+                    ] else if (backupProgress.status == BackupStatus.completed) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: cs.primaryContainer.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: cs.primary.withValues(alpha: 0.3)),
                         ),
-                      ],
-                      selected: {_backupMode},
-                      onSelectionChanged: (Set<_BackupMode> selection) {
-                        setState(() => _backupMode = selection.first);
-                      },
-                    ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.check_circle, color: cs.primary, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _backupMode == _BackupMode.saveToDevice
+                                    ? l10n.backupSavedToDownloads
+                                    : l10n.backupExportButton,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: cs.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                ref.read(backupProgressProvider.notifier).reset();
+                              },
+                              child: Text(l10n.backupDismiss),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ] else if (backupProgress.status == BackupStatus.failed) ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: cs.errorContainer.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: cs.error.withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.error, color: cs.error, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                backupProgress.error ?? l10n.backupSaveFailed,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: cs.error,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                ref.read(backupProgressProvider.notifier).reset();
+                              },
+                              child: Text(l10n.backupDismiss),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    if (backupProgress.status == BackupStatus.idle) ...[
+                      Semantics(
+                        container: true,
+                        child: CheckboxListTile(
+                          title: Text(l10n.backupIncludeSettings),
+                          value: _includeSettings,
+                          onChanged: (v) => setState(() => _includeSettings = v ?? true),
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
+                        ),
+                      ),
+                      Semantics(
+                        container: true,
+                        child: CheckboxListTile(
+                          title: Text(l10n.backupIncludeApiKeys),
+                          subtitle: Text(l10n.backupIncludeApiKeysHint),
+                          value: _includeApiKeys && _includeSettings,
+                          onChanged: _includeSettings
+                              ? (v) => setState(() => _includeApiKeys = v ?? false)
+                              : null,
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
+                        ),
+                      ),
+                      Semantics(
+                        container: true,
+                        child: CheckboxListTile(
+                          title: Text(l10n.backupIncludeMeetings),
+                          value: _includeMeetings,
+                          onChanged: (v) => setState(() => _includeMeetings = v ?? true),
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
+                        ),
+                      ),
+                      Semantics(
+                        container: true,
+                        child: CheckboxListTile(
+                          title: Text(l10n.backupIncludeAudio),
+                          subtitle: Text(l10n.backupIncludeAudioHint),
+                          value: _includeAudio && _includeMeetings,
+                          onChanged: _includeMeetings
+                              ? (v) => setState(() => _includeAudio = v ?? false)
+                              : null,
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _filenameCtrl,
+                        decoration: InputDecoration(
+                          labelText: l10n.backupFilename,
+                          border: const OutlineInputBorder(),
+                          suffixText: '.summsumm',
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        l10n.backupModeLabel,
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      SegmentedButton<_BackupMode>(
+                        segments: [
+                          ButtonSegment(
+                            value: _BackupMode.share,
+                            label: Text(l10n.backupModeShare),
+                            icon: const Icon(Icons.share, size: 18),
+                          ),
+                          ButtonSegment(
+                            value: _BackupMode.saveToDevice,
+                            label: Text(l10n.backupModeSave),
+                            icon: const Icon(Icons.save, size: 18),
+                          ),
+                        ],
+                        selected: {_backupMode},
+                        onSelectionChanged: (Set<_BackupMode> selection) {
+                          setState(() => _backupMode = selection.first);
+                        },
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton.icon(
-                        onPressed: _isExporting ? null : _export,
-                        icon: _isExporting
+                        onPressed: isExporting ? null : _export,
+                        icon: isExporting
                             ? SizedBox(
                                 width: 16,
                                 height: 16,
@@ -372,7 +404,11 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                                 ),
                               )
                             : const Icon(Icons.upload),
-                        label: Text(l10n.backupExportButton),
+                        label: Text(
+                          backupProgress.status == BackupStatus.running
+                              ? l10n.backupRunning
+                              : l10n.backupExportButton,
+                        ),
                       ),
                     ),
                   ],
@@ -381,7 +417,7 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          
+
           Semantics(
             container: true,
             label: l10n.backupImportTitle,
@@ -440,32 +476,35 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                     ),
                     if (_lastImportResult != null && _lastImportResult!.success) ...[
                       const SizedBox(height: 16),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: cs.primaryContainer.withValues(alpha: 0.3),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: cs.primary.withValues(alpha: 0.3)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              l10n.backupImportSuccess,
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                color: cs.primary,
-                                fontWeight: FontWeight.w600,
+                      SizedBox(
+                        width: double.infinity,
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: cs.primaryContainer.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: cs.primary.withValues(alpha: 0.3)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                l10n.backupImportSuccess,
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  color: cs.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${l10n.backupMeetingsImported(_lastImportResult!.meetingsImported)}\n'
-                              '${l10n.backupMeetingsSkipped(_lastImportResult!.meetingsSkipped)}\n'
-                              '${l10n.backupSettingsRestored(_lastImportResult!.settingsImported ? l10n.backupYes : l10n.backupNo)}\n'
-                              '${l10n.backupApiKeysRestored(_lastImportResult!.apiKeysImported ? l10n.backupYes : l10n.backupNo)}',
-                              style: theme.textTheme.bodySmall,
-                            ),
-                          ],
+                              const SizedBox(height: 4),
+                              Text(
+                                '${l10n.backupMeetingsImported(_lastImportResult!.meetingsImported)}\n'
+                                '${l10n.backupMeetingsSkipped(_lastImportResult!.meetingsSkipped)}\n'
+                                '${l10n.backupSettingsRestored(_lastImportResult!.settingsImported ? l10n.backupYes : l10n.backupNo)}\n'
+                                '${l10n.backupApiKeysRestored(_lastImportResult!.apiKeysImported ? l10n.backupYes : l10n.backupNo)}',
+                                style: theme.textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -473,9 +512,9 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
                 ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+           ),
+         ],
+       ),
+     );
+   }
+ }

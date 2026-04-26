@@ -23,7 +23,10 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 import android.content.ContentResolver
+import android.content.ContentValues
 import android.media.MediaMetadataRetriever
+import android.os.Environment
+import android.provider.MediaStore
 import android.provider.OpenableColumns
 import java.io.File
 import java.util.UUID
@@ -123,18 +126,46 @@ class MainActivity : FlutterActivity() {
                         }
                     }
                     "startBackupForeground" -> {
-                        val intent = Intent(this, BackupForegroundService::class.java)
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            startForegroundService(intent)
-                        } else {
-                            startService(intent)
-                        }
+                        BackupForegroundService.start(this)
                         result.success(null)
                     }
                     "stopBackupForeground" -> {
-                        val intent = Intent(this, BackupForegroundService::class.java)
-                        stopService(intent)
+                        BackupForegroundService.stop(this)
                         result.success(null)
+                    }
+                    "updateBackupProgress" -> {
+                        val title = call.argument<String>("title") ?: "Creating backup"
+                        val text = call.argument<String>("text") ?: "Please wait..."
+                        val progress = call.argument<Int>("progress") ?: 0
+                        val max = call.argument<Int>("max") ?: 100
+                        val indeterminate = call.argument<Boolean>("indeterminate") ?: false
+                        BackupForegroundService.updateProgress(this, title, text, progress, max, indeterminate)
+                        result.success(null)
+                    }
+                    "showBackupComplete" -> {
+                        val filePath = call.argument<String>("filePath") ?: ""
+                        val displayName = call.argument<String>("displayName") ?: filePath.substringAfterLast("/")
+                        BackupForegroundService.showComplete(this, filePath, displayName)
+                        result.success(null)
+                    }
+                    "showBackupError" -> {
+                        val errorMessage = call.argument<String>("errorMessage") ?: "Backup failed"
+                        BackupForegroundService.showError(this, errorMessage)
+                        result.success(null)
+                    }
+                    "saveToPublicDownloads" -> {
+                        val sourcePath = call.argument<String>("sourcePath")
+                        val displayName = call.argument<String>("displayName")
+                        if (sourcePath != null && displayName != null) {
+                            try {
+                                val publicPath = saveToPublicDownloads(sourcePath, displayName)
+                                result.success(publicPath)
+                            } catch (e: Exception) {
+                                result.error("SAVE_ERROR", e.message, null)
+                            }
+                        } else {
+                            result.error("INVALID_ARGS", "sourcePath or displayName is null", null)
+                        }
                     }
                     else -> result.notImplemented()
                 }
@@ -465,5 +496,51 @@ class MainActivity : FlutterActivity() {
         } catch (_: Exception) {
             0
         }
+    }
+
+    /// Saves a file to the public Downloads folder using MediaStore.
+    /// Returns the public URI of the saved file.
+    private fun saveToPublicDownloads(sourcePath: String, displayName: String): String? {
+        val sourceFile = File(sourcePath)
+        if (!sourceFile.exists()) {
+            throw IllegalArgumentException("Source file does not exist: $sourcePath")
+        }
+
+        val resolver = contentResolver
+        val contentValues = ContentValues().apply {
+            put(MediaStore.Downloads.DISPLAY_NAME, displayName)
+            put(MediaStore.Downloads.MIME_TYPE, "application/octet-stream")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                put(MediaStore.Downloads.IS_PENDING, 1)
+            }
+        }
+
+        val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+        } else {
+            MediaStore.Downloads.EXTERNAL_CONTENT_URI
+        }
+
+        val uri = resolver.insert(collection, contentValues)
+            ?: throw RuntimeException("Failed to create MediaStore entry")
+
+        try {
+            resolver.openOutputStream(uri)?.use { outputStream ->
+                sourceFile.inputStream().use { inputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+            }
+        } catch (e: Exception) {
+            resolver.delete(uri, null, null)
+            throw RuntimeException("Failed to copy file to Downloads: ${e.message}")
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            contentValues.clear()
+            contentValues.put(MediaStore.Downloads.IS_PENDING, 0)
+            resolver.update(uri, contentValues, null, null)
+        }
+
+        return uri.toString()
     }
 }

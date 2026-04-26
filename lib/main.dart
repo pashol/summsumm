@@ -51,7 +51,7 @@ void main() async {
   final otherDocs = <Document>[];
 
   for (final rawDoc in (intentData?['documents'] as List<dynamic>? ?? [])) {
-    final doc = rawDoc as Map<String, dynamic>;
+    final doc = Map<String, dynamic>.from(rawDoc);
     final text = doc['text'] as String? ?? '';
     final uri = doc['uri'] as String?;
     final name = doc['name'] as String?;
@@ -242,7 +242,7 @@ class _SummsummAppState extends ConsumerState<SummsummApp> {
       final otherDocs = <Document>[];
 
       for (final rawDoc in (rawData['documents'] as List<dynamic>? ?? [])) {
-        final doc = rawDoc as Map<String, dynamic>;
+        final doc = Map<String, dynamic>.from(rawDoc);
         final text = (doc['text'] as String?) ?? '';
         final uri = doc['uri'] as String?;
         final name = doc['name'] as String?;

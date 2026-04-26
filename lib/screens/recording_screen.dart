@@ -96,11 +96,21 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> {
   }
 
   Future<void> _startRecording() async {
-    final status = await Permission.microphone.request();
-    if (!status.isGranted) {
+    final micStatus = await Permission.microphone.request();
+    if (!micStatus.isGranted) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(AppLocalizations.of(context)!.recordingMicPermission)),
+        );
+      }
+      return;
+    }
+
+    final notificationStatus = await Permission.notification.request();
+    if (!notificationStatus.isGranted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.notificationPermission)),
         );
       }
       return;
