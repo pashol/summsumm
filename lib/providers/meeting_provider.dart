@@ -490,7 +490,7 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
       clearLastError: true,
       clearTranscriptionStatus: true,
       clearTranscriptionProgress: true,
-      provider: null,
+      clearProvider: true,
     );
     await repository.save(state);
     ref.read(meetingLibraryProvider.notifier).refresh();
