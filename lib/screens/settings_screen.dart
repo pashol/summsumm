@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:summsumm/l10n/app_localizations.dart';
 
+import '../models/app_settings.dart';
 import '../models/summary_style.dart';
 import '../models/transcription_config.dart';
 import '../providers/settings_provider.dart';
@@ -154,7 +155,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _SettingsRow(
                 icon: Icons.summarize,
                 title: l10n.settingsSummaryRow,
-                subtitle: '${SummaryStyle.values.byName(settings.summaryStyle).localizedTitle(context)}, ${localizedLanguageName(context, settings.language)}',
+                subtitle: '${_getSummaryStyleTitle(context, settings)}, ${localizedLanguageName(context, settings.language)}',
                 onTap: () {
                   Navigator.push(
                     context,
@@ -227,6 +228,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ],
       ),
     );
+  }
+}
+
+String _getSummaryStyleTitle(BuildContext context, AppSettings settings) {
+  try {
+    return SummaryStyle.values.byName(settings.summaryStyle).localizedTitle(context);
+  } catch (_) {
+    return SummaryStyle.structured.localizedTitle(context);
   }
 }
 

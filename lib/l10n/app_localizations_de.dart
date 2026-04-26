@@ -162,6 +162,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get retryButton => 'Wiederholen';
 
   @override
+  String get reTranscribeButton => 'Neu transkribieren';
+
+  @override
+  String get reTranscribeConfirmTitle => 'Transkript ersetzen?';
+
+  @override
+  String get reTranscribeConfirmBody =>
+      'Dadurch werden das vorhandene Transkript, die Diarisierung und alle Zusammenfassungen ersetzt. Diese Aktion kann nicht rückgängig gemacht werden.';
+
+  @override
   String get libraryFailedDetails => 'Fehlgeschlagen — tippen für Details';
 
   @override
@@ -758,4 +768,27 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get custom => 'benutzerdefiniert';
+
+  @override
+  String get backupNotificationPermission =>
+      'Benachrichtigungsberechtigung für Backup erforderlich';
+
+  @override
+  String get backupRunning => 'Backup läuft...';
+
+  @override
+  String get backupDismiss => 'Schließen';
+
+  @override
+  String get exportSummaryPdf => 'Zusammenfassung als PDF exportieren';
+
+  @override
+  String get exportTranscriptPdf => 'Transkript als PDF exportieren';
+
+  @override
+  String get notificationPermission =>
+      'Benachrichtigungsberechtigung erforderlich';
+
+  @override
+  String get meetingDetailAudioMissing => 'Audiodatei fehlt';
 }

@@ -22,6 +22,7 @@ class ProcessingService : Service() {
     private val STOP_PROCESSING_ACTION = "app.summsumm.STOP_PROCESSING"
 
     private lateinit var notificationManager: NotificationManager
+    private var wakeLock: android.os.PowerManager.WakeLock? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -36,7 +37,26 @@ class ProcessingService : Service() {
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }
+        acquireWakeLock()
         return START_STICKY
+    }
+
+    private fun acquireWakeLock() {
+        val powerManager = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        wakeLock = powerManager.newWakeLock(
+            android.os.PowerManager.PARTIAL_WAKE_LOCK,
+            "summsumm:ProcessingServiceWakeLock"
+        ).apply {
+            setReferenceCounted(false)
+            acquire(30 * 60 * 1000L) // 30 minutes max
+        }
+    }
+
+    private fun releaseWakeLock() {
+        wakeLock?.let {
+            if (it.isHeld) it.release()
+        }
+        wakeLock = null
     }
 
     private fun createNotificationChannel() {
@@ -86,6 +106,7 @@ class ProcessingService : Service() {
     }
 
     override fun onDestroy() {
+        releaseWakeLock()
         super.onDestroy()
     }
 }

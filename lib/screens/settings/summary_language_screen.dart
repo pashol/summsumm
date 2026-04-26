@@ -10,11 +10,17 @@ import '../../utils/localized_strings.dart';
 class SummaryLanguageScreen extends ConsumerWidget {
   const SummaryLanguageScreen({super.key});
 
-  String _getSelectedValue(AppSettings settings) {
+  String? _getSelectedValue(AppSettings settings) {
     if (settings.selectedCustomPromptId != null) {
-      return 'custom:${settings.selectedCustomPromptId}';
+      final customId = 'custom:${settings.selectedCustomPromptId}';
+      // Verify the custom prompt still exists
+      final exists = settings.customPrompts.any((p) => p.id == settings.selectedCustomPromptId);
+      if (exists) return customId;
     }
-    return settings.summaryStyle;
+    // Validate the summary style is valid
+    final validStyle = SummaryStyle.values.any((s) => s.name == settings.summaryStyle);
+    if (validStyle) return settings.summaryStyle;
+    return SummaryStyle.structured.name;
   }
 
   @override

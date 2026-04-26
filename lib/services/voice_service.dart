@@ -490,6 +490,9 @@ class VoiceService {
     return _transcribeWithOpenAI(filePath, apiKey);
   }
 
+  static const _transcribeTimeout = Duration(seconds: 60);
+  static const _maxTranscribeRetries = 3;
+
   Future<String?> _transcribeWithOpenAI(String filePath, String apiKey) async {
     final file = File(filePath);
     if (!await file.exists()) {
@@ -509,28 +512,61 @@ class VoiceService {
       _ => 'ogg',
     };
 
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse('https://api.openai.com/v1/audio/transcriptions'),
-    );
-    request.headers['Authorization'] = 'Bearer $apiKey';
-    request.files.add(
-      http.MultipartFile.fromBytes(
-        'file',
-        bytes,
-        filename: path.basename(filePath),
-        contentType: MediaType('audio', audioSubtype),
-      ),
-    );
-    request.fields['model'] = 'whisper-1';
+    Exception? lastError;
+    for (var attempt = 0; attempt < _maxTranscribeRetries; attempt++) {
+      try {
+        final request = http.MultipartRequest(
+          'POST',
+          Uri.parse('https://api.openai.com/v1/audio/transcriptions'),
+        );
+        request.headers['Authorization'] = 'Bearer $apiKey';
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'file',
+            bytes,
+            filename: path.basename(filePath),
+            contentType: MediaType('audio', audioSubtype),
+          ),
+        );
+        request.fields['model'] = 'whisper-1';
 
-    final response = await http.Response.fromStream(await _http.send(request));
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body)['text'] as String?;
+        final streamedResponse = await _http.send(request).timeout(_transcribeTimeout);
+        final response = await http.Response.fromStream(streamedResponse);
+
+        if (response.statusCode == 200) {
+          return jsonDecode(response.body)['text'] as String?;
+        }
+        throw VoiceTranscriptionException(
+          _formatError('OpenAI', response.statusCode, response.body),
+        );
+      } on TimeoutException {
+        lastError = VoiceTranscriptionException('Transcription timed out after ${_transcribeTimeout.inSeconds}s');
+        if (attempt < _maxTranscribeRetries - 1) {
+          await Future<void>.delayed(Duration(seconds: attempt + 1));
+          continue;
+        }
+      } on SocketException catch (e) {
+        lastError = VoiceTranscriptionException('Connection error: ${e.message}');
+        if (attempt < _maxTranscribeRetries - 1) {
+          await Future<void>.delayed(Duration(seconds: attempt + 1));
+          continue;
+        }
+      } on http.ClientException catch (e) {
+        lastError = VoiceTranscriptionException('Connection error: ${e.message}');
+        if (attempt < _maxTranscribeRetries - 1) {
+          await Future<void>.delayed(Duration(seconds: attempt + 1));
+          continue;
+        }
+      } catch (e) {
+        if (e is VoiceTranscriptionException) rethrow;
+        lastError = VoiceTranscriptionException(e.toString());
+        if (attempt < _maxTranscribeRetries - 1) {
+          await Future<void>.delayed(Duration(seconds: attempt + 1));
+          continue;
+        }
+      }
     }
-    throw VoiceTranscriptionException(
-      _formatError('OpenAI', response.statusCode, response.body),
-    );
+    throw lastError ?? VoiceTranscriptionException('Transcription failed after $_maxTranscribeRetries attempts');
   }
 
   static const _geminiTranscriptionModel = 'google/gemini-3-flash-preview';
@@ -543,9 +579,6 @@ class VoiceService {
 
   static const _transcriptionPrompt =
       'Transcribe this audio accurately. Output only the transcript.';
-
-  static const _transcribeTimeout = Duration(seconds: 60);
-  static const _maxTranscribeRetries = 3;
 
   Future<String?> _transcribeWithGemini(String filePath, String apiKey, {bool diarize = false}) async {
     final file = File(filePath);

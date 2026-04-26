@@ -49,6 +49,22 @@
   "summarizeButton": "Zusammenfassen",
   "transcribeButton": "Transkribieren",
   "retryButton": "Wiederholen",
+
+  "reTranscribeButton": "Neu transkribieren",
+  "@reTranscribeButton": {
+    "description": "Button to redo transcription from scratch"
+  },
+
+  "reTranscribeConfirmTitle": "Transkript ersetzen?",
+  "@reTranscribeConfirmTitle": {
+    "description": "Dialog title when confirming re-transcription"
+  },
+
+  "reTranscribeConfirmBody": "Dadurch werden das vorhandene Transkript, die Diarisierung und alle Zusammenfassungen ersetzt. Diese Aktion kann nicht rückgängig gemacht werden.",
+  "@reTranscribeConfirmBody": {
+    "description": "Dialog body explaining destructive re-transcription"
+  },
+
   "libraryFailedDetails": "Fehlgeschlagen — tippen für Details",
   "libraryArchivedSnackbar": "Meeting archiviert",
   "undoButton": "Rückgängig",
@@ -358,5 +374,40 @@
   "custom": "benutzerdefiniert",
   "@custom": {
     "description": "Label for custom prompts count"
+  },
+
+  "backupNotificationPermission": "Benachrichtigungsberechtigung für Backup erforderlich",
+  "@backupNotificationPermission": {
+    "description": "Message shown when notification permission is denied for backup"
+  },
+
+  "backupRunning": "Backup läuft...",
+  "@backupRunning": {
+    "description": "Title shown while backup is running"
+  },
+
+  "backupDismiss": "Schließen",
+  "@backupDismiss": {
+    "description": "Button to dismiss backup dialog"
+  },
+
+  "exportSummaryPdf": "Zusammenfassung als PDF exportieren",
+  "@exportSummaryPdf": {
+    "description": "Menu item to export summary as PDF"
+  },
+
+  "exportTranscriptPdf": "Transkript als PDF exportieren",
+  "@exportTranscriptPdf": {
+    "description": "Menu item to export transcript as PDF"
+  },
+
+  "notificationPermission": "Benachrichtigungsberechtigung erforderlich",
+  "@notificationPermission": {
+    "description": "Message shown when notification permission is denied"
+  },
+
+  "meetingDetailAudioMissing": "Audiodatei fehlt",
+  "@meetingDetailAudioMissing": {
+    "description": "Button label when audio file is missing and cannot be transcribed"
   }
 }

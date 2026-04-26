@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,7 +32,7 @@ class MeetingDetailScreen extends ConsumerStatefulWidget {
 class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
     with TickerProviderStateMixin {
   bool _diarize = false;
-  SummaryStyle? _selectedStyle;
+  String? _selectedStyleValue;
   String? _selectedLanguage;
   bool _showAddControls = false;
   int _activeSummaryIndex = 0;
@@ -298,12 +299,13 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
     switch (meeting.status) {
       case MeetingStatus.recorded:
         if (meeting.type == MeetingType.document) {
+          final canSummarize = meeting.audioPath.isNotEmpty && File(meeting.audioPath).existsSync();
           return Center(
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: FilledButton(
-                onPressed: () => provider.summarize(),
-                child: Text(l10n.summarizeButton),
+                onPressed: canSummarize ? () => provider.summarize() : null,
+                child: Text(canSummarize ? l10n.summarizeButton : l10n.meetingDetailAudioMissing),
               ),
             ),
           );
@@ -491,6 +493,8 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
   }
 
   Widget _buildChipRow(Meeting meeting, MeetingNotifier? provider, AppLocalizations l10n) {
+    final settings = ref.watch(settingsProvider);
+
     return Padding(
       padding: const EdgeInsets.only(left: 16, top: 8, bottom: 8),
       child: SingleChildScrollView(
@@ -499,14 +503,22 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
           children: [
             ...List.generate(meeting.summaries.length, (index) {
               final summary = meeting.summaries[index];
-              final styleCount = meeting.summaries
-                  .where((s) => s.style == summary.style)
-                  .toList();
-              final styleIndex = styleCount.indexOf(summary);
-              final styleTitle = summary.style.localizedTitle(context);
-              final chipLabel = styleCount.length > 1
-                  ? '$styleTitle ${styleIndex + 1}'
-                  : styleTitle;
+              // Use custom prompt name if available, otherwise style name
+              String chipLabel;
+              if (summary.customPromptId != null) {
+                final custom = settings.customPrompts
+                    .firstWhereOrNull((p) => p.id == summary.customPromptId);
+                chipLabel = custom?.name ?? summary.style.localizedTitle(context);
+              } else {
+                final styleCount = meeting.summaries
+                    .where((s) => s.style == summary.style && s.customPromptId == null)
+                    .toList();
+                final styleIndex = styleCount.indexOf(summary);
+                final styleTitle = summary.style.localizedTitle(context);
+                chipLabel = styleCount.length > 1
+                    ? '$styleTitle ${styleIndex + 1}'
+                    : styleTitle;
+              }
 
               return Padding(
                 padding: const EdgeInsets.only(right: 8),
@@ -538,31 +550,59 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
 
   Widget _buildAddControls(Meeting meeting, MeetingNotifier provider, AppLocalizations l10n) {
     final availableStyles = SummaryStyle.forType(meeting.type);
+    final settings = ref.read(settingsProvider);
+    final customPrompts = settings.customPrompts;
 
-    _selectedStyle ??= _resolveInitialStyle(
-      ref.read(settingsProvider).summaryStyle,
-      meeting.type,
-    );
-    _selectedLanguage ??= ref.read(settingsProvider).language;
+    // Initialize selected value from settings
+    if (_selectedStyleValue == null) {
+      if (settings.selectedCustomPromptId != null &&
+          customPrompts.any((p) => p.id == settings.selectedCustomPromptId)) {
+        _selectedStyleValue = 'custom:${settings.selectedCustomPromptId}';
+      } else {
+        final parsed = SummaryStyle.values.firstWhere(
+          (s) => s.name == settings.summaryStyle,
+          orElse: () => SummaryStyle.structured,
+        );
+        if (availableStyles.contains(parsed)) {
+          _selectedStyleValue = parsed.name;
+        } else {
+          _selectedStyleValue = availableStyles.first.name;
+        }
+      }
+    }
+    _selectedLanguage ??= settings.language;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          DropdownButtonFormField<SummaryStyle>(
-            initialValue: _selectedStyle,
+          DropdownButtonFormField<String>(
+            initialValue: _selectedStyleValue,
             decoration: InputDecoration(
               labelText: l10n.settingsStyleLabel,
               border: const OutlineInputBorder(),
               isDense: true,
             ),
-            items: availableStyles
-                .map((s) =>
-                    DropdownMenuItem(value: s, child: Text(s.localizedTitle(context))),)
-                .toList(),
+            items: [
+              ...availableStyles.map(
+                (s) => DropdownMenuItem(
+                  value: s.name,
+                  child: Text(s.localizedTitle(context)),
+                ),
+              ),
+              if (customPrompts.isNotEmpty) ...[
+                const DropdownMenuItem(enabled: false, child: Divider()),
+                ...customPrompts.map(
+                  (p) => DropdownMenuItem(
+                    value: 'custom:${p.id}',
+                    child: Text(p.name),
+                  ),
+                ),
+              ],
+            ],
             onChanged: (v) {
-              if (v != null) setState(() => _selectedStyle = v);
+              if (v != null) setState(() => _selectedStyleValue = v);
             },
           ),
           const SizedBox(height: 8),
@@ -586,9 +626,26 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
               Expanded(
                 child: FilledButton(
                   onPressed: () {
-                    final style = _selectedStyle!;
+                    final styleValue = _selectedStyleValue!;
                     final language = _selectedLanguage!;
-                    final styleTitle = style.localizedTitle(context);
+
+                    SummaryStyle? selectedStyle;
+                    String? customPromptId;
+                    String styleTitle;
+
+                    if (styleValue.startsWith('custom:')) {
+                      customPromptId = styleValue.substring(7);
+                      selectedStyle = SummaryStyle.structured;
+                      final prompt = customPrompts.firstWhereOrNull((p) => p.id == customPromptId);
+                      styleTitle = prompt?.name ?? l10n.styleStructured;
+                    } else {
+                      selectedStyle = SummaryStyle.values.firstWhere(
+                        (s) => s.name == styleValue,
+                        orElse: () => SummaryStyle.structured,
+                      );
+                      styleTitle = selectedStyle.localizedTitle(context);
+                    }
+
                     showDialog<void>(
                       context: context,
                       builder: (ctx) => AlertDialog(
@@ -602,12 +659,13 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                               Navigator.pop(ctx);
                               setState(() {
                                 _showAddControls = false;
-                                _selectedStyle = null;
+                                _selectedStyleValue = null;
                                 _selectedLanguage = null;
                               });
                               provider.summarize(
-                                style: style,
+                                style: selectedStyle,
                                 language: language,
+                                customPromptId: customPromptId,
                               );
                             }, isDefault: true),
                         ]),
@@ -621,7 +679,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
               TextButton(
                 onPressed: () => setState(() {
                   _showAddControls = false;
-                  _selectedStyle = null;
+                  _selectedStyleValue = null;
                   _selectedLanguage = null;
                 }),
                 child: Text(l10n.cancelButton),
@@ -631,16 +689,6 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
         ],
       ),
     );
-  }
-
-  SummaryStyle _resolveInitialStyle(String settingsStyle, MeetingType type) {
-    final parsed = SummaryStyle.values.firstWhere(
-      (s) => s.name == settingsStyle,
-      orElse: () => SummaryStyle.structured,
-    );
-    final available = SummaryStyle.forType(type);
-    if (available.contains(parsed)) return parsed;
-    return available.first;
   }
 
   Widget _buildTranscriptTab(Meeting meeting, MeetingNotifier provider, AppLocalizations l10n) {
@@ -690,8 +738,8 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
               ),
               const SizedBox(height: 8),
               FilledButton(
-                onPressed: () => provider.transcribe(diarize: _diarize),
-                child: Text(l10n.transcribeButton),
+                onPressed: _audioFileExists ? () => provider.transcribe(diarize: _diarize) : null,
+                child: Text(_audioFileExists ? l10n.transcribeButton : l10n.meetingDetailAudioMissing),
               ),
             ],
           ),

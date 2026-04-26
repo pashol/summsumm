@@ -380,6 +380,24 @@ abstract class AppLocalizations {
   /// **'Retry'**
   String get retryButton;
 
+  /// Button to redo transcription from scratch
+  ///
+  /// In en, this message translates to:
+  /// **'Re-transcribe'**
+  String get reTranscribeButton;
+
+  /// Dialog title when confirming re-transcription
+  ///
+  /// In en, this message translates to:
+  /// **'Replace transcript?'**
+  String get reTranscribeConfirmTitle;
+
+  /// Dialog body explaining destructive re-transcription
+  ///
+  /// In en, this message translates to:
+  /// **'This will replace the existing transcript, diarization, and all summaries. This action cannot be undone.'**
+  String get reTranscribeConfirmBody;
+
   /// Error indicator text in meeting tiles
   ///
   /// In en, this message translates to:
@@ -1477,6 +1495,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'custom'**
   String get custom;
+
+  /// Message shown when notification permission is denied for backup
+  ///
+  /// In en, this message translates to:
+  /// **'Notification permission is required for backup'**
+  String get backupNotificationPermission;
+
+  /// Title shown while backup is running
+  ///
+  /// In en, this message translates to:
+  /// **'Backup in progress...'**
+  String get backupRunning;
+
+  /// Button to dismiss backup dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get backupDismiss;
+
+  /// Menu item to export summary as PDF
+  ///
+  /// In en, this message translates to:
+  /// **'Export Summary as PDF'**
+  String get exportSummaryPdf;
+
+  /// Menu item to export transcript as PDF
+  ///
+  /// In en, this message translates to:
+  /// **'Export Transcript as PDF'**
+  String get exportTranscriptPdf;
+
+  /// Message shown when notification permission is denied
+  ///
+  /// In en, this message translates to:
+  /// **'Notification permission is required'**
+  String get notificationPermission;
+
+  /// Button label when audio file is missing and cannot be transcribed
+  ///
+  /// In en, this message translates to:
+  /// **'Audio file missing'**
+  String get meetingDetailAudioMissing;
 }
 
 class _AppLocalizationsDelegate

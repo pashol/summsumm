@@ -248,6 +248,21 @@
     "description": "Button to retry a failed operation"
   },
 
+  "reTranscribeButton": "Re-transcribe",
+  "@reTranscribeButton": {
+    "description": "Button to redo transcription from scratch"
+  },
+
+  "reTranscribeConfirmTitle": "Replace transcript?",
+  "@reTranscribeConfirmTitle": {
+    "description": "Dialog title when confirming re-transcription"
+  },
+
+  "reTranscribeConfirmBody": "This will replace the existing transcript, diarization, and all summaries. This action cannot be undone.",
+  "@reTranscribeConfirmBody": {
+    "description": "Dialog body explaining destructive re-transcription"
+  },
+
   "libraryFailedDetails": "Failed — tap for details",
   "@libraryFailedDetails": {
     "description": "Error indicator text in meeting tiles"
@@ -1184,5 +1199,40 @@
   "custom": "custom",
   "@custom": {
     "description": "Label for custom prompts count"
+  },
+
+  "backupNotificationPermission": "Notification permission is required for backup",
+  "@backupNotificationPermission": {
+    "description": "Message shown when notification permission is denied for backup"
+  },
+
+  "backupRunning": "Backup in progress...",
+  "@backupRunning": {
+    "description": "Title shown while backup is running"
+  },
+
+  "backupDismiss": "Dismiss",
+  "@backupDismiss": {
+    "description": "Button to dismiss backup dialog"
+  },
+
+  "exportSummaryPdf": "Export Summary as PDF",
+  "@exportSummaryPdf": {
+    "description": "Menu item to export summary as PDF"
+  },
+
+  "exportTranscriptPdf": "Export Transcript as PDF",
+  "@exportTranscriptPdf": {
+    "description": "Menu item to export transcript as PDF"
+  },
+
+  "notificationPermission": "Notification permission is required",
+  "@notificationPermission": {
+    "description": "Message shown when notification permission is denied"
+  },
+
+  "meetingDetailAudioMissing": "Audio file missing",
+  "@meetingDetailAudioMissing": {
+    "description": "Button label when audio file is missing and cannot be transcribed"
   }
 }

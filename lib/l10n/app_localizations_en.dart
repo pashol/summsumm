@@ -161,6 +161,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get retryButton => 'Retry';
 
   @override
+  String get reTranscribeButton => 'Re-transcribe';
+
+  @override
+  String get reTranscribeConfirmTitle => 'Replace transcript?';
+
+  @override
+  String get reTranscribeConfirmBody =>
+      'This will replace the existing transcript, diarization, and all summaries. This action cannot be undone.';
+
+  @override
   String get libraryFailedDetails => 'Failed — tap for details';
 
   @override
@@ -754,4 +764,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get custom => 'custom';
+
+  @override
+  String get backupNotificationPermission =>
+      'Notification permission is required for backup';
+
+  @override
+  String get backupRunning => 'Backup in progress...';
+
+  @override
+  String get backupDismiss => 'Dismiss';
+
+  @override
+  String get exportSummaryPdf => 'Export Summary as PDF';
+
+  @override
+  String get exportTranscriptPdf => 'Export Transcript as PDF';
+
+  @override
+  String get notificationPermission => 'Notification permission is required';
+
+  @override
+  String get meetingDetailAudioMissing => 'Audio file missing';
 }
