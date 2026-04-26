@@ -98,6 +98,17 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
     final settings = ref.read(settingsProvider);
     final repository = ref.read(meetingRepositoryProvider);
 
+    // Check if audio file exists
+    if (!await io.File(meeting.audioPath).exists()) {
+      state = meeting.copyWith(
+        status: MeetingStatus.failed,
+        lastError: 'Audio file not found: ${meeting.audioPath}',
+      );
+      await repository.save(state);
+      ref.read(meetingLibraryProvider.notifier).refresh();
+      return;
+    }
+
     // Check if using on-device transcription
     if (settings.transcriptionStrategy == TranscriptionStrategy.onDevice) {
       await _transcribeOnDevice(diarize: diarize);
@@ -322,11 +333,22 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
     }
   }
 
-  Future<void> summarize({SummaryStyle? style, String? language}) async {
+  Future<void> summarize({SummaryStyle? style, String? language, String? customPromptId}) async {
     final meeting = state;
     final settings = ref.read(settingsProvider);
     final aiService = ref.read(aiServiceProvider);
     final repository = ref.read(meetingRepositoryProvider);
+
+    // Check if source file exists for documents
+    if (meeting.type == MeetingType.document && !await io.File(meeting.audioPath).exists()) {
+      state = meeting.copyWith(
+        status: MeetingStatus.failed,
+        lastError: 'Source file not found: ${meeting.audioPath}',
+      );
+      await repository.save(state);
+      ref.read(meetingLibraryProvider.notifier).refresh();
+      return;
+    }
 
     final resolvedStyle = style ?? _resolveStyle(settings.summaryStyle, meeting.type);
     final resolvedLanguage = language ?? settings.language;
@@ -347,7 +369,7 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
 
     try {
       final langSuffixText = langSuffix(resolvedLanguage, 'The summary');
-      final systemPrompt = _promptForStyle(resolvedStyle, meeting.type, langSuffixText);
+      final systemPrompt = _promptForStyle(resolvedStyle, meeting.type, langSuffixText, customPromptId: customPromptId);
 
       String summary = '';
       final newSummary = MeetingSummary(
@@ -356,6 +378,7 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
         language: resolvedLanguage,
         content: '',
         createdAt: DateTime.now(),
+        customPromptId: customPromptId,
       );
 
       if (meeting.type == MeetingType.document) {
@@ -422,14 +445,15 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
     return available.first;
   }
 
-  String _promptForStyle(SummaryStyle style, MeetingType type, String langSuffixText) {
+  String _promptForStyle(SummaryStyle style, MeetingType type, String langSuffixText, {String? customPromptId}) {
     final settings = ref.read(settingsProvider);
 
-    // Check if a custom prompt is selected
+    // Check if a custom prompt is selected (either passed in or from settings)
     CustomPrompt? selectedCustom;
-    if (settings.selectedCustomPromptId != null) {
+    final effectiveCustomPromptId = customPromptId ?? settings.selectedCustomPromptId;
+    if (effectiveCustomPromptId != null) {
       selectedCustom = settings.customPrompts.firstWhereOrNull(
-        (p) => p.id == settings.selectedCustomPromptId,
+        (p) => p.id == effectiveCustomPromptId,
       );
     }
 
@@ -451,6 +475,25 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
         await summarize();
       }
     }
+  }
+
+  Future<void> resetTranscription() async {
+    final meeting = state;
+    final repository = ref.read(meetingRepositoryProvider);
+
+    state = meeting.copyWith(
+      clearRawTranscript: true,
+      clearCleanedTranscript: true,
+      clearSpeakerSegments: true,
+      summaries: [],
+      status: MeetingStatus.recorded,
+      clearLastError: true,
+      clearTranscriptionStatus: true,
+      clearTranscriptionProgress: true,
+      provider: null,
+    );
+    await repository.save(state);
+    ref.read(meetingLibraryProvider.notifier).refresh();
   }
 
   Future<void> rename(String newTitle) async {
