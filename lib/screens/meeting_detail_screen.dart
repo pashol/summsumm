@@ -691,6 +691,99 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
     );
   }
 
+  bool _canDiarize(AppSettings settings) {
+    return settings.provider == 'openrouter' ||
+        settings.transcriptionStrategy == TranscriptionStrategy.onDevice;
+  }
+
+  bool _hasTranscriptDataToReset(Meeting meeting) {
+    return meeting.transcript != null ||
+        (meeting.speakerSegments?.isNotEmpty ?? false) ||
+        meeting.wasLiveTranscribed;
+  }
+
+  void _showReTranscribeConfirm(
+    BuildContext context,
+    MeetingNotifier provider,
+    AppLocalizations l10n,
+  ) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.reTranscribeConfirmTitle),
+        content: Text(l10n.reTranscribeConfirmBody),
+        actions: _buildDialogActions(ctx, [
+          (
+            label: l10n.cancelButton,
+            onPressed: () => Navigator.pop(ctx),
+            isDefault: false,
+          ),
+          (
+            label: l10n.reTranscribeButton,
+            onPressed: () {
+              Navigator.pop(ctx);
+              provider.resetTranscription();
+            },
+            isDefault: true,
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildTranscriptActions(
+    Meeting meeting,
+    MeetingNotifier provider,
+    AppLocalizations l10n,
+  ) {
+    final settings = ref.watch(settingsProvider);
+    final canDiarize = _canDiarize(settings);
+    final showReTranscribe = meeting.type != MeetingType.document &&
+        meeting.status != MeetingStatus.recorded &&
+        meeting.status != MeetingStatus.transcribing &&
+        (meeting.status != MeetingStatus.failed ||
+            _hasTranscriptDataToReset(meeting));
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: Row(
+        children: [
+          Tooltip(
+            message: canDiarize ? '' : l10n.meetingDetailDiarizationRequires,
+            child: Row(
+              children: [
+                Switch(
+                  value: _diarize,
+                  onChanged: canDiarize
+                      ? (v) => setState(() => _diarize = v)
+                      : null,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  l10n.meetingDetailDiarizeSpeakers,
+                  style: TextStyle(
+                    color: canDiarize
+                        ? null
+                        : Theme.of(context).disabledColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Spacer(),
+          if (showReTranscribe)
+            OutlinedButton.icon(
+              onPressed: meeting.status == MeetingStatus.summarizing
+                  ? null
+                  : () => _showReTranscribeConfirm(context, provider, l10n),
+              icon: const Icon(Icons.refresh, size: 18),
+              label: Text(l10n.reTranscribeButton),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTranscriptTab(Meeting meeting, MeetingNotifier provider, AppLocalizations l10n) {
     switch (meeting.status) {
       case MeetingStatus.recorded:
@@ -706,8 +799,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
           );
         }
         final settings = ref.watch(settingsProvider);
-        final canDiarize = settings.provider == 'openrouter' ||
-                           settings.transcriptionStrategy == TranscriptionStrategy.onDevice;
+        final canDiarize = _canDiarize(settings);
 
         return Padding(
           padding: const EdgeInsets.all(16),
@@ -754,6 +846,8 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
       case MeetingStatus.done:
         return Column(
           children: [
+            if (meeting.type != MeetingType.document)
+              _buildTranscriptActions(meeting, provider, l10n),
             if (meeting.type == MeetingType.document)
               MaterialBanner(
                 content: Text(l10n.meetingDetailDocumentContent),
@@ -802,14 +896,21 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
         );
       case MeetingStatus.failed:
         if (meeting.type == MeetingType.document) return const SizedBox.shrink();
-        return Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: FilledButton(
-              onPressed: provider.retry,
-              child: Text(l10n.retryButton),
+        return Column(
+          children: [
+            _buildTranscriptActions(meeting, provider, l10n),
+            Expanded(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: FilledButton(
+                    onPressed: provider.retry,
+                    child: Text(l10n.retryButton),
+                  ),
+                ),
+              ),
             ),
-          ),
+          ],
         );
     }
   }
