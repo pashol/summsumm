@@ -101,7 +101,7 @@ Column(
 
 `Meeting.copyWith` currently uses `rawTranscript: rawTranscript ?? this.rawTranscript`, which means passing `rawTranscript: null` **does not clear** the field — it keeps the old value. The same applies to `cleanedTranscript` and `speakerSegments`.
 
-**Fix:** Add `clearRawTranscript`, `clearCleanedTranscript`, and `clearSpeakerSegments` boolean flags (default `false`) to `Meeting.copyWith`. When a flag is `true`, the corresponding field is explicitly set to `null` regardless of the passed value.
+**Fix:** Add `clearRawTranscript`, `clearCleanedTranscript`, `clearSpeakerSegments`, `clearProvider`, and `clearTranscriptionLog` boolean flags (default `false`) to `Meeting.copyWith`. When a flag is `true`, the corresponding field is explicitly set to `null` regardless of the passed value.
 
 ```dart
 Meeting copyWith({
@@ -109,6 +109,8 @@ Meeting copyWith({
   bool clearRawTranscript = false,
   bool clearCleanedTranscript = false,
   bool clearSpeakerSegments = false,
+  bool clearProvider = false,
+  bool clearTranscriptionLog = false,
   // ...
 }) {
   return Meeting(
@@ -116,6 +118,8 @@ Meeting copyWith({
     rawTranscript: clearRawTranscript ? null : (rawTranscript ?? this.rawTranscript),
     cleanedTranscript: clearCleanedTranscript ? null : (cleanedTranscript ?? this.cleanedTranscript),
     speakerSegments: clearSpeakerSegments ? null : (speakerSegments ?? this.speakerSegments),
+    provider: clearProvider ? null : (provider ?? this.provider),
+    transcriptionLog: clearTranscriptionLog ? null : (transcriptionLog ?? this.transcriptionLog),
     // ...
   );
 }
@@ -133,12 +137,12 @@ Fields cleared on re-transcribe:
 - `transcriptionStatus` → `null` (via `clearTranscriptionStatus: true`)
 - `transcriptionProgress` → `null` (via `clearTranscriptionProgress: true`)
 - `provider` → `null`
+- `transcriptionLog` → `null` (via `clearTranscriptionLog: true`)
+- `wasLiveTranscribed` → `false`
 
 Fields preserved:
 - `id`, `createdAt`, `durationSec`, `audioPath`, `title`
 - `type`, `archived`, `cleanupEnabled`
-- `wasLiveTranscribed`
-- `transcriptionLog` (diagnostic, may be useful for support)
 
 ---
 
@@ -148,6 +152,8 @@ Fields preserved:
 
 ```dart
 Future<void> resetTranscription() async {
+  if (_isPlaceholder) return;
+
   final meeting = state;
   final repository = ref.read(meetingRepositoryProvider);
 
@@ -160,10 +166,13 @@ Future<void> resetTranscription() async {
     clearLastError: true,
     clearTranscriptionStatus: true,
     clearTranscriptionProgress: true,
-    provider: null,
+    clearProvider: true,
+    clearTranscriptionLog: true,
+    wasLiveTranscribed: false,
   );
   await repository.save(state);
   ref.read(meetingLibraryProvider.notifier).refresh();
+  ref.read(archivedMeetingsProvider.notifier).refresh();
 }
 ```
 
@@ -180,7 +189,7 @@ The existing `retry()` method remains unchanged for backward compatibility. It h
 | Re-transcribe during `summarizing` | Button is disabled. Prevents race condition between summary generation and transcript wipe. |
 | Re-transcribe with missing audio | After reset, status is `recorded`. The existing `_audioFileExists` check disables the Transcribe button and shows "Audio missing" label. |
 | On-device model not yet downloaded | After reset + manual Transcribe, follows existing flow: initialize service → download model → transcribe. |
-| Live-transcribed meeting (`wasLiveTranscribed == true`) | Flag is preserved. If user re-transcribes on-device, `_transcribeOnDevice()` skips ASR and only runs diarization if requested. This is correct existing behavior. |
+| Live-transcribed meeting (`wasLiveTranscribed == true`) | Flag is reset to `false`. On-device re-transcription will run full ASR from scratch, not skip it. |
 | Document-type meetings | Re-transcribe is not shown. `_buildTranscriptTab` returns document-specific UI. |
 
 ---
@@ -221,11 +230,12 @@ The existing `retry()` method remains unchanged for backward compatibility. It h
 
 ## 10. Files to Modify
 
-1. `lib/providers/meeting_provider.dart` — add `resetTranscription()` method.
-2. `lib/screens/meeting_detail_screen.dart` — add Re-transcribe button + confirmation dialog.
-3. `lib/l10n/app_localizations.dart` — add new string getters.
-4. `lib/l10n/app_localizations_en.dart` — add English strings.
-5. `lib/l10n/app_localizations_de.dart` — add German strings.
+1. `lib/models/meeting.dart` — add `clearRawTranscript`, `clearCleanedTranscript`, `clearSpeakerSegments`, `clearProvider`, `clearTranscriptionLog` flags to `Meeting.copyWith`.
+2. `lib/providers/meeting_provider.dart` — add `resetTranscription()` method.
+3. `lib/screens/meeting_detail_screen.dart` — add Re-transcribe button + confirmation dialog.
+4. `lib/l10n/app_localizations.dart` — add new string getters.
+5. `lib/l10n/app_localizations_en.dart` — add English strings.
+6. `lib/l10n/app_localizations_de.dart` — add German strings.
 
 ---
 
