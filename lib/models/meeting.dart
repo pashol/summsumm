@@ -10,6 +10,7 @@ class MeetingSummary {
   final String language;
   final String content;
   final DateTime createdAt;
+  final String? customPromptId;
 
   const MeetingSummary({
     required this.id,
@@ -17,6 +18,7 @@ class MeetingSummary {
     required this.language,
     required this.content,
     required this.createdAt,
+    this.customPromptId,
   });
 
   MeetingSummary copyWith({
@@ -25,6 +27,7 @@ class MeetingSummary {
     String? language,
     String? content,
     DateTime? createdAt,
+    String? customPromptId,
   }) {
     return MeetingSummary(
       id: id ?? this.id,
@@ -32,6 +35,7 @@ class MeetingSummary {
       language: language ?? this.language,
       content: content ?? this.content,
       createdAt: createdAt ?? this.createdAt,
+      customPromptId: customPromptId ?? this.customPromptId,
     );
   }
 
@@ -42,6 +46,7 @@ class MeetingSummary {
       'language': language,
       'content': content,
       'createdAt': createdAt.toUtc().toIso8601String(),
+      'customPromptId': customPromptId,
     };
   }
 
@@ -55,6 +60,7 @@ class MeetingSummary {
       language: json['language'] as String? ?? 'Same as input',
       content: json['content'] as String? ?? '',
       createdAt: DateTime.parse(json['createdAt'] as String),
+      customPromptId: json['customPromptId'] as String?,
     );
   }
 }
@@ -133,6 +139,9 @@ class Meeting {
     List<MeetingSummary>? summaries,
     List<SpeakerSegment>? speakerSegments,
     bool? wasLiveTranscribed,
+    bool clearRawTranscript = false,
+    bool clearCleanedTranscript = false,
+    bool clearSpeakerSegments = false,
   }) {
     return Meeting(
       id: id ?? this.id,
@@ -140,8 +149,8 @@ class Meeting {
       durationSec: durationSec ?? this.durationSec,
       audioPath: audioPath ?? this.audioPath,
       title: title ?? this.title,
-      rawTranscript: rawTranscript ?? this.rawTranscript,
-      cleanedTranscript: cleanedTranscript ?? this.cleanedTranscript,
+      rawTranscript: clearRawTranscript ? null : (rawTranscript ?? this.rawTranscript),
+      cleanedTranscript: clearCleanedTranscript ? null : (cleanedTranscript ?? this.cleanedTranscript),
       cleanupEnabled: cleanupEnabled ?? this.cleanupEnabled,
       status: status ?? this.status,
       lastError: clearLastError ? null : (lastError ?? this.lastError),
@@ -152,7 +161,7 @@ class Meeting {
       transcriptionStatus: clearTranscriptionStatus ? null : (transcriptionStatus ?? this.transcriptionStatus),
       transcriptionProgress: clearTranscriptionProgress ? null : (transcriptionProgress ?? this.transcriptionProgress),
       summaries: summaries ?? this.summaries,
-      speakerSegments: speakerSegments ?? this.speakerSegments,
+      speakerSegments: clearSpeakerSegments ? null : (speakerSegments ?? this.speakerSegments),
       wasLiveTranscribed: wasLiveTranscribed ?? this.wasLiveTranscribed,
     );
   }

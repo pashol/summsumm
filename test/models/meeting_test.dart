@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:summsumm/models/meeting.dart';
 import 'package:summsumm/models/summary_style.dart';
+import 'package:summsumm/models/transcription_config.dart';
 
 void main() {
   group('MeetingSummary', () {
@@ -295,6 +296,59 @@ void main() {
       expect(restored.cleanedTranscript, 'This is a test.');
       expect(restored.cleanupEnabled, true);
       expect(restored.transcript, 'This is a test.');
+    });
+
+    test('copyWith clearRawTranscript clears rawTranscript', () {
+      final meeting = Meeting(
+        id: 'm1',
+        createdAt: DateTime.utc(2026, 4, 20),
+        durationSec: 300,
+        audioPath: '/path',
+        title: 'Test',
+        status: MeetingStatus.transcribed,
+        rawTranscript: 'Raw text',
+        cleanedTranscript: 'Clean text',
+      );
+
+      final updated = meeting.copyWith(clearRawTranscript: true);
+      expect(updated.rawTranscript, null);
+      expect(updated.cleanedTranscript, 'Clean text');
+      expect(updated.transcript, 'Clean text');
+    });
+
+    test('copyWith clearCleanedTranscript clears cleanedTranscript', () {
+      final meeting = Meeting(
+        id: 'm1',
+        createdAt: DateTime.utc(2026, 4, 20),
+        durationSec: 300,
+        audioPath: '/path',
+        title: 'Test',
+        status: MeetingStatus.transcribed,
+        rawTranscript: 'Raw text',
+        cleanedTranscript: 'Clean text',
+      );
+
+      final updated = meeting.copyWith(clearCleanedTranscript: true);
+      expect(updated.cleanedTranscript, null);
+      expect(updated.rawTranscript, 'Raw text');
+      expect(updated.transcript, 'Raw text');
+    });
+
+    test('copyWith clearSpeakerSegments clears speakerSegments', () {
+      final meeting = Meeting(
+        id: 'm1',
+        createdAt: DateTime.utc(2026, 4, 20),
+        durationSec: 300,
+        audioPath: '/path',
+        title: 'Test',
+        status: MeetingStatus.transcribed,
+        speakerSegments: [
+          const SpeakerSegment(startTime: 0, endTime: 5, speakerLabel: 'Alice', text: 'Hi'),
+        ],
+      );
+
+      final updated = meeting.copyWith(clearSpeakerSegments: true);
+      expect(updated.speakerSegments, null);
     });
   });
 }
