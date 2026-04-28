@@ -19,6 +19,7 @@ class AudioPlayerService {
   Future<void> init() async {
     if (_isInitialized) return;
     await _player.openPlayer();
+    await _player.setSubscriptionDuration(const Duration(milliseconds: 200));
     _isInitialized = true;
 
     // Listen to progress updates from the player

@@ -69,9 +69,13 @@ class AiService {
           if (data == '[DONE]') return;
           try {
             final json = jsonDecode(data) as Map<String, dynamic>;
+            final Object? error = json['error'];
+            if (error != null) throw AiException(_streamErrorMessage(error));
             final delta =
                 (json['choices'] as List?)?.first?['delta']?['content'];
             if (delta is String && delta.isNotEmpty) yield delta;
+          } on AiException {
+            rethrow;
           } catch (_) {
             // Malformed SSE line — skip
           }
@@ -85,9 +89,13 @@ class AiService {
           if (data != '[DONE]') {
             try {
               final json = jsonDecode(data) as Map<String, dynamic>;
+              final Object? error = json['error'];
+              if (error != null) throw AiException(_streamErrorMessage(error));
               final delta =
                   (json['choices'] as List?)?.first?['delta']?['content'];
               if (delta is String && delta.isNotEmpty) yield delta;
+            } on AiException {
+              rethrow;
             } catch (_) {}
           }
         }
@@ -181,9 +189,13 @@ class AiService {
           if (data == '[DONE]') return;
           try {
             final json = jsonDecode(data) as Map<String, dynamic>;
+            final Object? error = json['error'];
+            if (error != null) throw AiException(_streamErrorMessage(error));
             final delta =
                 (json['choices'] as List?)?.first?['delta']?['content'];
             if (delta is String && delta.isNotEmpty) yield delta;
+          } on AiException {
+            rethrow;
           } catch (_) {}
         }
       }
@@ -194,6 +206,14 @@ class AiService {
     }
   }
 
+  String _streamErrorMessage(Object error) {
+    if (error is Map<String, dynamic>) {
+      final message = error['message'];
+      if (message is String && message.isNotEmpty) return message;
+    }
+    return error.toString();
+  }
+
   Stream<String> cleanupTranscript({
     required String rawTranscript,
     required String provider,
@@ -201,9 +221,14 @@ class AiService {
     required String model,
     bool diarized = false,
   }) async* {
-    final prompt = '''Clean and refine the following transcript according to these rules:
+    final structureRules = diarized
+        ? '- Keep timestamps and speaker labels exactly as they are (format: [hh:mm:ss] Speaker X:).'
+        : '- Do not add timestamps.\n- Do not add speaker labels.';
 
-- Keep timestamps and speaker labels exactly as they are (format: [hh:mm:ss] Speaker X:).
+    final prompt =
+        '''Clean and refine the following transcript according to these rules:
+
+$structureRules
 - Remove filler words, repetitions, false starts, and spoken-language artifacts.
 - Keep the original language
 - Correct grammar, sentence structure, and wording without changing the meaning.
@@ -212,6 +237,10 @@ class AiService {
 - Do not add new information or interpretations.
 - Preserve the original order of statements strictly.
 - Keep the wording precise and concise without embellishment.
+- Do not add an introduction.
+- Do not add explanations.
+- Do not add a "Changes made" section.
+- Output only the cleaned transcript.
 
 Transcript:
 $rawTranscript''';
@@ -273,7 +302,10 @@ You are a helpful assistant that summarizes documents concisely. Formatting rule
         return await _voiceService.transcribeWithOpenAI(filePath, apiKey);
       case 'openrouter':
         return await _voiceService.transcribeFile(
-          filePath, provider, apiKey, diarize: diarize,
+          filePath,
+          provider,
+          apiKey,
+          diarize: diarize,
         );
       default:
         return await _voiceService.transcribeLocally(filePath);

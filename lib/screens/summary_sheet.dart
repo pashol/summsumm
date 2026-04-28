@@ -23,7 +23,8 @@ class SummarySheet extends ConsumerStatefulWidget {
   final int initialIndex;
   final void Function(String summary)? onSummarized;
   final void Function(String error)? onSummaryFailed;
-  final ScrollController? scrollController; // when set, skip inner DraggableScrollableSheet
+  final ScrollController?
+      scrollController; // when set, skip inner DraggableScrollableSheet
   final VoidCallback? onClose; // when set, overrides Navigator.pop()
 
   const SummarySheet({
@@ -45,7 +46,7 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
   bool _isRecording = false;
   ScrollController? _scrollCtrl;
 
-   void _startRecording(LongPressStartDetails _) async {
+  void _startRecording(LongPressStartDetails _) async {
     try {
       setState(() => _isRecording = true);
       await ref.read(voiceServiceProvider).startRecording();
@@ -54,13 +55,15 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.summarySheetFailedRecording(e.toString()))),
+          SnackBar(
+            content: Text(l10n.summarySheetFailedRecording(e.toString())),
+          ),
         );
       }
     }
   }
 
-   void _stopRecordingAndSendHandler(LongPressEndDetails _) async {
+  void _stopRecordingAndSendHandler(LongPressEndDetails _) async {
     try {
       setState(() => _isRecording = false);
       final filePath = await ref.read(voiceServiceProvider).stopRecording();
@@ -91,7 +94,7 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
 
   final _followUpCtrl = TextEditingController();
   final _followUpFocus = FocusNode();
-  late AnimationController _entryController;
+  AnimationController? _entryController;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
 
@@ -99,6 +102,13 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
   void initState() {
     super.initState();
     _activeIndex = widget.initialIndex;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_entryController != null) return;
+
     _entryController = AnimationController(
       duration: animDuration(context, M3Tokens.durationSpring),
       vsync: this,
@@ -106,19 +116,20 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.1),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _entryController,
-      curve: M3Tokens.spatialSpring,
-    ),
+    ).animate(
+      CurvedAnimation(
+        parent: _entryController!,
+        curve: M3Tokens.spatialSpring,
+      ),
     );
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _entryController,
+        parent: _entryController!,
         curve: M3Tokens.effectsSpring,
       ),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _entryController.forward();
+      _entryController?.forward();
       _startSummary();
     });
   }
@@ -153,7 +164,7 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
         );
   }
 
-   Future<void> _sendFollowUp() async {
+  Future<void> _sendFollowUp() async {
     final question = _followUpCtrl.text.trim();
     if (question.isEmpty) return;
     _followUpCtrl.clear();
@@ -230,7 +241,7 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
 
   @override
   void dispose() {
-    _entryController.dispose();
+    _entryController?.dispose();
 
     _followUpCtrl.dispose();
     _followUpFocus.dispose();
@@ -240,22 +251,22 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
 
   @override
   Widget build(BuildContext context) {
-     ref.listen<SummaryState>(summaryProvider, (prev, next) {
-        if (prev?.status != SummaryStatus.done &&
-            next.status == SummaryStatus.done) {
-          widget.onSummarized?.call(next.summary);
-        }
-       if (prev?.status != SummaryStatus.error &&
-           next.status == SummaryStatus.error) {
-         widget.onSummaryFailed?.call(next.error);
-       }
-       // Auto-scroll when new chat messages are added
-       if (prev != null && next.chat.length > prev.chat.length) {
-         WidgetsBinding.instance.addPostFrameCallback((_) {
-           _scrollToBottom();
-         });
-       }
-     });
+    ref.listen<SummaryState>(summaryProvider, (prev, next) {
+      if (prev?.status != SummaryStatus.done &&
+          next.status == SummaryStatus.done) {
+        widget.onSummarized?.call(next.summary);
+      }
+      if (prev?.status != SummaryStatus.error &&
+          next.status == SummaryStatus.error) {
+        widget.onSummaryFailed?.call(next.error);
+      }
+      // Auto-scroll when new chat messages are added
+      if (prev != null && next.chat.length > prev.chat.length) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _scrollToBottom();
+        });
+      }
+    });
     final summaryState = ref.watch(summaryProvider);
     final notifier = ref.read(summaryProvider.notifier);
 
@@ -267,72 +278,72 @@ class _SummarySheetState extends ConsumerState<SummarySheet>
     }
 
     Widget buildBody(ScrollController ctrl) => AnimatedBuilder(
-      animation: _entryController,
-      builder: (context, _) => SlideTransition(
-        position: _slideAnimation,
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: _SheetBody(
-            scrollCtrl: ctrl,
-            sheetScrollCtrl: ctrl,
-            summaryState: summaryState,
-            documents: widget.documents,
-            activeIndex: _activeIndex,
-            onIndexChanged: (i) => setState(() => _activeIndex = i),
-            followUpCtrl: _followUpCtrl,
-            followUpFocus: _followUpFocus,
-            onCopy: () => _copyToClipboard(summaryState.summary),
-            onReadAloud: () async {
-              final settings = ref.read(settingsProvider);
-              await notifier.startSpeaking(summaryState.summary, settings);
-            },
-            onPauseSpeaking: notifier.pauseSpeaking,
-            onResumeSpeaking: notifier.resumeSpeaking,
-            onStopSpeaking: notifier.stopSpeaking,
-            onNewSummary: () async {
-              await notifier.reset();
-              await _startSummary();
-            },
-            onFactCheck: _factCheck,
-            onClose: () => _handleClose(context),
-            onSettings: _openSettings,
-            onSendFollowUp: _sendFollowUp,
-            isRecording: _isRecording,
-            onLongPressStart: _startRecording,
-            onLongPressEnd: _stopRecordingAndSendHandler,
-            onRetryPdf: () async {
-              final settings = ref.read(settingsProvider);
-              final notifier = ref.read(settingsProvider.notifier);
-              final apiKey =
-                  await notifier.getApiKey(settings.provider) ?? '';
-              await ref
-                  .read(summaryProvider.notifier)
-                  .retryPdfWithFallbackModel(
-                    document: widget.documents[_activeIndex],
-                    apiKey: apiKey,
-                    settings: settings,
-                  );
-            },
+          animation: _entryController!,
+          builder: (context, _) => SlideTransition(
+            position: _slideAnimation,
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: _SheetBody(
+                scrollCtrl: ctrl,
+                sheetScrollCtrl: ctrl,
+                summaryState: summaryState,
+                documents: widget.documents,
+                activeIndex: _activeIndex,
+                onIndexChanged: (i) => setState(() => _activeIndex = i),
+                followUpCtrl: _followUpCtrl,
+                followUpFocus: _followUpFocus,
+                onCopy: () => _copyToClipboard(summaryState.summary),
+                onReadAloud: () async {
+                  final settings = ref.read(settingsProvider);
+                  await notifier.startSpeaking(summaryState.summary, settings);
+                },
+                onPauseSpeaking: notifier.pauseSpeaking,
+                onResumeSpeaking: notifier.resumeSpeaking,
+                onStopSpeaking: notifier.stopSpeaking,
+                onNewSummary: () async {
+                  await notifier.reset();
+                  await _startSummary();
+                },
+                onFactCheck: _factCheck,
+                onClose: () => _handleClose(context),
+                onSettings: _openSettings,
+                onSendFollowUp: _sendFollowUp,
+                isRecording: _isRecording,
+                onLongPressStart: _startRecording,
+                onLongPressEnd: _stopRecordingAndSendHandler,
+                onRetryPdf: () async {
+                  final settings = ref.read(settingsProvider);
+                  final notifier = ref.read(settingsProvider.notifier);
+                  final apiKey =
+                      await notifier.getApiKey(settings.provider) ?? '';
+                  await ref
+                      .read(summaryProvider.notifier)
+                      .retryPdfWithFallbackModel(
+                        document: widget.documents[_activeIndex],
+                        apiKey: apiKey,
+                        settings: settings,
+                      );
+                },
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+
+    if (widget.scrollController != null) {
+      _scrollCtrl = widget.scrollController!;
+      return buildBody(widget.scrollController!);
+    }
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.8,
+      minChildSize: 0.4,
+      maxChildSize: 1.0,
+      expand: false,
+      builder: (_, sheetScrollCtrl) {
+        _scrollCtrl = sheetScrollCtrl;
+        return buildBody(sheetScrollCtrl);
+      },
     );
-
-     if (widget.scrollController != null) {
-       _scrollCtrl = widget.scrollController!;
-       return buildBody(widget.scrollController!);
-     }
-
-     return DraggableScrollableSheet(
-       initialChildSize: 0.8,
-       minChildSize: 0.4,
-       maxChildSize: 1.0,
-       expand: false,
-       builder: (_, sheetScrollCtrl) {
-         _scrollCtrl = sheetScrollCtrl;
-         return buildBody(sheetScrollCtrl);
-       },
-     );
   }
 
   void _handleClose(BuildContext context) {
@@ -502,7 +513,10 @@ class _SheetBody extends StatelessWidget {
                         builder: (context, value, child) {
                           return Transform.scale(
                             scale: 0.9 + (0.1 * value),
-                            child: Opacity(opacity: value.clamp(0.0, 1.0), child: child),
+                            child: Opacity(
+                              opacity: value.clamp(0.0, 1.0),
+                              child: child,
+                            ),
                           );
                         },
                         child: Text(
@@ -511,7 +525,7 @@ class _SheetBody extends StatelessWidget {
                         ),
                       ),
 
-                     // Chat history
+                    // Chat history
                     if (summaryState.chat.isNotEmpty) ...[
                       const Divider(),
                       const SizedBox(height: 8),
@@ -771,7 +785,7 @@ class _ChatBubble extends StatelessWidget {
     final displayContent =
         streamingContent != null && isCursorVisible ? '$content▋' : content;
 
-return Container(
+    return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Align(
         alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
@@ -793,8 +807,12 @@ return Container(
               borderRadius: BorderRadius.only(
                 topLeft: const Radius.circular(20),
                 topRight: const Radius.circular(20),
-                bottomLeft: isUser ? const Radius.circular(20) : const Radius.circular(4),
-                bottomRight: isUser ? const Radius.circular(4) : const Radius.circular(20),
+                bottomLeft: isUser
+                    ? const Radius.circular(20)
+                    : const Radius.circular(4),
+                bottomRight: isUser
+                    ? const Radius.circular(4)
+                    : const Radius.circular(20),
               ),
             ),
             padding: const EdgeInsets.symmetric(
@@ -808,7 +826,9 @@ return Container(
                 ? MarkdownBody(
                     data: displayContent,
                     styleSheet: MarkdownStyleSheet(
-                      p: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                      p: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
                     ),
                   )
                 : Text(
@@ -926,7 +946,7 @@ class _ActionButtonState extends State<_ActionButton>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: animDuration(context, M3Tokens.durationStandard),
+      duration: M3Tokens.durationStandard,
     );
     _scaleAnimation = Tween<double>(begin: 1.0, end: 0.9).animate(
       CurvedAnimation(
@@ -934,6 +954,12 @@ class _ActionButtonState extends State<_ActionButton>
         curve: M3Tokens.buttonPressCurve,
       ),
     );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _controller.duration = animDuration(context, M3Tokens.durationStandard);
   }
 
   @override
@@ -1020,13 +1046,22 @@ class _FollowUpInputState extends State<_FollowUpInput>
     super.initState();
     _pulseCtrl = AnimationController(
       vsync: this,
-      duration: animDuration(context, const Duration(milliseconds: 800)),
+      duration: const Duration(milliseconds: 800),
     );
     _scaleAnim = Tween<double>(begin: 1.0, end: 1.5).animate(
       CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeOut),
     );
     _opacityAnim = Tween<double>(begin: 0.7, end: 0.0).animate(
       CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeOut),
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _pulseCtrl.duration = animDuration(
+      context,
+      const Duration(milliseconds: 800),
     );
   }
 
@@ -1112,8 +1147,8 @@ class _FollowUpInputState extends State<_FollowUpInput>
                       hintText: widget.remainingTurns == 1
                           ? l10n.summarySheetLastFollowUp
                           : l10n.summarySheetFollowUpHint,
-                      border: OutlineInputBorder(
-                        borderRadius: const BorderRadius.all(Radius.circular(24)),
+                      border: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(24)),
                       ),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,

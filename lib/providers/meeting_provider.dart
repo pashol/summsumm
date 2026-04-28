@@ -14,11 +14,14 @@ import 'package:summsumm/providers/on_device_transcription_provider.dart';
 import '../models/custom_prompt.dart';
 import '../utils/prompt_resolver.dart';
 import 'package:collection/collection.dart';
+
 final voiceServiceProvider = Provider<VoiceService>((ref) => VoiceService());
 final aiServiceProvider = Provider<AiService>((ref) => AiService());
-final processingServiceProvider = Provider<ProcessingService>((ref) => ProcessingService());
+final processingServiceProvider =
+    Provider<ProcessingService>((ref) => ProcessingService());
 
-final meetingProvider = NotifierProvider.family<MeetingNotifier, Meeting, String>(
+final meetingProvider =
+    NotifierProvider.family<MeetingNotifier, Meeting, String>(
   MeetingNotifier.new,
 );
 
@@ -73,7 +76,8 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
     try {
       final client = http.Client();
       try {
-        final response = await client.head(url).timeout(const Duration(seconds: 5));
+        final response =
+            await client.head(url).timeout(const Duration(seconds: 5));
         return response.statusCode < 500;
       } finally {
         client.close();
@@ -121,20 +125,28 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
     if (!await _hasConnectivity(settings.provider)) {
       state = meeting.copyWith(
         status: MeetingStatus.failed,
-        lastError: 'No internet connection. Please connect to a network and try again.',
+        lastError:
+            'No internet connection. Please connect to a network and try again.',
       );
       await repository.save(state);
       ref.read(meetingLibraryProvider.notifier).refresh();
       return;
     }
 
-    state = meeting.copyWith(status: MeetingStatus.transcribing, clearLastError: true, transcriptionStatus: 'Validating audio…', transcriptionProgress: null);
+    state = meeting.copyWith(
+        status: MeetingStatus.transcribing,
+        clearLastError: true,
+        transcriptionStatus: 'Validating audio…',
+        transcriptionProgress: null);
     await repository.save(state);
     ref.read(meetingLibraryProvider.notifier).refresh();
 
     try {
       await processingService.start();
-      final apiKey = await ref.read(settingsProvider.notifier).getApiKey(settings.provider) ?? '';
+      final apiKey = await ref
+              .read(settingsProvider.notifier)
+              .getApiKey(settings.provider) ??
+          '';
       final transcript = await voiceService.transcribeFile(
         meeting.audioPath,
         settings.provider,
@@ -153,7 +165,8 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
       if (transcript == null || transcript.trim().isEmpty) {
         state = meeting.copyWith(
           status: MeetingStatus.failed,
-          lastError: 'Transcription returned no text. Please ensure the audio file is valid.',
+          lastError:
+              'Transcription returned no text. Please ensure the audio file is valid.',
         );
         await repository.save(state);
         ref.read(meetingLibraryProvider.notifier).refresh();
@@ -188,6 +201,7 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
             provider: settings.provider,
             apiKey: apiKey,
             model: settings.activeModel,
+            diarized: diarize,
           );
 
           await for (final chunk in cleanupStream) {
@@ -305,7 +319,8 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
       if (transcript.isEmpty) {
         state = meeting.copyWith(
           status: MeetingStatus.failed,
-          lastError: 'Transcription returned no text. Please ensure the audio file is valid.',
+          lastError:
+              'Transcription returned no text. Please ensure the audio file is valid.',
         );
         await repository.save(state);
         ref.read(meetingLibraryProvider.notifier).refresh();
@@ -333,14 +348,16 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
     }
   }
 
-  Future<void> summarize({SummaryStyle? style, String? language, String? customPromptId}) async {
+  Future<void> summarize(
+      {SummaryStyle? style, String? language, String? customPromptId}) async {
     final meeting = state;
     final settings = ref.read(settingsProvider);
     final aiService = ref.read(aiServiceProvider);
     final repository = ref.read(meetingRepositoryProvider);
 
     // Check if source file exists for documents
-    if (meeting.type == MeetingType.document && !await io.File(meeting.audioPath).exists()) {
+    if (meeting.type == MeetingType.document &&
+        !await io.File(meeting.audioPath).exists()) {
       state = meeting.copyWith(
         status: MeetingStatus.failed,
         lastError: 'Source file not found: ${meeting.audioPath}',
@@ -350,26 +367,31 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
       return;
     }
 
-    final resolvedStyle = style ?? _resolveStyle(settings.summaryStyle, meeting.type);
+    final resolvedStyle =
+        style ?? _resolveStyle(settings.summaryStyle, meeting.type);
     final resolvedLanguage = language ?? settings.language;
 
     if (!await _hasConnectivity(settings.provider)) {
       state = meeting.copyWith(
         status: MeetingStatus.failed,
-        lastError: 'No internet connection. Please connect to a network and try again.',
+        lastError:
+            'No internet connection. Please connect to a network and try again.',
       );
       await repository.save(state);
       ref.read(meetingLibraryProvider.notifier).refresh();
       return;
     }
 
-    state = meeting.copyWith(status: MeetingStatus.summarizing, clearLastError: true);
+    state = meeting.copyWith(
+        status: MeetingStatus.summarizing, clearLastError: true);
     await repository.save(state);
     ref.read(meetingLibraryProvider.notifier).refresh();
 
     try {
       final langSuffixText = langSuffix(resolvedLanguage, 'The summary');
-      final systemPrompt = _promptForStyle(resolvedStyle, meeting.type, langSuffixText, customPromptId: customPromptId);
+      final systemPrompt = _promptForStyle(
+          resolvedStyle, meeting.type, langSuffixText,
+          customPromptId: customPromptId);
 
       String summary = '';
       final newSummary = MeetingSummary(
@@ -388,7 +410,10 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
           model: settings.activeModel,
           prompt: systemPrompt,
           provider: settings.provider,
-          apiKey: await ref.read(settingsProvider.notifier).getApiKey(settings.provider) ?? '',
+          apiKey: await ref
+                  .read(settingsProvider.notifier)
+                  .getApiKey(settings.provider) ??
+              '',
         );
         await for (final chunk in summaryStream) {
           summary += chunk;
@@ -408,7 +433,10 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
               'content': meeting.transcript ?? '',
             },
           ],
-          apiKey: await ref.read(settingsProvider.notifier).getApiKey(settings.provider) ?? '',
+          apiKey: await ref
+                  .read(settingsProvider.notifier)
+                  .getApiKey(settings.provider) ??
+              '',
           provider: settings.provider,
         );
         await for (final chunk in summaryStream) {
@@ -418,6 +446,11 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
         }
       }
 
+      if (summary.trim().isEmpty) {
+        throw const AiException(
+            'Summary failed: the provider returned an empty response.');
+      }
+
       state = state.copyWith(
         status: MeetingStatus.done,
         clearLastError: true,
@@ -425,7 +458,7 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
       await repository.save(state);
       ref.read(meetingLibraryProvider.notifier).refresh();
     } catch (e) {
-      state = meeting.copyWith(
+      state = state.copyWith(
         status: MeetingStatus.failed,
         lastError: e.toString(),
       );
@@ -445,12 +478,15 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
     return available.first;
   }
 
-  String _promptForStyle(SummaryStyle style, MeetingType type, String langSuffixText, {String? customPromptId}) {
+  String _promptForStyle(
+      SummaryStyle style, MeetingType type, String langSuffixText,
+      {String? customPromptId}) {
     final settings = ref.read(settingsProvider);
 
     // Check if a custom prompt is selected (either passed in or from settings)
     CustomPrompt? selectedCustom;
-    final effectiveCustomPromptId = customPromptId ?? settings.selectedCustomPromptId;
+    final effectiveCustomPromptId =
+        customPromptId ?? settings.selectedCustomPromptId;
     if (effectiveCustomPromptId != null) {
       selectedCustom = settings.customPrompts.firstWhereOrNull(
         (p) => p.id == effectiveCustomPromptId,

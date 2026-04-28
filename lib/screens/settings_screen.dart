@@ -70,7 +70,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         automaticallyImplyLeading: !widget.isInitialSetup,
       ),
       body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          bottom: MediaQuery.of(context).padding.bottom + 16,
+        ),
         children: [
           if (widget.isInitialSetup) ...[
             const SizedBox(height: 16),
@@ -223,8 +227,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ],
           ),
-
-          const SizedBox(height: 32),
         ],
       ),
     );

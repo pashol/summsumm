@@ -1,6 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../l10n/app_localizations.dart';
@@ -74,8 +76,15 @@ class MeetingShareSheet extends StatelessWidget {
       }
       return;
     }
+    final tempDir = await getTemporaryDirectory();
+    final safeTitle = meeting.title.replaceAll(RegExp(r'[^\w\s-]'), '').trim();
+    final ext = p.extension(meeting.audioPath);
+    final tempFileName = '$safeTitle$ext';
+    final tempPath = p.join(tempDir.path, tempFileName);
+    await file.copy(tempPath);
+
     await Share.shareXFiles(
-      [XFile(meeting.audioPath)],
+      [XFile(tempPath, name: tempFileName)],
       subject: meeting.title,
     );
   }

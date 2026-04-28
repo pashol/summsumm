@@ -1,10 +1,77 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:summsumm/models/app_settings.dart';
+import 'package:summsumm/l10n/app_localizations.dart';
 import 'package:summsumm/models/custom_prompt.dart';
 import 'package:summsumm/models/meeting.dart';
 import 'package:summsumm/models/summary_style.dart';
+import 'package:summsumm/providers/meeting_library_provider.dart';
+import 'package:summsumm/screens/meeting_detail_screen.dart';
+
+class _LoadedMeetings extends MeetingLibraryNotifier {
+  @override
+  Future<List<Meeting>> build() async => [_meetingWithTranscript];
+
+  @override
+  Future<void> refresh() async {
+    state = AsyncData([_meetingWithTranscript]);
+  }
+}
+
+class _NoArchivedMeetings extends ArchivedMeetingsNotifier {
+  @override
+  Future<List<Meeting>> build() async => [];
+
+  @override
+  Future<void> refresh() async {
+    state = const AsyncData([]);
+  }
+}
+
+final _meetingWithTranscript = Meeting(
+  id: 'meeting-1',
+  createdAt: DateTime.utc(2026, 4, 20, 10),
+  durationSec: 300,
+  audioPath: '',
+  title: 'Planning',
+  status: MeetingStatus.done,
+  rawTranscript: 'First line.\nSecond line.',
+  summaries: [
+    MeetingSummary(
+      id: 'summary-1',
+      style: SummaryStyle.concise,
+      language: 'English',
+      content: 'A summary.',
+      createdAt: DateTime.utc(2026, 4, 20, 11),
+    ),
+  ],
+);
 
 void main() {
+  testWidgets('transcript tab uses a floating re-transcribe button',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          meetingLibraryProvider.overrideWith(_LoadedMeetings.new),
+          archivedMeetingsProvider.overrideWith(_NoArchivedMeetings.new),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: MeetingDetailScreen(meetingId: 'meeting-1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Transcript'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PopupMenuButton), findsNothing);
+    expect(find.byIcon(Icons.refresh), findsOneWidget);
+  });
+
   group('MeetingSummary customPromptId', () {
     test('serializes customPromptId to JSON', () {
       final summary = MeetingSummary(
@@ -108,13 +175,14 @@ void main() {
   });
 
   group('MeetingNotifier summarize with customPromptId', () {
-    test('promptForStyle resolves custom prompt when customPromptId is passed', () {
+    test('promptForStyle resolves custom prompt when customPromptId is passed',
+        () {
       // We cannot easily instantiate the notifier here because it needs a Ref,
       // but we can test the PromptResolver directly to ensure it works with
       // the right custom prompt.
       // This test documents that the interaction works as expected.
 
-      final custom = const CustomPrompt(
+      const custom = CustomPrompt(
         id: 'custom-1',
         name: 'Exec',
         text: 'Be executive.',

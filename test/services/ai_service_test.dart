@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -8,7 +7,8 @@ import 'package:summsumm/services/ai_service.dart';
 
 class _MockClient extends http.BaseClient {
   final StreamController<List<int>> _controller = StreamController<List<int>>();
-  final Completer<http.StreamedResponse> _completer = Completer<http.StreamedResponse>();
+  final Completer<http.StreamedResponse> _completer =
+      Completer<http.StreamedResponse>();
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
@@ -31,6 +31,7 @@ class _MockClient extends http.BaseClient {
 
 class _TestableAiService extends AiService {
   final http.Client _client;
+  List<Map<String, dynamic>>? lastMessages;
 
   _TestableAiService(this._client);
 
@@ -41,6 +42,7 @@ class _TestableAiService extends AiService {
     required List<Map<String, dynamic>> messages,
     required String provider,
   }) async* {
+    lastMessages = messages;
     final isProviderOpenAi = provider == 'openai';
     final endpoint = isProviderOpenAi
         ? 'https://api.openai.com/v1/chat/completions'
@@ -94,20 +96,97 @@ void main() {
       final service = _TestableAiService(mockClient);
       const raw = 'Um, like, this is a test. Uh, yeah.';
 
-      final futureChunks = service.cleanupTranscript(
-        rawTranscript: raw,
-        provider: 'openai',
-        apiKey: 'test-key',
-        model: 'gpt-5.4-nano',
-      ).toList();
+      final futureChunks = service
+          .cleanupTranscript(
+            rawTranscript: raw,
+            provider: 'openai',
+            apiKey: 'test-key',
+            model: 'gpt-5.4-nano',
+          )
+          .toList();
 
-      mockClient.emit('data: {"choices":[{"delta":{"content":"Cleaned"}}]}\n\n');
+      mockClient
+          .emit('data: {"choices":[{"delta":{"content":"Cleaned"}}]}\n\n');
       mockClient.emit('data: {"choices":[{"delta":{"content":" text"}}]}\n\n');
       mockClient.emit('data: [DONE]\n\n');
       mockClient.complete();
 
       final chunks = await futureChunks;
       expect(chunks.join(), 'Cleaned text');
+    });
+
+    test('cleanupTranscript tells models not to add meta text', () async {
+      final mockClient = _MockClient();
+      final service = _TestableAiService(mockClient);
+
+      final futureChunks = service
+          .cleanupTranscript(
+            rawTranscript: 'Hello there.',
+            provider: 'openai',
+            apiKey: 'test-key',
+            model: 'gpt-5.4-nano',
+          )
+          .toList();
+
+      mockClient.emit('data: [DONE]\n\n');
+      mockClient.complete();
+      await futureChunks;
+
+      final prompt = service.lastMessages!.single['content'] as String;
+      expect(prompt, contains('Do not add an introduction.'));
+      expect(prompt, contains('Do not add explanations.'));
+      expect(prompt, contains('Do not add a "Changes made" section.'));
+      expect(prompt, contains('Output only the cleaned transcript.'));
+    });
+
+    test('cleanupTranscript uses plain transcript rules when not diarized',
+        () async {
+      final mockClient = _MockClient();
+      final service = _TestableAiService(mockClient);
+
+      final futureChunks = service
+          .cleanupTranscript(
+            rawTranscript: 'Hello there.',
+            provider: 'openai',
+            apiKey: 'test-key',
+            model: 'gpt-5.4-nano',
+          )
+          .toList();
+
+      mockClient.emit('data: [DONE]\n\n');
+      mockClient.complete();
+      await futureChunks;
+
+      final prompt = service.lastMessages!.single['content'] as String;
+      expect(prompt, contains('Do not add timestamps.'));
+      expect(prompt, contains('Do not add speaker labels.'));
+      expect(prompt, isNot(contains('Keep timestamps and speaker labels')));
+    });
+
+    test('cleanupTranscript preserves labels and timestamps when diarized',
+        () async {
+      final mockClient = _MockClient();
+      final service = _TestableAiService(mockClient);
+
+      final futureChunks = service
+          .cleanupTranscript(
+            rawTranscript: '[00:00] Speaker 1: Hello there.',
+            provider: 'openai',
+            apiKey: 'test-key',
+            model: 'gpt-5.4-nano',
+            diarized: true,
+          )
+          .toList();
+
+      mockClient.emit('data: [DONE]\n\n');
+      mockClient.complete();
+      await futureChunks;
+
+      final prompt = service.lastMessages!.single['content'] as String;
+      expect(prompt,
+          contains('Keep timestamps and speaker labels exactly as they are'));
+      expect(prompt, isNot(contains('Do not add timestamps.')));
+      expect(prompt, isNot(contains('Do not add speaker labels.')));
     });
   });
 }

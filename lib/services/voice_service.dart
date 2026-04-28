@@ -710,7 +710,7 @@ TASK:
 2. When the same speaker continues across a chunk boundary, keep the SAME label
 3. Timestamps in the format [MM:SS] or [HH:MM:SS] may be relative to each chunk. Make timestamps ABSOLUTE based on chunk offsets (e.g., if chunk 2 starts at 298s, [00:00] becomes [04:58])
 4. Preserve all speech content verbatim - only fix speaker labels and timestamps
-5. Maintain the format: [HH:MM:SS] Speaker X: <text>
+5. Maintain the format: [HH:MM:SS] Speaker X: <text> (Timestamps must always start on a new line)
 
 Output only the corrected transcript, no explanations or markdown code blocks.'''
 ;

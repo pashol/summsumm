@@ -43,5 +43,15 @@ void main() {
       expect(config.decoderPath, contains('tiny-decoder.int8.onnx'));
       expect(config.tokensPath, contains('tiny-tokens.txt'));
     });
+
+    test('model archive extraction avoids full in-memory decoding', () async {
+      final source = await File(
+        'lib/services/model_download_manager.dart',
+      ).readAsString();
+      final extractionSource = source.substring(source.indexOf('_extract'));
+
+      expect(extractionSource, isNot(contains('readAsBytesSync')));
+      expect(extractionSource, isNot(contains('decodeBytes')));
+    });
   });
 }

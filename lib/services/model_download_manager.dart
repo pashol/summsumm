@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:archive/archive.dart';
+import 'package:archive/archive_io.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
@@ -18,9 +19,12 @@ class ModelDownloadManager {
   bool _isCancelled = false;
 
   static const _modelUrls = {
-    ModelSize.tiny: 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-tiny.tar.bz2',
-    ModelSize.base: 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-base.tar.bz2',
-    ModelSize.small: 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-small.tar.bz2',
+    ModelSize.tiny:
+        'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-tiny.tar.bz2',
+    ModelSize.base:
+        'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-base.tar.bz2',
+    ModelSize.small:
+        'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-small.tar.bz2',
   };
 
   static const _modelNames = {
@@ -30,17 +34,18 @@ class ModelDownloadManager {
   };
 
   static DownloadType _modelSizeToType(ModelSize size) => switch (size) {
-    ModelSize.tiny => DownloadType.whisperTiny,
-    ModelSize.base => DownloadType.whisperBase,
-    ModelSize.small => DownloadType.whisperSmall,
-  };
+        ModelSize.tiny => DownloadType.whisperTiny,
+        ModelSize.base => DownloadType.whisperBase,
+        ModelSize.small => DownloadType.whisperSmall,
+      };
 
-  ModelDownloadManager({http.Client? client}) : _client = client ?? http.Client();
+  ModelDownloadManager({http.Client? client})
+      : _client = client ?? http.Client();
 
   Stream<DownloadProgress> get progressStream => _progressController.stream;
-  
+
   bool get isDownloading => _activeDownloads.isNotEmpty;
-  
+
   void cancelDownload() {
     _isCancelled = true;
     _currentResponse?.stream.listen(null).cancel();
@@ -60,9 +65,9 @@ class ModelDownloadManager {
     final encoderFile = File('$dir/$modelName-encoder.int8.onnx');
     final decoderFile = File('$dir/$modelName-decoder.int8.onnx');
     final tokensFile = File('$dir/$modelName-tokens.txt');
-    return await encoderFile.exists() && 
-           await decoderFile.exists() && 
-           await tokensFile.exists();
+    return await encoderFile.exists() &&
+        await decoderFile.exists() &&
+        await tokensFile.exists();
   }
 
   Future<bool> isSpeakerModelAvailable() async {
@@ -73,44 +78,50 @@ class ModelDownloadManager {
 
   Future<DownloadProgress> downloadModel(ModelSize size) async {
     final type = _modelSizeToType(size);
-    
+
     if (_activeDownloads.contains(type)) {
       throw StateError('Model $size is already downloading');
     }
-    
+
     return await _downloadLock.synchronized(() async {
       _activeDownloads.add(type);
       _isCancelled = false;
-      
+
       final dir = await _modelsDir;
       final modelName = _modelNames[size]!;
       final tarPath = '$dir/$modelName.tar.bz2';
 
-      _progressController.add(DownloadProgress(
-        type: type,
-        fraction: 0.0,
-        status: DownloadStatus.downloading,
-      ),);
+      _progressController.add(
+        DownloadProgress(
+          type: type,
+          fraction: 0.0,
+          status: DownloadStatus.downloading,
+        ),
+      );
 
       try {
         await _downloadFile(_modelUrls[size]!, tarPath, (fraction) {
           if (_isCancelled) {
             throw Exception('Download cancelled');
           }
-          _progressController.add(DownloadProgress(
-            type: type,
-            fraction: fraction * 0.7,
-            status: DownloadStatus.downloading,
-          ),);
+          _progressController.add(
+            DownloadProgress(
+              type: type,
+              fraction: fraction * 0.7,
+              status: DownloadStatus.downloading,
+            ),
+          );
         });
 
         if (_isCancelled) {
           await File(tarPath).delete();
-          _progressController.add(DownloadProgress(
-            type: type,
-            fraction: 0.0,
-            status: DownloadStatus.cancelled,
-          ),);
+          _progressController.add(
+            DownloadProgress(
+              type: type,
+              fraction: 0.0,
+              status: DownloadStatus.cancelled,
+            ),
+          );
           return DownloadProgress(
             type: type,
             fraction: 0.0,
@@ -118,21 +129,25 @@ class ModelDownloadManager {
           );
         }
 
-        _progressController.add(DownloadProgress(
-          type: type,
-          fraction: 0.7,
-          status: DownloadStatus.extracting,
-        ),);
+        _progressController.add(
+          DownloadProgress(
+            type: type,
+            fraction: 0.7,
+            status: DownloadStatus.extracting,
+          ),
+        );
 
         await _extractTarBz2(tarPath, dir, modelName);
 
         await File(tarPath).delete();
 
-        _progressController.add(DownloadProgress(
-          type: type,
-          fraction: 1.0,
-          status: DownloadStatus.completed,
-        ),);
+        _progressController.add(
+          DownloadProgress(
+            type: type,
+            fraction: 1.0,
+            status: DownloadStatus.completed,
+          ),
+        );
 
         return DownloadProgress(
           type: type,
@@ -140,11 +155,14 @@ class ModelDownloadManager {
           status: DownloadStatus.completed,
         );
       } catch (e) {
-        _progressController.add(DownloadProgress(
-          type: type,
-          fraction: 0.0,
-          status: _isCancelled ? DownloadStatus.cancelled : DownloadStatus.failed,
-        ),);
+        _progressController.add(
+          DownloadProgress(
+            type: type,
+            fraction: 0.0,
+            status:
+                _isCancelled ? DownloadStatus.cancelled : DownloadStatus.failed,
+          ),
+        );
         rethrow;
       } finally {
         _activeDownloads.remove(type);
@@ -152,7 +170,11 @@ class ModelDownloadManager {
     });
   }
 
-  Future<void> _extractTarBz2(String tarPath, String destDir, String modelName) async {
+  Future<void> _extractTarBz2(
+    String tarPath,
+    String destDir,
+    String modelName,
+  ) async {
     await compute(_extractInIsolate, {
       'tarPath': tarPath,
       'destDir': destDir,
@@ -165,39 +187,22 @@ class ModelDownloadManager {
     final destDir = args['destDir'] as String;
     final modelName = args['modelName'] as String;
 
-    final bytes = File(tarPath).readAsBytesSync();
-    
-    final bz2Decoder = BZip2Decoder();
-    final tarBytes = bz2Decoder.decodeBytes(bytes);
-    
-    final tarArchive = TarDecoder().decodeBytes(tarBytes);
-    
-    for (final entry in tarArchive) {
-      if (!entry.isFile) continue;
-      
-      final fileName = p.basename(entry.name);
-      
-      if (fileName.contains('encoder.int8.onnx')) {
-        final outputPath = '$destDir/$modelName-encoder.int8.onnx';
-        File(outputPath).writeAsBytesSync(entry.content as List<int>);
-      } else if (fileName.contains('decoder.int8.onnx')) {
-        final outputPath = '$destDir/$modelName-decoder.int8.onnx';
-        File(outputPath).writeAsBytesSync(entry.content as List<int>);
-      } else if (fileName.endsWith('tokens.txt')) {
-        final outputPath = '$destDir/$modelName-tokens.txt';
-        File(outputPath).writeAsBytesSync(entry.content as List<int>);
-      }
-    }
+    _extractSelectedTarBz2Files(tarPath, destDir, {
+      'encoder.int8.onnx': '$destDir/$modelName-encoder.int8.onnx',
+      'decoder.int8.onnx': '$destDir/$modelName-decoder.int8.onnx',
+      'tokens.txt': '$destDir/$modelName-tokens.txt',
+    });
   }
 
   Future<void> downloadSpeakerModel() async {
     final dir = await _modelsDir;
     final modelPath = '$dir/speaker-embedding.onnx';
     if (await File(modelPath).exists()) return;
-    
-    const url = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-ecapa-tdnn.tar.bz2';
+
+    const url =
+        'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-ecapa-tdnn.tar.bz2';
     final tarPath = '$dir/speaker.tar.bz2';
-    
+
     await _downloadFile(url, tarPath, (_) {});
     await _extractSpeakerModel(tarPath, dir);
     await File(tarPath).delete();
@@ -214,25 +219,22 @@ class ModelDownloadManager {
     final tarPath = args['tarPath'] as String;
     final destDir = args['destDir'] as String;
 
-    final bytes = File(tarPath).readAsBytesSync();
-    final bz2Decoder = BZip2Decoder();
-    final tarBytes = bz2Decoder.decodeBytes(bytes);
-    final tarArchive = TarDecoder().decodeBytes(tarBytes);
-
-    for (final entry in tarArchive) {
-      if (!entry.isFile) continue;
-      final fileName = p.basename(entry.name);
-      if (fileName == 'model.onnx' || fileName.endsWith('.onnx')) {
-        File('$destDir/speaker-embedding.onnx').writeAsBytesSync(entry.content as List<int>);
-        break;
-      }
-    }
+    _extractSelectedTarBz2Files(
+      tarPath,
+      destDir,
+      const {'model.onnx': ''},
+      fallbackOnnxOutputPath: '$destDir/speaker-embedding.onnx',
+    );
   }
 
-  Future<void> _downloadFile(String url, String path, void Function(double) onProgress) async {
+  Future<void> _downloadFile(
+    String url,
+    String path,
+    void Function(double) onProgress,
+  ) async {
     final request = http.Request('GET', Uri.parse(url));
     final response = _currentResponse = await _client.send(request);
-    
+
     if (response.statusCode != 200) {
       throw Exception('Download failed: ${response.statusCode}');
     }
@@ -334,44 +336,50 @@ class ModelDownloadManager {
 
   Future<DownloadProgress> downloadStreamingModel(String language) async {
     const type = DownloadType.streaming;
-    
+
     if (_activeDownloads.contains(type)) {
       throw StateError('Streaming model is already downloading');
     }
-    
+
     return await _downloadLock.synchronized(() async {
       _activeDownloads.add(type);
       _isCancelled = false;
-      
+
       final config = StreamingModelConfigs.forLanguage(language);
       final dir = await _modelsDir;
       final tarPath = '$dir/streaming_model.tar.bz2';
 
-      _progressController.add(const DownloadProgress(
-        type: type,
-        fraction: 0.0,
-        status: DownloadStatus.downloading,
-      ),);
+      _progressController.add(
+        const DownloadProgress(
+          type: type,
+          fraction: 0.0,
+          status: DownloadStatus.downloading,
+        ),
+      );
 
       try {
         await _downloadFile(config.url, tarPath, (fraction) {
           if (_isCancelled) {
             throw Exception('Download cancelled');
           }
-          _progressController.add(DownloadProgress(
-            type: type,
-            fraction: fraction * 0.7,
-            status: DownloadStatus.downloading,
-          ),);
+          _progressController.add(
+            DownloadProgress(
+              type: type,
+              fraction: fraction * 0.7,
+              status: DownloadStatus.downloading,
+            ),
+          );
         });
 
         if (_isCancelled) {
           await File(tarPath).delete();
-          _progressController.add(const DownloadProgress(
-            type: type,
-            fraction: 0.0,
-            status: DownloadStatus.cancelled,
-          ),);
+          _progressController.add(
+            const DownloadProgress(
+              type: type,
+              fraction: 0.0,
+              status: DownloadStatus.cancelled,
+            ),
+          );
           return const DownloadProgress(
             type: type,
             fraction: 0.0,
@@ -379,20 +387,24 @@ class ModelDownloadManager {
           );
         }
 
-        _progressController.add(const DownloadProgress(
-          type: type,
-          fraction: 0.7,
-          status: DownloadStatus.extracting,
-        ),);
+        _progressController.add(
+          const DownloadProgress(
+            type: type,
+            fraction: 0.7,
+            status: DownloadStatus.extracting,
+          ),
+        );
 
         await _extractStreamingModel(tarPath, dir, config);
         await File(tarPath).delete();
 
-        _progressController.add(const DownloadProgress(
-          type: type,
-          fraction: 1.0,
-          status: DownloadStatus.completed,
-        ),);
+        _progressController.add(
+          const DownloadProgress(
+            type: type,
+            fraction: 1.0,
+            status: DownloadStatus.completed,
+          ),
+        );
 
         return const DownloadProgress(
           type: type,
@@ -400,11 +412,14 @@ class ModelDownloadManager {
           status: DownloadStatus.completed,
         );
       } catch (e) {
-        _progressController.add(DownloadProgress(
-          type: type,
-          fraction: 0.0,
-          status: _isCancelled ? DownloadStatus.cancelled : DownloadStatus.failed,
-        ),);
+        _progressController.add(
+          DownloadProgress(
+            type: type,
+            fraction: 0.0,
+            status:
+                _isCancelled ? DownloadStatus.cancelled : DownloadStatus.failed,
+          ),
+        );
         rethrow;
       } finally {
         _activeDownloads.remove(type);
@@ -412,7 +427,11 @@ class ModelDownloadManager {
     });
   }
 
-  Future<void> _extractStreamingModel(String tarPath, String destDir, StreamingModelConfig config) async {
+  Future<void> _extractStreamingModel(
+    String tarPath,
+    String destDir,
+    StreamingModelConfig config,
+  ) async {
     await compute(_extractStreamingInIsolate, {
       'tarPath': tarPath,
       'destDir': destDir,
@@ -425,26 +444,12 @@ class ModelDownloadManager {
     final destDir = args['destDir'] as String;
     final config = args['config'] as StreamingModelConfig;
 
-    final bytes = File(tarPath).readAsBytesSync();
-    final bz2Decoder = BZip2Decoder();
-    final tarBytes = bz2Decoder.decodeBytes(bytes);
-    final tarArchive = TarDecoder().decodeBytes(tarBytes);
-
-    for (final entry in tarArchive) {
-      if (!entry.isFile) continue;
-
-      final fileName = p.basename(entry.name);
-
-      if (fileName == config.encoderFile) {
-        File('$destDir/${config.encoderFile}').writeAsBytesSync(entry.content as List<int>);
-      } else if (fileName == config.decoderFile) {
-        File('$destDir/${config.decoderFile}').writeAsBytesSync(entry.content as List<int>);
-      } else if (fileName == config.joinerFile) {
-        File('$destDir/${config.joinerFile}').writeAsBytesSync(entry.content as List<int>);
-      } else if (fileName == config.tokensFile) {
-        File('$destDir/${config.tokensFile}').writeAsBytesSync(entry.content as List<int>);
-      }
-    }
+    _extractSelectedTarBz2Files(tarPath, destDir, {
+      config.encoderFile: '$destDir/${config.encoderFile}',
+      config.decoderFile: '$destDir/${config.decoderFile}',
+      config.joinerFile: '$destDir/${config.joinerFile}',
+      config.tokensFile: '$destDir/${config.tokensFile}',
+    });
   }
 
   Future<Map<String, String>> getStreamingModelPaths(String language) async {
@@ -461,7 +466,8 @@ class ModelDownloadManager {
   // Diarization model methods
   Future<bool> isSegmentationModelAvailable() async {
     final dir = await _modelsDir;
-    return await File('$dir/sherpa-onnx-pyannote-segmentation-3-0.onnx').exists();
+    return await File('$dir/sherpa-onnx-pyannote-segmentation-3-0.onnx')
+        .exists();
   }
 
   Future<bool> isEmbeddingModelAvailable() async {
@@ -471,50 +477,60 @@ class ModelDownloadManager {
 
   Future<void> downloadEmbeddingModel() async {
     const type = DownloadType.embedding;
-    
+
     if (_activeDownloads.contains(type)) {
       throw StateError('Embedding model is already downloading');
     }
-    
+
     await _downloadLock.synchronized(() async {
       _activeDownloads.add(type);
       _isCancelled = false;
-      
+
       final dir = await _modelsDir;
       final modelPath = '$dir/speaker-embedding.onnx';
       if (await File(modelPath).exists()) return;
 
-      const url = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx';
+      const url =
+          'https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx';
 
-      _progressController.add(const DownloadProgress(
-        type: type,
-        fraction: 0.0,
-        status: DownloadStatus.downloading,
-      ),);
+      _progressController.add(
+        const DownloadProgress(
+          type: type,
+          fraction: 0.0,
+          status: DownloadStatus.downloading,
+        ),
+      );
 
       try {
         await _downloadFile(url, modelPath, (fraction) {
           if (_isCancelled) {
             throw Exception('Download cancelled');
           }
-          _progressController.add(DownloadProgress(
-            type: type,
-            fraction: fraction,
-            status: DownloadStatus.downloading,
-          ),);
+          _progressController.add(
+            DownloadProgress(
+              type: type,
+              fraction: fraction,
+              status: DownloadStatus.downloading,
+            ),
+          );
         });
 
-        _progressController.add(const DownloadProgress(
-          type: type,
-          fraction: 1.0,
-          status: DownloadStatus.completed,
-        ),);
+        _progressController.add(
+          const DownloadProgress(
+            type: type,
+            fraction: 1.0,
+            status: DownloadStatus.completed,
+          ),
+        );
       } catch (e) {
-        _progressController.add(DownloadProgress(
-          type: type,
-          fraction: 0.0,
-          status: _isCancelled ? DownloadStatus.cancelled : DownloadStatus.failed,
-        ),);
+        _progressController.add(
+          DownloadProgress(
+            type: type,
+            fraction: 0.0,
+            status:
+                _isCancelled ? DownloadStatus.cancelled : DownloadStatus.failed,
+          ),
+        );
         rethrow;
       } finally {
         _activeDownloads.remove(type);
@@ -524,70 +540,84 @@ class ModelDownloadManager {
 
   Future<void> downloadSegmentationModel() async {
     const type = DownloadType.segmentation;
-    
+
     if (_activeDownloads.contains(type)) {
       throw StateError('Segmentation model is already downloading');
     }
-    
+
     await _downloadLock.synchronized(() async {
       _activeDownloads.add(type);
       _isCancelled = false;
-      
+
       final dir = await _modelsDir;
       final modelPath = '$dir/sherpa-onnx-pyannote-segmentation-3-0.onnx';
       if (await File(modelPath).exists()) return;
 
-      const url = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-segmentation-models/sherpa-onnx-pyannote-segmentation-3-0.tar.bz2';
+      const url =
+          'https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-segmentation-models/sherpa-onnx-pyannote-segmentation-3-0.tar.bz2';
       final tarPath = '$dir/segmentation.tar.bz2';
 
-      _progressController.add(const DownloadProgress(
-        type: type,
-        fraction: 0.0,
-        status: DownloadStatus.downloading,
-      ),);
+      _progressController.add(
+        const DownloadProgress(
+          type: type,
+          fraction: 0.0,
+          status: DownloadStatus.downloading,
+        ),
+      );
 
       try {
         await _downloadFile(url, tarPath, (fraction) {
           if (_isCancelled) {
             throw Exception('Download cancelled');
           }
-          _progressController.add(DownloadProgress(
-            type: type,
-            fraction: fraction * 0.7,
-            status: DownloadStatus.downloading,
-          ),);
+          _progressController.add(
+            DownloadProgress(
+              type: type,
+              fraction: fraction * 0.7,
+              status: DownloadStatus.downloading,
+            ),
+          );
         });
 
         if (_isCancelled) {
           await File(tarPath).delete();
-          _progressController.add(const DownloadProgress(
-            type: type,
-            fraction: 0.0,
-            status: DownloadStatus.cancelled,
-          ),);
+          _progressController.add(
+            const DownloadProgress(
+              type: type,
+              fraction: 0.0,
+              status: DownloadStatus.cancelled,
+            ),
+          );
           return;
         }
 
-        _progressController.add(const DownloadProgress(
-          type: type,
-          fraction: 0.7,
-          status: DownloadStatus.extracting,
-        ),);
+        _progressController.add(
+          const DownloadProgress(
+            type: type,
+            fraction: 0.7,
+            status: DownloadStatus.extracting,
+          ),
+        );
 
         await _extractSegmentationModel(tarPath, dir);
         await File(tarPath).delete();
 
-        _progressController.add(const DownloadProgress(
-          type: type,
-          fraction: 1.0,
-          status: DownloadStatus.completed,
-        ),);
+        _progressController.add(
+          const DownloadProgress(
+            type: type,
+            fraction: 1.0,
+            status: DownloadStatus.completed,
+          ),
+        );
       } catch (e) {
-        _progressController.add(DownloadProgress(
-          type: type,
-          fraction: 0.0,
-          status: _isCancelled ? DownloadStatus.cancelled : DownloadStatus.failed,
-        ),);
+        _progressController.add(
+          DownloadProgress(
+            type: type,
+            fraction: 0.0,
+            status:
+                _isCancelled ? DownloadStatus.cancelled : DownloadStatus.failed,
+          ),
+        );
         rethrow;
       } finally {
         _activeDownloads.remove(type);
@@ -606,18 +636,62 @@ class ModelDownloadManager {
     final tarPath = args['tarPath'] as String;
     final destDir = args['destDir'] as String;
 
-    final bytes = File(tarPath).readAsBytesSync();
-    final bz2Decoder = BZip2Decoder();
-    final tarBytes = bz2Decoder.decodeBytes(bytes);
-    final tarArchive = TarDecoder().decodeBytes(tarBytes);
+    _extractSelectedTarBz2Files(tarPath, destDir, {
+      'model.onnx': '$destDir/sherpa-onnx-pyannote-segmentation-3-0.onnx',
+    });
+  }
 
-    for (final entry in tarArchive) {
-      if (!entry.isFile) continue;
-      final fileName = p.basename(entry.name);
-      if (fileName == 'model.onnx') {
-        File('$destDir/sherpa-onnx-pyannote-segmentation-3-0.onnx').writeAsBytesSync(entry.content as List<int>);
-        break;
-      }
+  static void _extractSelectedTarBz2Files(
+    String tarBz2Path,
+    String destDir,
+    Map<String, String> outputPathByFileName, {
+    String? fallbackOnnxOutputPath,
+  }) {
+    final tempTarPath = '$destDir/${p.basename(tarBz2Path)}.tar';
+    final compressedInput = InputFileStream(tarBz2Path);
+    final tarOutput = OutputFileStream(tempTarPath);
+
+    try {
+      BZip2Decoder().decodeStream(compressedInput, tarOutput);
+    } finally {
+      compressedInput.closeSync();
+      tarOutput.closeSync();
+    }
+
+    final tarInput = InputFileStream(tempTarPath);
+    try {
+      TarDecoder().decodeStream(
+        tarInput,
+        callback: (entry) {
+          if (!entry.isFile) return;
+
+          final fileName = p.basename(entry.name);
+          var outputPath = outputPathByFileName[fileName];
+          outputPath ??= outputPathByFileName.entries
+              .where((mapping) => fileName.endsWith(mapping.key))
+              .map((mapping) => mapping.value)
+              .firstOrNull;
+
+          if ((outputPath == null || outputPath.isEmpty) &&
+              fallbackOnnxOutputPath != null &&
+              fileName.endsWith('.onnx')) {
+            outputPath = fallbackOnnxOutputPath;
+          }
+
+          if (outputPath == null || outputPath.isEmpty) return;
+
+          final output = OutputFileStream(outputPath);
+          try {
+            entry.writeContent(output);
+          } finally {
+            output.closeSync();
+          }
+        },
+      );
+    } finally {
+      tarInput.closeSync();
+      final tempTar = File(tempTarPath);
+      if (tempTar.existsSync()) tempTar.deleteSync();
     }
   }
 
