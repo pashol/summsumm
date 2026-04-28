@@ -1191,6 +1191,31 @@
     "description": "Settings row title for prompt editor"
   },
 
+  "askLibraryTitle": "Ask Library",
+  "@askLibraryTitle": {
+    "description": "Title for Ask Library feature"
+  },
+
+  "askLibrarySubtitle": "Search and chat across indexed transcripts and documents",
+  "@askLibrarySubtitle": {
+    "description": "Subtitle describing Ask Library feature"
+  },
+
+  "localLibraryChatTitle": "Local library chat",
+  "@localLibraryChatTitle": {
+    "description": "Settings row title for local library chat"
+  },
+
+  "localLibraryChatSubtitleEnabled": "Ask Library indexing is enabled",
+  "@localLibraryChatSubtitleEnabled": {
+    "description": "Subtitle when local library chat is enabled"
+  },
+
+  "localLibraryChatSubtitleDisabled": "Ask Library indexing is disabled",
+  "@localLibraryChatSubtitleDisabled": {
+    "description": "Subtitle when local library chat is disabled"
+  },
+
   "edited": "edited",
   "@edited": {
     "description": "Label for edited prompts count"

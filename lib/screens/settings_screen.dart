@@ -129,6 +129,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   );
                 },
               ),
+              const Divider(height: 1, indent: 16, endIndent: 16),
+              _SettingsRow(
+                icon: Icons.manage_search_outlined,
+                title: l10n.localLibraryChatTitle,
+                subtitle: settings.localLibraryChatEnabled
+                    ? l10n.localLibraryChatSubtitleEnabled
+                    : l10n.localLibraryChatSubtitleDisabled,
+                onTap: () {
+                  ref
+                      .read(settingsProvider.notifier)
+                      .setLocalLibraryChatEnabled(!settings.localLibraryChatEnabled);
+                },
+              ),
             ],
           ),
 

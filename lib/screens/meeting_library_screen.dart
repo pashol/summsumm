@@ -373,12 +373,13 @@ class _AskLibraryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
       child: ListTile(
         leading: const Icon(Icons.manage_search_outlined),
-        title: const Text('Ask Library'),
-        subtitle: const Text('Search and chat across indexed transcripts and documents'),
+        title: Text(l10n.askLibraryTitle),
+        subtitle: Text(l10n.askLibrarySubtitle),
         onTap: () {
           HapticFeedback.lightImpact();
           Navigator.push<void>(context, SpringPageRoute(builder: (_) => const AskLibraryScreen()));

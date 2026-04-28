@@ -409,5 +409,30 @@
   "meetingDetailAudioMissing": "Audiodatei fehlt",
   "@meetingDetailAudioMissing": {
     "description": "Button label when audio file is missing and cannot be transcribed"
+  },
+
+  "askLibraryTitle": "Bibliothek fragen",
+  "@askLibraryTitle": {
+    "description": "Title for Ask Library feature"
+  },
+
+  "askLibrarySubtitle": "Durchsuche indexierte Transkripte und Dokumente im Chat",
+  "@askLibrarySubtitle": {
+    "description": "Subtitle describing Ask Library feature"
+  },
+
+  "localLibraryChatTitle": "Lokaler Bibliothekschat",
+  "@localLibraryChatTitle": {
+    "description": "Settings row title for local library chat"
+  },
+
+  "localLibraryChatSubtitleEnabled": "Indexierung für Bibliothek fragen ist aktiviert",
+  "@localLibraryChatSubtitleEnabled": {
+    "description": "Subtitle when local library chat is enabled"
+  },
+
+  "localLibraryChatSubtitleDisabled": "Indexierung für Bibliothek fragen ist deaktiviert",
+  "@localLibraryChatSubtitleDisabled": {
+    "description": "Subtitle when local library chat is disabled"
   }
 }

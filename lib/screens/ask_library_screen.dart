@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/library_rag.dart';
 import '../providers/ask_library_chat_provider.dart';
 import '../providers/library_rag_provider.dart';
@@ -30,7 +31,7 @@ class _AskLibraryScreenState extends ConsumerState<AskLibraryScreen> {
     final setup = ref.watch(libraryRagSetupProvider);
     final chat = ref.watch(askLibraryChatProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Ask Library')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.askLibraryTitle)),
       body: switch (setup.readiness) {
         LibraryRagReadiness.disabled => _SetupView(
             text: 'Enable local library chat to index your transcripts and documents for contextual search.',
