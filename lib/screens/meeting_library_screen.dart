@@ -14,6 +14,7 @@ import '../theme/reduced_motion.dart';
 import '../widgets/meeting_share_sheet.dart';
 import '../widgets/spring_page_route.dart';
 import 'archived_meetings_screen.dart';
+import 'ask_library_screen.dart';
 import 'meeting_detail_screen.dart';
 import 'recording_screen.dart';
 import 'settings_screen.dart';
@@ -83,11 +84,15 @@ class MeetingLibraryScreen extends ConsumerWidget {
     }
     return SlidableAutoCloseBehavior(
       child: ListView.builder(
-        itemCount: meetings.length,
+        itemCount: meetings.length + 1,
         itemBuilder: (ctx, i) {
+          if (i == 0) {
+            return const _AskLibraryTile();
+          }
+          final meetingIndex = i - 1;
           return TweenAnimationBuilder<double>(
             tween: Tween(begin: 0.0, end: 1.0),
-            duration: animDuration(ctx, Duration(milliseconds: 400 + (i * 50))),
+            duration: animDuration(ctx, Duration(milliseconds: 400 + (meetingIndex * 50))),
             curve: Curves.elasticOut,
             builder: (context, value, child) {
               return Transform.translate(
@@ -95,7 +100,7 @@ class MeetingLibraryScreen extends ConsumerWidget {
                 child: Opacity(opacity: value.clamp(0.0, 1.0), child: child),
               );
             },
-            child: _MeetingTile(meeting: meetings[i]),
+            child: _MeetingTile(meeting: meetings[meetingIndex]),
           );
         },
       ),
@@ -360,5 +365,25 @@ class _ActionButton extends StatelessWidget {
           child: Text(l10n.retryButton),
         );
     }
+  }
+}
+
+class _AskLibraryTile extends StatelessWidget {
+  const _AskLibraryTile();
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      child: ListTile(
+        leading: const Icon(Icons.manage_search_outlined),
+        title: const Text('Ask Library'),
+        subtitle: const Text('Search and chat across indexed transcripts and documents'),
+        onTap: () {
+          HapticFeedback.lightImpact();
+          Navigator.push<void>(context, SpringPageRoute(builder: (_) => const AskLibraryScreen()));
+        },
+      ),
+    );
   }
 }
