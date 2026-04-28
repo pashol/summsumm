@@ -43,6 +43,7 @@ dependencies:
   synchronized: ^3.1.0
   encrypt: ^5.0.3
   collection: ^1.19.0
+  mobile_rag_engine: ^0.17.0
 
 dev_dependencies:
   flutter_test:
@@ -55,3 +56,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   generate: true
+  assets:
+    - assets/rag/model.onnx
+    - assets/rag/tokenizer.json

@@ -146,6 +146,12 @@ class Settings extends _$Settings {
     await _persist(next);
   }
 
+  Future<void> setLocalLibraryChatEnabled(bool enabled) async {
+    final next = state.copyWith(localLibraryChatEnabled: enabled);
+    state = next;
+    await _persist(next);
+  }
+
   Future<void> setPromptOverride(String style, String text) async {
     final nextOverrides = Map<String, String>.from(state.promptOverrides);
     nextOverrides[style] = text;

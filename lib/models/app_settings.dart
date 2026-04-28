@@ -22,6 +22,7 @@ class AppSettings {
   final bool onDeviceDiarization;
   final String streamingModelLanguage;
   final bool compressAudioStorage;
+  final bool localLibraryChatEnabled;
   final Map<String, String> promptOverrides;
   final List<CustomPrompt> customPrompts;
   final String? selectedCustomPromptId;
@@ -43,6 +44,7 @@ class AppSettings {
     this.onDeviceDiarization = true,
     this.streamingModelLanguage = 'English',
     this.compressAudioStorage = false,
+    this.localLibraryChatEnabled = false,
     this.promptOverrides = const {},
     this.customPrompts = const [],
     this.selectedCustomPromptId,
@@ -66,6 +68,7 @@ class AppSettings {
           onDeviceDiarization: true,
           streamingModelLanguage: 'English',
           compressAudioStorage: false,
+          localLibraryChatEnabled: false,
           promptOverrides: const {},
           customPrompts: const [],
           selectedCustomPromptId: null,
@@ -88,6 +91,7 @@ class AppSettings {
     bool? onDeviceDiarization,
     String? streamingModelLanguage,
     bool? compressAudioStorage,
+    bool? localLibraryChatEnabled,
     Map<String, String>? promptOverrides,
     List<CustomPrompt>? customPrompts,
     String? selectedCustomPromptId,
@@ -109,6 +113,7 @@ class AppSettings {
         onDeviceDiarization: onDeviceDiarization ?? this.onDeviceDiarization,
         streamingModelLanguage: streamingModelLanguage ?? this.streamingModelLanguage,
         compressAudioStorage: compressAudioStorage ?? this.compressAudioStorage,
+        localLibraryChatEnabled: localLibraryChatEnabled ?? this.localLibraryChatEnabled,
         promptOverrides: promptOverrides ?? this.promptOverrides,
         customPrompts: customPrompts ?? this.customPrompts,
         selectedCustomPromptId: selectedCustomPromptId ?? this.selectedCustomPromptId,
@@ -131,6 +136,7 @@ class AppSettings {
         'onDeviceDiarization': onDeviceDiarization,
         'streamingModelLanguage': streamingModelLanguage,
         'compressAudioStorage': compressAudioStorage,
+        'localLibraryChatEnabled': localLibraryChatEnabled,
         'promptOverrides': promptOverrides,
         'customPrompts': customPrompts.map((p) => p.toJson()).toList(),
         'selectedCustomPromptId': selectedCustomPromptId,
@@ -158,6 +164,7 @@ class AppSettings {
         onDeviceDiarization: json['onDeviceDiarization'] as bool? ?? true,
         streamingModelLanguage: json['streamingModelLanguage'] as String? ?? 'English',
         compressAudioStorage: json['compressAudioStorage'] as bool? ?? false,
+        localLibraryChatEnabled: json['localLibraryChatEnabled'] as bool? ?? false,
         promptOverrides: (json['promptOverrides'] as Map<String, dynamic>?)?.map(
               (k, v) => MapEntry(k, v?.toString() ?? ''),
             ) ??
@@ -197,6 +204,7 @@ class AppSettings {
         other.onDeviceDiarization == onDeviceDiarization &&
         other.streamingModelLanguage == streamingModelLanguage &&
         other.compressAudioStorage == compressAudioStorage &&
+        other.localLibraryChatEnabled == localLibraryChatEnabled &&
         other.promptOverrides == promptOverrides &&
         listEquals(other.customPrompts, customPrompts) &&
         other.selectedCustomPromptId == selectedCustomPromptId;
@@ -220,6 +228,7 @@ class AppSettings {
         onDeviceDiarization,
         streamingModelLanguage,
         compressAudioStorage,
+        localLibraryChatEnabled,
         promptOverrides,
         Object.hashAll(customPrompts),
         selectedCustomPromptId,
