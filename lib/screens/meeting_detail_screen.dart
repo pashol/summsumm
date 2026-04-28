@@ -24,8 +24,13 @@ import 'package:summsumm/services/audio_player_service.dart';
 
 class MeetingDetailScreen extends ConsumerStatefulWidget {
   final String meetingId;
+  final int initialTabIndex;
 
-  const MeetingDetailScreen({super.key, required this.meetingId});
+  const MeetingDetailScreen({
+    super.key,
+    required this.meetingId,
+    this.initialTabIndex = 0,
+  });
 
   @override
   ConsumerState<MeetingDetailScreen> createState() =>
@@ -60,7 +65,11 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: widget.initialTabIndex.clamp(0, 2),
+    );
     _initAudio();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(meetingLibraryProvider.notifier).refresh();

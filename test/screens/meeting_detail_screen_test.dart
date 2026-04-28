@@ -193,4 +193,25 @@ void main() {
       expect(custom.text, 'Be executive.');
     });
   });
+
+  testWidgets('initialTabIndex opens transcript tab', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          meetingLibraryProvider.overrideWith(_LoadedMeetings.new),
+          archivedMeetingsProvider.overrideWith(_NoArchivedMeetings.new),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: MeetingDetailScreen(meetingId: 'meeting-1', initialTabIndex: 1),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    final tabBar = tester.widget<TabBar>(find.byType(TabBar));
+    expect(tabBar.controller?.index, 1);
+  });
 }
