@@ -23,7 +23,7 @@ final secureStorageProvider = Provider<SecureStorageService>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef SecureStorageRef = ProviderRef<SecureStorageService>;
-String _$settingsHash() => r'3facae45e99339d273ce6bfae3bbde5ab971354a';
+String _$settingsHash() => r'b192fe3f102463500b7ccd3c83776dc71249669e';
 
 /// See also [Settings].
 @ProviderFor(Settings)

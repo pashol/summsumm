@@ -248,6 +248,18 @@ abstract class AppLocalizations {
   /// **'System Default'**
   String get settingsSystemDefault;
 
+  /// Settings switch title for displaying extracted text instead of inline PDF documents
+  ///
+  /// In en, this message translates to:
+  /// **'Show extracted PDF text only'**
+  String get settingsShowExtractedPdfTextOnly;
+
+  /// Settings switch subtitle for displaying extracted text instead of inline PDF documents
+  ///
+  /// In en, this message translates to:
+  /// **'Use the extracted text view instead of the original inline PDF.'**
+  String get settingsShowExtractedPdfTextOnlySubtitle;
+
   /// Library screen title
   ///
   /// In en, this message translates to:

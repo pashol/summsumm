@@ -26,6 +26,8 @@
   "settingsFailedToLoadModels": "Modelle konnten nicht geladen werden: {error}",
   "settingsAppLanguageLabel": "App-Sprache",
   "settingsSystemDefault": "Systemstandard",
+  "settingsShowExtractedPdfTextOnly": "Nur extrahierten PDF-Text anzeigen",
+  "settingsShowExtractedPdfTextOnlySubtitle": "Verwendet die extrahierte Textansicht statt des originalen eingebetteten PDFs.",
 
   "libraryTitle": "Bibliothek",
   "libraryImportFile": "Datei importieren",

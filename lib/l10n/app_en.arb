@@ -132,6 +132,16 @@
     "description": "Option to use device system locale"
   },
 
+  "settingsShowExtractedPdfTextOnly": "Show extracted PDF text only",
+  "@settingsShowExtractedPdfTextOnly": {
+    "description": "Settings switch title for displaying extracted text instead of inline PDF documents"
+  },
+
+  "settingsShowExtractedPdfTextOnlySubtitle": "Use the extracted text view instead of the original inline PDF.",
+  "@settingsShowExtractedPdfTextOnlySubtitle": {
+    "description": "Settings switch subtitle for displaying extracted text instead of inline PDF documents"
+  },
+
   "libraryTitle": "Library",
   "@libraryTitle": {
     "description": "Library screen title"

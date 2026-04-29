@@ -89,6 +89,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSystemDefault => 'System Default';
 
   @override
+  String get settingsShowExtractedPdfTextOnly => 'Show extracted PDF text only';
+
+  @override
+  String get settingsShowExtractedPdfTextOnlySubtitle =>
+      'Use the extracted text view instead of the original inline PDF.';
+
+  @override
   String get libraryTitle => 'Library';
 
   @override
