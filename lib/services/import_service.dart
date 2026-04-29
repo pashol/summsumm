@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:flutter/services.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
@@ -10,14 +11,35 @@ import 'package:uuid/uuid.dart';
 
 typedef DocumentTextExtractor = Future<String> Function(String path);
 
-Future<String> _extractPdfText(String path) async {
-  final bytes = await File(path).readAsBytes();
+const _largePdfThresholdBytes = 1536 * 1024;
+
+String _extractPdfTextFromBytes(List<int> bytes) {
   final document = PdfDocument(inputBytes: bytes);
   try {
-    return PdfTextExtractor(document).extractText(layoutText: true);
+    return PdfTextExtractor(document).extractText();
   } finally {
     document.dispose();
   }
+}
+
+String _normalizeDocumentText(String text) {
+  const paragraphBreak = '\u0000PDF_PARAGRAPH_BREAK\u0000';
+  return text
+      .replaceAll('\r\n', '\n')
+      .replaceAll('\r', '\n')
+      .replaceAll(RegExp(r'[ \t]+'), ' ')
+      .replaceAll(RegExp(r'\n{3,}'), paragraphBreak)
+      .replaceAll(RegExp(r'\n+'), ' ')
+      .replaceAll(paragraphBreak, '\n\n')
+      .trim();
+}
+
+Future<String> _extractPdfText(String path) async {
+  final bytes = await File(path).readAsBytes();
+  if (bytes.length > _largePdfThresholdBytes) {
+    return Isolate.run(() => _extractPdfTextFromBytes(bytes));
+  }
+  return _extractPdfTextFromBytes(bytes);
 }
 
 class ImportService {
@@ -72,7 +94,9 @@ class ImportService {
     String? documentText;
     if (type == MeetingType.document) {
       try {
-        documentText = await _documentTextExtractor(destPath);
+        documentText = _normalizeDocumentText(
+          await _documentTextExtractor(destPath),
+        );
       } catch (_) {
         documentText = null;
       }

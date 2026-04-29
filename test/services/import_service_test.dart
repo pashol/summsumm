@@ -43,13 +43,15 @@ void main() {
     return f;
   }
 
-  Future<File> makePositionedPdf(String name) async {
+  Future<File> makePositionedPdf(String name, {double secondWordX = 48}) async {
     final document = PdfDocument();
     try {
       final page = document.pages.add();
       final font = PdfStandardFont(PdfFontFamily.helvetica, 12);
-      page.graphics.drawString('Hallo', font, bounds: Rect.fromLTWH(0, 0, 40, 20));
-      page.graphics.drawString('Welt', font, bounds: Rect.fromLTWH(48, 0, 40, 20));
+      page.graphics
+          .drawString('Hallo', font, bounds: Rect.fromLTWH(0, 0, 40, 20));
+      page.graphics.drawString('Welt', font,
+          bounds: Rect.fromLTWH(secondWordX, 0, 40, 20));
       final file = File(p.join(tempDir.path, name));
       await file.writeAsBytes(await document.save());
       return file;
@@ -110,6 +112,33 @@ void main() {
     expect(meeting, isNotNull);
     expect(meeting!.rawTranscript, contains('Hallo Welt'));
     expect(meeting.rawTranscript, isNot(contains('Hallo\n')));
+  });
+
+  test('default PDF extraction does not preserve large layout gaps', () async {
+    service = ImportService(
+      repo,
+      getMeetingsDir: () async => meetingsDir,
+    );
+    final source = await makePositionedPdf('wide-layout.pdf', secondWordX: 300);
+
+    final meeting = await service.importFile(source.path);
+
+    expect(meeting, isNotNull);
+    expect(meeting!.rawTranscript, 'Hallo Welt');
+  });
+
+  test('normalizes extracted document text before storing it', () async {
+    service = ImportService(
+      repo,
+      getMeetingsDir: () async => meetingsDir,
+      documentTextExtractor: (_) async =>
+          'First\nwrapped   line\n\n\nSecond paragraph',
+    );
+    final source = await makeSourceFile('report.pdf');
+
+    final meeting = await service.importFile(source.path);
+
+    expect(meeting!.rawTranscript, 'First wrapped line\n\nSecond paragraph');
   });
 
   test('imports PDF when text extraction fails', () async {
