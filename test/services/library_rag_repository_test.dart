@@ -327,6 +327,27 @@ void main() {
     expect(metadata.sources.single.title, 'Renamed meeting');
     expect(metadata.sources.single.ragSourceId, 10);
   });
+
+  test('syncLibrary continues when removeSource fails', () async {
+    final client = FakeLibraryRagClient()..nextSourceId = 10;
+    client.throwOnRemoveSource = true;
+    final store = _MemoryMetadataStore();
+    final repository = LibraryRagRepository(
+      ragService: LibraryRagService(client: client),
+      metadataStore: store,
+      documentTextExtractor: (_) async => '',
+    );
+    await repository.syncLibrary([
+      _meeting(id: 'a', transcript: 'alpha beta gamma'),
+    ]);
+
+    await repository.syncLibrary([
+      _meeting(id: 'a', transcript: 'changed transcript'),
+    ]);
+
+    final metadata = await store.load();
+    expect(metadata.sources.single.ragSourceId, 10);
+  });
 }
 
 Meeting _meeting({

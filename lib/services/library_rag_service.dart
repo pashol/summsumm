@@ -107,6 +107,7 @@ class FakeLibraryRagClient implements LibraryRagClient {
   String? lastMetadata;
   final List<FakeLibraryRagDocument> addedDocuments = [];
   final List<int> removedSourceIds = [];
+  bool throwOnRemoveSource = false;
   LibraryRagSearchResult searchResult = const LibraryRagSearchResult(
     contextText: '',
     chunks: [],
@@ -138,6 +139,7 @@ class FakeLibraryRagClient implements LibraryRagClient {
 
   @override
   Future<void> removeSource(int sourceId) async {
+    if (throwOnRemoveSource) throw Exception('removeSource failed');
     removedSourceIds.add(sourceId);
   }
 

@@ -64,7 +64,7 @@ class LibraryRagRepository {
         totalItems: meetings.length,
         failedItems: 0,
         currentTitle: meeting.title,
-      ));
+      ),);
       final text = await _textFor(meeting);
       if (text.trim().isEmpty) continue;
       eligible.add(_IndexCandidate(meeting: meeting, text: text));
@@ -79,7 +79,7 @@ class LibraryRagRepository {
         totalItems: eligible.length,
         failedItems: failed,
         currentTitle: candidate.meeting.title,
-      ));
+      ),);
 
       try {
         final ragSourceId = await _ragService.addSource(
@@ -87,11 +87,11 @@ class LibraryRagRepository {
           title: candidate.meeting.title,
           metadataJson: _metadataJson(candidate.meeting),
         );
-        indexed.add(_indexedSource(
+        indexed.add(_createIndexedSource(
           meeting: candidate.meeting,
           text: candidate.text,
           ragSourceId: ragSourceId,
-        ));
+        ),);
       } catch (_) {
         failed++;
       }
@@ -103,7 +103,7 @@ class LibraryRagRepository {
       indexedItems: indexed.length,
       totalItems: eligible.length,
       failedItems: failed,
-    ));
+    ),);
     return metadata;
   }
 
@@ -185,7 +185,7 @@ class LibraryRagRepository {
         totalItems: candidates.length,
         failedItems: failed,
         currentTitle: candidate.meeting.title,
-      ));
+      ),);
 
       final previousSource = previousByItem[candidate.meeting.id];
       final nextHash = _hash(candidate.text);
@@ -199,7 +199,7 @@ class LibraryRagRepository {
           contentHash: previousSource.contentHash,
           contentLength: candidate.text.length,
           indexedAt: previousSource.indexedAt,
-        ));
+        ),);
         processed++;
         continue;
       }
@@ -222,11 +222,11 @@ class LibraryRagRepository {
             title: candidate.meeting.title,
             metadataJson: _metadataJson(candidate.meeting),
           );
-          nextSources.add(_indexedSource(
+          nextSources.add(_createIndexedSource(
             meeting: candidate.meeting,
             text: candidate.text,
             ragSourceId: ragSourceId,
-          ));
+          ),);
         } catch (_) {
           failed++;
         }
@@ -240,7 +240,7 @@ class LibraryRagRepository {
       indexedItems: processed,
       totalItems: candidates.length,
       failedItems: failed,
-    ));
+    ),);
     return metadata;
   }
 
@@ -262,7 +262,7 @@ class LibraryRagRepository {
     return meeting.transcript ?? '';
   }
 
-  IndexedLibrarySource _indexedSource({
+  IndexedLibrarySource _createIndexedSource({
     required Meeting meeting,
     required String text,
     required int ragSourceId,
