@@ -17,6 +17,9 @@ android {
     namespace = "app.summsumm"
     compileSdk = 36
     ndkVersion = "28.2.13676358"
+    ndk {
+        abiFilters += listOf("armeabi-v7a", "arm64-v8a")
+    }
 
     defaultConfig {
         applicationId = "app.summsumm"

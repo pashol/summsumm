@@ -42,4 +42,25 @@ class BackupDestination {
         '${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
     return '${dateStr}_${timeStr}_backup.summsumm';
   }
+
+  static Future<String?> getDownloadsPath() async {
+    if (Platform.isAndroid) {
+      final dir = await getExternalStorageDirectory();
+      if (dir == null) return null;
+      return p.join(dir.path, 'Download');
+    } else if (Platform.isIOS) {
+      final dir = await getApplicationDocumentsDirectory();
+      return dir.path;
+    }
+    return null;
+  }
+
+  static Future<File> getBackupFile([String? customName]) async {
+    final downloadsPath = await getDownloadsPath();
+    final filename = customName ?? generateFilename();
+    if (downloadsPath == null) {
+      throw UnsupportedError('Downloads path not available on this platform');
+    }
+    return File(p.join(downloadsPath, filename));
+  }
 }

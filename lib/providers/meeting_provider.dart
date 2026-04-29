@@ -15,6 +15,36 @@ import '../models/custom_prompt.dart';
 import '../utils/prompt_resolver.dart';
 import 'package:collection/collection.dart';
 
+List<SpeakerSegment> _alignTranscriptToSegments(
+  String transcript,
+  List<SpeakerSegment> segments,
+) {
+  if (transcript.isEmpty || segments.isEmpty) return segments;
+
+  final words = transcript.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+  if (words.isEmpty) return segments;
+
+  final totalDuration = segments.fold<double>(
+    0.0,
+    (sum, s) => sum + (s.endTime - s.startTime),
+  );
+  if (totalDuration <= 0) return segments;
+
+  int wordIdx = 0;
+  return segments.map((seg) {
+    final segDuration = seg.endTime - seg.startTime;
+    final wordCount = (words.length * segDuration / totalDuration).round().clamp(0, words.length - wordIdx);
+    final segText = words.sublist(wordIdx, wordIdx + wordCount).join(' ');
+    wordIdx += wordCount;
+    return SpeakerSegment(
+      speakerLabel: seg.speakerLabel,
+      startTime: seg.startTime,
+      endTime: seg.endTime,
+      text: segText,
+    );
+  }).toList();
+}
+
 final voiceServiceProvider = Provider<VoiceService>((ref) => VoiceService());
 final aiServiceProvider = Provider<AiService>((ref) => AiService());
 final processingServiceProvider =
@@ -263,8 +293,10 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
 
         try {
           final segments = await service.diarizeFile(meeting.audioPath);
+          final transcript = meeting.transcript ?? '';
+          final aligned = _alignTranscriptToSegments(transcript, segments);
           state = meeting.copyWith(
-            speakerSegments: segments,
+            speakerSegments: aligned,
             status: MeetingStatus.transcribed,
             provider: 'on-device',
             clearLastError: true,
@@ -328,15 +360,43 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
       }
 
       state = meeting.copyWith(
-        transcript: transcript,
+        rawTranscript: transcript,
         status: MeetingStatus.transcribed,
         provider: 'on-device',
+        cleanupEnabled: true,
         clearLastError: true,
         clearTranscriptionStatus: true,
         clearTranscriptionProgress: true,
       );
       await repository.save(state);
       ref.read(meetingLibraryProvider.notifier).refresh();
+
+      if (diarize && settings.onDeviceDiarization) {
+        state = state.copyWith(
+          status: MeetingStatus.transcribing,
+          transcriptionStatus: 'Identifying speakers…',
+          transcriptionProgress: null,
+        );
+        await repository.save(state);
+        ref.read(meetingLibraryProvider.notifier).refresh();
+
+        try {
+          final segments = await service.diarizeFile(meeting.audioPath);
+          final aligned = _alignTranscriptToSegments(transcript, segments);
+          state = state.copyWith(
+            speakerSegments: aligned,
+            clearTranscriptionStatus: true,
+            clearTranscriptionProgress: true,
+          );
+        } catch (e) {
+          state = state.copyWith(
+            clearTranscriptionStatus: true,
+            clearTranscriptionProgress: true,
+          );
+        }
+        await repository.save(state);
+        ref.read(meetingLibraryProvider.notifier).refresh();
+      }
     } catch (e) {
       state = meeting.copyWith(
         status: MeetingStatus.failed,

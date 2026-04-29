@@ -44,6 +44,8 @@ dependencies:
   encrypt: ^5.0.3
   collection: ^1.19.0
   mobile_rag_engine: ^0.17.0
+  package_info_plus: ^8.3.1
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:
@@ -52,6 +54,9 @@ dev_dependencies:
   riverpod_generator: ^2.6.3
   riverpod_lint: ^2.6.3
   custom_lint: ^0.7.0
+
+dependency_overrides:
+  flutter_rust_bridge: 2.11.1
 
 flutter:
   uses-material-design: true

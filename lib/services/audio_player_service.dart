@@ -33,7 +33,7 @@ class AudioPlayerService {
 
   Future<void> play(String path) async {
     await init();
-    await _player.startPlayer(
+    final duration = await _player.startPlayer(
       fromURI: path,
       whenFinished: () {
         _isPlayingController.add(false);
@@ -41,6 +41,10 @@ class AudioPlayerService {
         _positionController.add(_currentPosition);
       },
     );
+    if (duration != null && duration > Duration.zero) {
+      _currentDuration = duration;
+      _durationController.add(_currentDuration);
+    }
     _isPlayingController.add(true);
   }
 

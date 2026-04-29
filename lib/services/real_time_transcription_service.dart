@@ -28,6 +28,10 @@ class RealTimeTranscriptionService {
   Future<void> start({required String language}) async {
     if (_isRunning) return;
 
+    if (_asrEngine.isInitialized) {
+      _asrEngine.dispose();
+    }
+
     final config = StreamingModelConfigs.forLanguage(language);
 
     // Download model if needed
@@ -120,9 +124,6 @@ class RealTimeTranscriptionService {
 
     _isRunning = false;
     _buffer.clear();
-
-    // Dispose engine to allow re-initialization on next start
-    _asrEngine.dispose();
 
     return _fullTranscript.trim();
   }

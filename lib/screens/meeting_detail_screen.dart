@@ -95,11 +95,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
     if (_isPlaying) {
       await _audioPlayer.pause();
     } else {
-      final meeting = ref.read(meetingProvider(widget.meetingId));
-      if (_audioDuration == Duration.zero && meeting.durationSec > 0) {
-        setState(() => _audioDuration = Duration(seconds: meeting.durationSec));
-      }
-      if (_audioPosition > Duration.zero && _audioPosition < _audioDuration) {
+      if (_audioPosition > Duration.zero && _audioDuration > Duration.zero && _audioPosition < _audioDuration) {
         await _audioPlayer.resume();
       } else {
         await _audioPlayer.play(path);

@@ -121,7 +121,6 @@ class Meeting {
     int? durationSec,
     String? audioPath,
     String? title,
-    String? transcript,
     String? rawTranscript,
     String? cleanedTranscript,
     bool? cleanupEnabled,

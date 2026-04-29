@@ -15,7 +15,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsTitle => 'Einstellungen';
 
   @override
-  String get settingsSetupHint => 'Lege deinen API-Schlüssel fest, um zu beginnen.';
+  String get settingsSetupHint =>
+      'Lege deinen API-Schlüssel fest, um zu beginnen.';
 
   @override
   String get settingsModelSection => 'Modell';
@@ -36,7 +37,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsSearchAllModels => 'Alle OpenRouter-Modelle durchsuchen';
 
   @override
-  String get settingsEnterKeyFirst => 'Gib zuerst deinen API-Schlüssel ein, um Modelle zu laden.';
+  String get settingsEnterKeyFirst =>
+      'Gib zuerst deinen API-Schlüssel ein, um Modelle zu laden.';
 
   @override
   String settingsApiKeySection(String provider) {
@@ -131,10 +133,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get libraryDeleteMeeting => 'Meeting löschen?';
 
   @override
-  String get libraryDeleteDocumentConfirm => 'Dies wird diese Dokumentzusammenfassung dauerhaft löschen.';
+  String get libraryDeleteDocumentConfirm =>
+      'Dies wird diese Dokumentzusammenfassung dauerhaft löschen.';
 
   @override
-  String get libraryDeleteMeetingConfirm => 'Dies wird die Aufnahme und alle Daten dauerhaft löschen.';
+  String get libraryDeleteMeetingConfirm =>
+      'Dies wird die Aufnahme und alle Daten dauerhaft löschen.';
 
   @override
   String get cancelButton => 'Abbrechen';
@@ -164,7 +168,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get reTranscribeConfirmTitle => 'Transkript ersetzen?';
 
   @override
-  String get reTranscribeConfirmBody => 'Dadurch werden das vorhandene Transkript, die Diarisierung und alle Zusammenfassungen ersetzt. Diese Aktion kann nicht rückgängig gemacht werden.';
+  String get reTranscribeConfirmBody =>
+      'Dadurch werden das vorhandene Transkript, die Diarisierung und alle Zusammenfassungen ersetzt. Diese Aktion kann nicht rückgängig gemacht werden.';
 
   @override
   String get libraryFailedDetails => 'Fehlgeschlagen — tippen für Details';
@@ -209,7 +214,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get meetingDetailTranscribedBy => 'Transkribiert von';
 
   @override
-  String get meetingDetailNoTranscript => 'Noch kein Transkript.\nWechsle zum Transkript-Tab, um zu transkribieren.';
+  String get meetingDetailNoTranscript =>
+      'Noch kein Transkript.\nWechsle zum Transkript-Tab, um zu transkribieren.';
 
   @override
   String get meetingDetailTranscribing => 'Transkribieren…';
@@ -232,22 +238,27 @@ class AppLocalizationsDe extends AppLocalizations {
   String get meetingDetailGenerate => 'Erstellen';
 
   @override
-  String get meetingDetailNotRecording => 'Dies ist ein Dokument, keine Aufnahme.\nWechsle zum Zusammenfassung-Tab, um es zu verarbeiten.';
+  String get meetingDetailNotRecording =>
+      'Dies ist ein Dokument, keine Aufnahme.\nWechsle zum Zusammenfassung-Tab, um es zu verarbeiten.';
 
   @override
-  String get meetingDetailDiarizationRequires => 'Diarisierung erfordert OpenRouter';
+  String get meetingDetailDiarizationRequires =>
+      'Diarisierung erfordert OpenRouter';
 
   @override
   String get meetingDetailDiarizeSpeakers => 'Sprecher diarisieren';
 
   @override
-  String get meetingDetailDocumentContent => 'Dies ist der importierte Dokumentinhalt, kein Transkript.';
+  String get meetingDetailDocumentContent =>
+      'Dies ist der importierte Dokumentinhalt, kein Transkript.';
 
   @override
-  String get meetingDetailDocumentNotReady => 'Dokumentinhalt noch nicht verfügbar.\nWechsle zum Zusammenfassung-Tab, um es zu verarbeiten.';
+  String get meetingDetailDocumentNotReady =>
+      'Dokumentinhalt noch nicht verfügbar.\nWechsle zum Zusammenfassung-Tab, um es zu verarbeiten.';
 
   @override
-  String get meetingDetailTranscribeFirst => 'Transkribiere zuerst das Meeting, um zu chatten.';
+  String get meetingDetailTranscribeFirst =>
+      'Transkribiere zuerst das Meeting, um zu chatten.';
 
   @override
   String get meetingDetailChatHint => 'Frage zu diesem Meeting…';
@@ -263,7 +274,8 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get summarySheetNoApiKey => 'Kein API-Schlüssel konfiguriert. Öffne zuerst die Einstellungen.';
+  String get summarySheetNoApiKey =>
+      'Kein API-Schlüssel konfiguriert. Öffne zuerst die Einstellungen.';
 
   @override
   String get summarySheetCopied => 'In die Zwischenablage kopiert';
@@ -308,7 +320,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get startButton => 'Start';
 
   @override
-  String get recordingMicPermission => 'Mikrofonberechtigung ist zum Aufnehmen erforderlich';
+  String get recordingMicPermission =>
+      'Mikrofonberechtigung ist zum Aufnehmen erforderlich';
 
   @override
   String recordingFailedStart(String error) {
@@ -319,7 +332,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get liveTranscriptionTitle => 'Live-Transkription';
 
   @override
-  String get liveTranscriptionPrompt => 'Sprache in Echtzeit während der Aufnahme transkribieren?\n\nDies verbraucht mehr Akku, aber du siehst den Text während du sprichst.';
+  String get liveTranscriptionPrompt =>
+      'Sprache in Echtzeit während der Aufnahme transkribieren?\n\nDies verbraucht mehr Akku, aber du siehst den Text während du sprichst.';
 
   @override
   String get liveTranscriptionYes => 'Ja';
@@ -424,7 +438,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get onboardingWelcomeTitle => 'Alles zusammenfassen, überall';
 
   @override
-  String get onboardingWelcomeSubtitle => 'KI-gestützte Zusammenfassungen aus Text, Sprache und Dokumenten';
+  String get onboardingWelcomeSubtitle =>
+      'KI-gestützte Zusammenfassungen aus Text, Sprache und Dokumenten';
 
   @override
   String get onboardingGetStarted => 'Loslegen';
@@ -439,16 +454,19 @@ class AppLocalizationsDe extends AppLocalizations {
   String get onboardingOnlineFeatures => 'Online-Funktionen';
 
   @override
-  String get onboardingOnlineFeaturesDesc => 'Textzusammenfassung, PDF-Zusammenfassungen, Cloud-Transkription — Erfordert API-Schlüssel';
+  String get onboardingOnlineFeaturesDesc =>
+      'Textzusammenfassung, PDF-Zusammenfassungen, Cloud-Transkription — Erfordert API-Schlüssel';
 
   @override
   String get onboardingOfflineFeatures => 'Offline-Funktionen';
 
   @override
-  String get onboardingOfflineFeaturesDesc => 'Meeting-Aufnahme, On-Device-Transkription — Funktioniert ohne Internet nach Modell-Download';
+  String get onboardingOfflineFeaturesDesc =>
+      'Meeting-Aufnahme, On-Device-Transkription — Funktioniert ohne Internet nach Modell-Download';
 
   @override
-  String get onboardingTranscriptionNote => 'On-Device-Transkription unterstützt mehrere Sprachen. Live-Transkription funktioniert am besten auf Englisch.';
+  String get onboardingTranscriptionNote =>
+      'On-Device-Transkription unterstützt mehrere Sprachen. Live-Transkription funktioniert am besten auf Englisch.';
 
   @override
   String get onboardingContinue => 'Weiter';
@@ -457,7 +475,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get onboardingApiKeyTitle => 'Deine KI verbinden';
 
   @override
-  String get onboardingApiKeySubtitle => 'Füge einen API-Schlüssel hinzu, um KI-Funktionen zu nutzen. Du kannst dies überspringen und später in den Einstellungen hinzufügen.';
+  String get onboardingApiKeySubtitle =>
+      'Füge einen API-Schlüssel hinzu, um KI-Funktionen zu nutzen. Du kannst dies überspringen und später in den Einstellungen hinzufügen.';
 
   @override
   String get onboardingSkipForNow => 'Jetzt überspringen';
@@ -466,10 +485,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get onboardingQuickStartTitle => 'Bereit!';
 
   @override
-  String get onboardingQuickStartOnline => 'Du kannst jetzt Text und PDFs zusammenfassen.';
+  String get onboardingQuickStartOnline =>
+      'Du kannst jetzt Text und PDFs zusammenfassen.';
 
   @override
-  String get onboardingQuickStartOffline => 'Du kannst Meetings aufnehmen und On-Device-Transkription nutzen. Füge später einen API-Schlüssel für KI-Funktionen hinzu.';
+  String get onboardingQuickStartOffline =>
+      'Du kannst Meetings aufnehmen und On-Device-Transkription nutzen. Füge später einen API-Schlüssel für KI-Funktionen hinzu.';
 
   @override
   String get onboardingGoToSettings => 'Zu den Einstellungen';
@@ -490,7 +511,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get backupIncludeApiKeys => 'API-Schlüssel einbeziehen';
 
   @override
-  String get backupIncludeApiKeysHint => 'Erfordert Einstellungen einzubeziehen';
+  String get backupIncludeApiKeysHint =>
+      'Erfordert Einstellungen einzubeziehen';
 
   @override
   String get backupIncludeMeetings => 'Meeting-Daten einbeziehen';
@@ -511,7 +533,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get backupSelectFile => 'Backupdatei auswählen';
 
   @override
-  String get backupImportHint => 'Wähle eine .summsumm Backupdatei, um deine Daten wiederherzustellen. Bestehende Meetings werden übersprungen (nicht überschrieben).';
+  String get backupImportHint =>
+      'Wähle eine .summsumm Backupdatei, um deine Daten wiederherzustellen. Bestehende Meetings werden übersprungen (nicht überschrieben).';
 
   @override
   String get backupSetPassword => 'Backup-Passwort festlegen';
@@ -526,7 +549,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get backupPasswordHint => 'Mindestens 8 Zeichen';
 
   @override
-  String get backupPasswordTooShort => 'Passwort muss mindestens 8 Zeichen haben';
+  String get backupPasswordTooShort =>
+      'Passwort muss mindestens 8 Zeichen haben';
 
   @override
   String get backupImportSuccess => 'Import erfolgreich';
@@ -696,7 +720,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get addPrompt => 'Prompt hinzufügen';
 
   @override
-  String get noCustomPrompts => 'Noch keine benutzerdefinierten Prompts. Tippe auf +, um einen zu erstellen.';
+  String get noCustomPrompts =>
+      'Noch keine benutzerdefinierten Prompts. Tippe auf +, um einen zu erstellen.';
 
   @override
   String get newPromptTitle => 'Neuer benutzerdefinierter Prompt';
@@ -729,7 +754,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get deletePromptTitle => 'Prompt löschen';
 
   @override
-  String get deletePromptMessage => 'Möchtest du diesen benutzerdefinierten Prompt wirklich löschen?';
+  String get deletePromptMessage =>
+      'Möchtest du diesen benutzerdefinierten Prompt wirklich löschen?';
 
   @override
   String get settingsSummaryRow => 'Zusammenfassung';
@@ -741,16 +767,19 @@ class AppLocalizationsDe extends AppLocalizations {
   String get askLibraryTitle => 'Bibliothek fragen';
 
   @override
-  String get askLibrarySubtitle => 'Durchsuche indexierte Transkripte und Dokumente im Chat';
+  String get askLibrarySubtitle =>
+      'Durchsuche indexierte Transkripte und Dokumente im Chat';
 
   @override
   String get localLibraryChatTitle => 'Lokaler Bibliothekschat';
 
   @override
-  String get localLibraryChatSubtitleEnabled => 'Indexierung für Bibliothek fragen ist aktiviert';
+  String get localLibraryChatSubtitleEnabled =>
+      'Indexierung für Bibliothek fragen ist aktiviert';
 
   @override
-  String get localLibraryChatSubtitleDisabled => 'Indexierung für Bibliothek fragen ist deaktiviert';
+  String get localLibraryChatSubtitleDisabled =>
+      'Indexierung für Bibliothek fragen ist deaktiviert';
 
   @override
   String get edited => 'bearbeitet';
@@ -759,7 +788,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get custom => 'benutzerdefiniert';
 
   @override
-  String get backupNotificationPermission => 'Benachrichtigungsberechtigung für Backup erforderlich';
+  String get backupNotificationPermission =>
+      'Benachrichtigungsberechtigung für Backup erforderlich';
 
   @override
   String get backupRunning => 'Backup läuft...';
@@ -774,7 +804,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get exportTranscriptPdf => 'Transkript als PDF exportieren';
 
   @override
-  String get notificationPermission => 'Benachrichtigungsberechtigung erforderlich';
+  String get notificationPermission =>
+      'Benachrichtigungsberechtigung erforderlich';
 
   @override
   String get meetingDetailAudioMissing => 'Audiodatei fehlt';

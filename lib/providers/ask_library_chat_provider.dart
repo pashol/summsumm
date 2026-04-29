@@ -8,6 +8,7 @@ import '../providers/library_rag_provider.dart';
 import '../providers/models_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/ai_service.dart';
+import '../services/library_rag_service.dart';
 
 class AskLibraryChatState {
   final List<AskLibraryMessage> messages;
@@ -60,7 +61,8 @@ class AskLibraryChatNotifier extends StateNotifier<AskLibraryChatState> {
         final updated = List<AskLibraryMessage>.from(state.messages);
         updated[updated.length - 1] = const AskLibraryMessage(
           role: 'assistant',
-          content: 'I could not find enough relevant context in your library to answer that.',
+          content:
+              'I could not find enough relevant context in your library to answer that.',
         );
         state = state.copyWith(messages: updated, isStreaming: false);
         return;
@@ -68,15 +70,20 @@ class AskLibraryChatNotifier extends StateNotifier<AskLibraryChatState> {
 
       final citations = await _citationsForSearch(search);
       final settings = _ref.read(settingsProvider);
-      final apiKey = await _ref.read(settingsProvider.notifier).getApiKey(settings.provider) ?? '';
+      final apiKey = await _ref
+              .read(settingsProvider.notifier)
+              .getApiKey(settings.provider) ??
+          '';
       final apiMessages = [
         {
           'role': 'system',
-          'content': 'You answer questions using only the provided library context. If the context does not support an answer, say you could not find enough information. Keep answers concise and cite source labels when useful.',
+          'content':
+              'You answer questions using only the provided library context. If the context does not support an answer, say you could not find enough information. Keep answers concise and cite source labels when useful.',
         },
         {
           'role': 'user',
-          'content': 'Library context:\n${search.contextText}\n\nQuestion: $trimmed',
+          'content':
+              'Library context:\n${search.contextText}\n\nQuestion: $trimmed',
         },
       ];
 
@@ -102,7 +109,8 @@ class AskLibraryChatNotifier extends StateNotifier<AskLibraryChatState> {
         },
         onError: (Object e) {
           if (!_mounted) return;
-          final updated = List<AskLibraryMessage>.from(state.messages)..removeLast();
+          final updated = List<AskLibraryMessage>.from(state.messages)
+            ..removeLast();
           state = state.copyWith(
             messages: updated,
             isStreaming: false,
@@ -116,7 +124,8 @@ class AskLibraryChatNotifier extends StateNotifier<AskLibraryChatState> {
         cancelOnError: true,
       );
     } catch (e) {
-      final updated = List<AskLibraryMessage>.from(state.messages)..removeLast();
+      final updated = List<AskLibraryMessage>.from(state.messages)
+        ..removeLast();
       state = state.copyWith(
         messages: updated,
         isStreaming: false,
@@ -125,7 +134,9 @@ class AskLibraryChatNotifier extends StateNotifier<AskLibraryChatState> {
     }
   }
 
-  Future<List<LibraryCitation>> _citationsForSearch(search) async {
+  Future<List<LibraryCitation>> _citationsForSearch(
+    LibraryRagSearchResult search,
+  ) async {
     final seen = <String>{};
     final citations = <LibraryCitation>[];
     for (final chunk in search.chunks) {
@@ -134,13 +145,19 @@ class AskLibraryChatNotifier extends StateNotifier<AskLibraryChatState> {
       final decoded = jsonDecode(metadataJson) as Map<String, dynamic>;
       final id = decoded['libraryItemId'] as String?;
       if (id == null || !seen.add(id)) continue;
-      citations.add(LibraryCitation(
-        libraryItemId: id,
-        title: decoded['title'] as String? ?? 'Untitled',
-        sourceKind: LibrarySourceKind.values.byName(decoded['sourceKind'] as String),
-        contentType: LibraryContentType.values.byName(decoded['contentType'] as String),
-        excerpt: chunk.content,
-      ));
+      citations.add(
+        LibraryCitation(
+          libraryItemId: id,
+          title: decoded['title'] as String? ?? 'Untitled',
+          sourceKind: LibrarySourceKind.values.byName(
+            decoded['sourceKind'] as String,
+          ),
+          contentType: LibraryContentType.values.byName(
+            decoded['contentType'] as String,
+          ),
+          excerpt: chunk.content,
+        ),
+      );
     }
     return citations;
   }

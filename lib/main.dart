@@ -24,8 +24,7 @@ import 'services/meeting_repository.dart';
 import 'utils/document_title.dart';
 
 /// Returns true when any document is a PDF (has a content URI).
-bool isDocumentShare(List<Document> documents) =>
-    documents.any((d) => d.isPdf);
+bool isDocumentShare(List<Document> documents) => documents.any((d) => d.isPdf);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,7 +32,8 @@ void main() async {
 
   // Check if onboarding is completed
   final prefs = await SharedPreferences.getInstance();
-  final hasCompletedOnboarding = prefs.getBool('has_completed_onboarding') ?? false;
+  final hasCompletedOnboarding =
+      prefs.getBool('has_completed_onboarding') ?? false;
 
   // Retrieve the intent data from the native layer before the UI builds.
   const channel = MethodChannel('app.summsumm/intent');
@@ -51,7 +51,7 @@ void main() async {
   final otherDocs = <Document>[];
 
   for (final rawDoc in (intentData?['documents'] as List<dynamic>? ?? [])) {
-    final doc = Map<String, dynamic>.from(rawDoc);
+    final doc = Map<String, dynamic>.from(rawDoc as Map<dynamic, dynamic>);
     final text = doc['text'] as String? ?? '';
     final uri = doc['uri'] as String?;
     final name = doc['name'] as String?;
@@ -62,27 +62,29 @@ void main() async {
     final durationMs = doc['durationMs'] as int?;
 
     if (docType == 'audio' && path != null) {
-      audioDocs.add(Document(
-        id: path.hashCode.toString(),
-        text: '',
-        title: name,
-        name: name,
-        size: size,
-        type: 'audio',
-        path: path,
-        durationMs: durationMs,
-      ),
+      audioDocs.add(
+        Document(
+          id: path.hashCode.toString(),
+          text: '',
+          title: name,
+          name: name,
+          size: size,
+          type: 'audio',
+          path: path,
+          durationMs: durationMs,
+        ),
       );
     } else {
-      otherDocs.add(Document(
-        id: (text.isNotEmpty ? text : uri ?? '').hashCode.toString(),
-        text: text,
-        title: name,
-        uri: uri,
-        name: name,
-        size: size,
-        error: error,
-      ),
+      otherDocs.add(
+        Document(
+          id: (text.isNotEmpty ? text : uri ?? '').hashCode.toString(),
+          text: text,
+          title: name,
+          uri: uri,
+          name: name,
+          size: size,
+          error: error,
+        ),
       );
     }
   }
@@ -108,7 +110,10 @@ void main() async {
   final audioImported = audioDocs.isNotEmpty;
   final backupDocs = otherDocs.where((d) => d.type == 'backup').toList();
   final nonBackupDocs = otherDocs.where((d) => d.type != 'backup').toList();
-  final showOnboarding = !hasCompletedOnboarding && !openSettings && nonBackupDocs.isEmpty && backupDocs.isEmpty;
+  final showOnboarding = !hasCompletedOnboarding &&
+      !openSettings &&
+      nonBackupDocs.isEmpty &&
+      backupDocs.isEmpty;
 
   runApp(
     ProviderScope(
@@ -242,7 +247,7 @@ class _SummsummAppState extends ConsumerState<SummsummApp> {
       final otherDocs = <Document>[];
 
       for (final rawDoc in (rawData['documents'] as List<dynamic>? ?? [])) {
-        final doc = Map<String, dynamic>.from(rawDoc);
+        final doc = Map<String, dynamic>.from(rawDoc as Map<dynamic, dynamic>);
         final text = (doc['text'] as String?) ?? '';
         final uri = doc['uri'] as String?;
         final name = doc['name'] as String?;
@@ -253,27 +258,29 @@ class _SummsummAppState extends ConsumerState<SummsummApp> {
         final durationMs = doc['durationMs'] as int?;
 
         if (docType == 'audio' && path != null) {
-          audioDocs.add(Document(
-            id: path.hashCode.toString(),
-            text: '',
-            title: name,
-            name: name,
-            size: size,
-            type: 'audio',
-            path: path,
-            durationMs: durationMs,
-          ),
+          audioDocs.add(
+            Document(
+              id: path.hashCode.toString(),
+              text: '',
+              title: name,
+              name: name,
+              size: size,
+              type: 'audio',
+              path: path,
+              durationMs: durationMs,
+            ),
           );
         } else {
-          otherDocs.add(Document(
-            id: (text.isNotEmpty ? text : uri ?? '').hashCode.toString(),
-            text: text,
-            title: name,
-            uri: uri,
-            name: name,
-            size: size,
-            error: error,
-          ),
+          otherDocs.add(
+            Document(
+              id: (text.isNotEmpty ? text : uri ?? '').hashCode.toString(),
+              text: text,
+              title: name,
+              uri: uri,
+              name: name,
+              size: size,
+              error: error,
+            ),
           );
         }
       }
@@ -312,14 +319,16 @@ class _SummsummAppState extends ConsumerState<SummsummApp> {
         final locale = ref.watch(localeProvider);
         return DynamicColorBuilder(
           builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
-            final lightScheme = lightDynamic ?? ColorScheme.fromSeed(
-              seedColor: M3Tokens.seedColor,
-              brightness: Brightness.light,
-            );
-            final darkScheme = darkDynamic ?? ColorScheme.fromSeed(
-              seedColor: M3Tokens.seedColor,
-              brightness: Brightness.dark,
-            );
+            final lightScheme = lightDynamic ??
+                ColorScheme.fromSeed(
+                  seedColor: M3Tokens.seedColor,
+                  brightness: Brightness.light,
+                );
+            final darkScheme = darkDynamic ??
+                ColorScheme.fromSeed(
+                  seedColor: M3Tokens.seedColor,
+                  brightness: Brightness.dark,
+                );
             return MaterialApp(
               navigatorKey: _navigatorKey,
               title: 'AI Text Summarizer',
@@ -389,7 +398,8 @@ class _SummarySheetHostState extends State<_SummarySheetHost>
       durationSec: 0,
       audioPath: '',
       title: title,
-      rawTranscript: widget.documents.isNotEmpty ? widget.documents.first.text : '',
+      rawTranscript:
+          widget.documents.isNotEmpty ? widget.documents.first.text : '',
       status: MeetingStatus.summarizing,
       type: MeetingType.document,
     );
@@ -406,24 +416,28 @@ class _SummarySheetHostState extends State<_SummarySheetHost>
         documents: widget.documents,
         initialIndex: 0,
         onSummarized: (summary) async {
-          await repo.save(entry.copyWith(
-            summaries: [
-              MeetingSummary(
-                id: 'sum_${DateTime.now().millisecondsSinceEpoch}',
-                style: SummaryStyle.structured,
-                language: 'Same as input',
-                content: summary,
-                createdAt: DateTime.now(),
-              ),
-            ],
-            status: MeetingStatus.done,
-          ),);
+          await repo.save(
+            entry.copyWith(
+              summaries: [
+                MeetingSummary(
+                  id: 'sum_${DateTime.now().millisecondsSinceEpoch}',
+                  style: SummaryStyle.structured,
+                  language: 'Same as input',
+                  content: summary,
+                  createdAt: DateTime.now(),
+                ),
+              ],
+              status: MeetingStatus.done,
+            ),
+          );
         },
         onSummaryFailed: (error) async {
-          await repo.save(entry.copyWith(
-            status: MeetingStatus.failed,
-            lastError: error,
-          ),);
+          await repo.save(
+            entry.copyWith(
+              status: MeetingStatus.failed,
+              lastError: error,
+            ),
+          );
         },
       ),
     );
@@ -537,24 +551,28 @@ class _DocumentSheetHostState extends State<_DocumentSheetHost> {
                 scrollController: scrollCtrl,
                 onClose: _closeSheet,
                 onSummarized: (summary) async {
-                  await _repo.save(_entry.copyWith(
-                    summaries: [
-                      MeetingSummary(
-                        id: 'sum_${DateTime.now().millisecondsSinceEpoch}',
-                        style: SummaryStyle.structured,
-                        language: 'Same as input',
-                        content: summary,
-                        createdAt: DateTime.now(),
-                      ),
-                    ],
-                    status: MeetingStatus.done,
-                  ),);
+                  await _repo.save(
+                    _entry.copyWith(
+                      summaries: [
+                        MeetingSummary(
+                          id: 'sum_${DateTime.now().millisecondsSinceEpoch}',
+                          style: SummaryStyle.structured,
+                          language: 'Same as input',
+                          content: summary,
+                          createdAt: DateTime.now(),
+                        ),
+                      ],
+                      status: MeetingStatus.done,
+                    ),
+                  );
                 },
                 onSummaryFailed: (error) async {
-                  await _repo.save(_entry.copyWith(
-                    status: MeetingStatus.failed,
-                    lastError: error,
-                  ),);
+                  await _repo.save(
+                    _entry.copyWith(
+                      status: MeetingStatus.failed,
+                      lastError: error,
+                    ),
+                  );
                 },
               ),
             ),

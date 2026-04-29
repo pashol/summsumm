@@ -245,14 +245,14 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> {
   Future<void> _stopRecording() async {
     if (!_isRecording) return;
 
-    // Stop live transcription
+    String? liveTranscript;
     if (_liveTranscriptionEnabled) {
       await _transcriptSubscription?.cancel();
       _transcriptSubscription = null;
       await _audioSubscription?.cancel();
       _audioSubscription = null;
       final service = ref.read(realTimeTranscriptionServiceProvider);
-      await service.stop();
+      liveTranscript = await service.stop();
       setState(() {
         _liveTranscriptionEnabled = false;
       });
@@ -263,7 +263,14 @@ class _RecordingScreenState extends ConsumerState<RecordingScreen> {
     setState(() => _isRecording = false);
 
     final service = ref.read(recordingServiceProvider);
-    final meeting = await service.stopRecording(_elapsedSeconds);
+    var meeting = await service.stopRecording(_elapsedSeconds);
+
+    if (liveTranscript != null && liveTranscript.trim().isNotEmpty) {
+      meeting = meeting.copyWith(
+        rawTranscript: liveTranscript.trim(),
+        wasLiveTranscribed: true,
+      );
+    }
 
     final repository = ref.read(meetingRepositoryProvider);
     await repository.save(meeting);

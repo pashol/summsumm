@@ -7,17 +7,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa;
 import 'package:summsumm/models/transcription_config.dart';
 
-Float32List _convertPcmBytesToFloat32(Uint8List bytes) {
-  final sampleCount = bytes.length ~/ 2;
-  final values = Float32List(sampleCount);
-  final data = ByteData.sublistView(bytes);
-  for (var i = 0; i < sampleCount; i++) {
-    final short = data.getInt16(i * 2, Endian.little);
-    values[i] = short / 32768.0;
-  }
-  return values;
-}
-
 Future<String> _convertToWav(String inputPath) async {
   final tempDir = await getTemporaryDirectory();
   final outputPath = '${tempDir.path}/sherpa_input_${DateTime.now().millisecondsSinceEpoch}.wav';
@@ -84,15 +73,17 @@ class SherpaAsrEngine {
     }
 
     try {
-      final bytes = await File(wavPath).readAsBytes();
-      
-      const wavHeaderSize = 44;
-      if (bytes.length < wavHeaderSize) {
-        throw StateError('Audio file too small: ${bytes.length} bytes');
+      final wave = sherpa.readWave(wavPath);
+      if (wave.samples.isEmpty) {
+        throw StateError('Audio file contains no samples: $wavPath');
       }
-      
-      final pcmBytes = bytes.sublist(wavHeaderSize);
-      final samples = _convertPcmBytesToFloat32(pcmBytes);
+
+      Float32List samples;
+      if (wave.sampleRate != 16000) {
+        samples = _resampleTo16k(wave.samples, wave.sampleRate);
+      } else {
+        samples = wave.samples;
+      }
 
       final stream = _recognizer!.createStream();
       stream.acceptWaveform(samples: samples, sampleRate: 16000);
@@ -109,6 +100,21 @@ class SherpaAsrEngine {
         } catch (_) {}
       }
     }
+  }
+
+  Float32List _resampleTo16k(Float32List samples, int sourceRate) {
+    if (sourceRate == 16000) return samples;
+    final ratio = 16000.0 / sourceRate;
+    final newLength = (samples.length * ratio).round();
+    final result = Float32List(newLength);
+    for (var i = 0; i < newLength; i++) {
+      final srcIdx = i / ratio;
+      final idx0 = srcIdx.floor();
+      final idx1 = (idx0 + 1).clamp(0, samples.length - 1);
+      final frac = srcIdx - idx0;
+      result[i] = samples[idx0] * (1 - frac) + samples[idx1] * frac;
+    }
+    return result;
   }
 
   Future<void> dispose() async {
