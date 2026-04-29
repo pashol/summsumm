@@ -39,7 +39,7 @@ void main() {
 
     final metadata = await store.load();
     expect(metadata.sources.single.libraryItemId, 'a');
-    expect(metadata.sources.single.ragSourceId, 99);
+    expect(metadata.sources.single.ragSourceId, 1);
     expect(metadata.sources.single.contentType, LibraryContentType.transcript);
   });
 

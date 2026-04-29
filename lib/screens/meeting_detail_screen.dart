@@ -95,7 +95,9 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
     if (_isPlaying) {
       await _audioPlayer.pause();
     } else {
-      if (_audioPosition > Duration.zero && _audioDuration > Duration.zero && _audioPosition < _audioDuration) {
+      if (_audioPosition > Duration.zero &&
+          _audioDuration > Duration.zero &&
+          _audioPosition < _audioDuration) {
         await _audioPlayer.resume();
       } else {
         await _audioPlayer.play(path);
@@ -192,7 +194,11 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
             controller: _tabController,
             tabs: [
               Tab(text: l10n.meetingDetailTabSummary),
-              Tab(text: l10n.meetingDetailTabTranscript),
+              Tab(
+                text: meeting.type == MeetingType.document
+                    ? l10n.meetingDetailTabContent
+                    : l10n.meetingDetailTabTranscript,
+              ),
               Tab(text: l10n.meetingDetailTabChat),
             ],
           ),
@@ -841,6 +847,11 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
 
   Widget _buildTranscriptTab(
       Meeting meeting, MeetingNotifier provider, AppLocalizations l10n) {
+    if (meeting.type == MeetingType.document &&
+        (meeting.transcript?.trim().isNotEmpty ?? false)) {
+      return _buildDocumentContentTab(meeting, provider, l10n);
+    }
+
     switch (meeting.status) {
       case MeetingStatus.recorded:
         if (meeting.type == MeetingType.document) {
@@ -996,6 +1007,48 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
           ],
         );
     }
+  }
+
+  Widget _buildDocumentContentTab(
+    Meeting meeting,
+    MeetingNotifier provider,
+    AppLocalizations l10n,
+  ) {
+    return Column(
+      children: [
+        MaterialBanner(
+          content: Text(l10n.meetingDetailDocumentContent),
+          actions: const [SizedBox.shrink()],
+          backgroundColor:
+              Theme.of(context).colorScheme.surfaceContainerHighest,
+        ),
+        Expanded(
+          child: _buildTranscriptPane(
+            meeting: meeting,
+            provider: provider,
+            l10n: l10n,
+            child: Scrollbar(
+              thumbVisibility: _isDesktop,
+              controller: _transcriptScrollController,
+              child: SingleChildScrollView(
+                controller: _transcriptScrollController,
+                primary: false,
+                padding: EdgeInsets.only(
+                  left: 16,
+                  top: 16,
+                  right: 16,
+                  bottom: MediaQuery.of(context).padding.bottom + 16,
+                ),
+                child: SelectableText(
+                  meeting.transcript!,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildChatTab(Meeting meeting, AppLocalizations l10n) {

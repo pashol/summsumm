@@ -101,7 +101,7 @@ class FakeLibraryRagDocument {
 
 class FakeLibraryRagClient implements LibraryRagClient {
   int initializeCalls = 0;
-  int nextSourceId = 99;
+  int nextSourceId = 1;
   String? lastText;
   String? lastName;
   String? lastMetadata;
@@ -132,7 +132,7 @@ class FakeLibraryRagClient implements LibraryRagClient {
       name: name,
       metadata: metadata,
       sourceId: sourceId,
-    ));
+    ),);
     return sourceId;
   }
 

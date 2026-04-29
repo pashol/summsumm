@@ -1,21 +1,47 @@
 import 'dart:io';
 
 import 'package:flutter/services.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:summsumm/models/meeting.dart';
 import 'package:summsumm/services/meeting_repository.dart';
 import 'package:uuid/uuid.dart';
 
+typedef DocumentTextExtractor = Future<String> Function(String path);
+
+Future<String> _extractPdfText(String path) async {
+  final bytes = await File(path).readAsBytes();
+  final document = PdfDocument(inputBytes: bytes);
+  try {
+    return PdfTextExtractor(document).extractText();
+  } finally {
+    document.dispose();
+  }
+}
+
 class ImportService {
   final MeetingRepository _repository;
   final Future<Directory> Function()? _getMeetingsDir;
+  final DocumentTextExtractor _documentTextExtractor;
   static const MethodChannel _channel = MethodChannel('app.summsumm/intent');
 
-  ImportService(this._repository, {Future<Directory> Function()? getMeetingsDir})
-      : _getMeetingsDir = getMeetingsDir;
+  ImportService(
+    this._repository, {
+    Future<Directory> Function()? getMeetingsDir,
+    DocumentTextExtractor? documentTextExtractor,
+  })  : _getMeetingsDir = getMeetingsDir,
+        _documentTextExtractor = documentTextExtractor ?? _extractPdfText;
 
-  static const _audioExtensions = {'m4a', 'mp3', 'wav', 'flac', 'aac', 'ogg', 'webm'};
+  static const _audioExtensions = {
+    'm4a',
+    'mp3',
+    'wav',
+    'flac',
+    'aac',
+    'ogg',
+    'webm',
+  };
   static const _documentExtensions = {'pdf'};
 
   Future<Meeting?> importFile(String sourcePath) async {
@@ -43,6 +69,15 @@ class ImportService {
       durationSec = await _getAudioDuration(destPath);
     }
 
+    String? documentText;
+    if (type == MeetingType.document) {
+      try {
+        documentText = await _documentTextExtractor(destPath);
+      } catch (_) {
+        documentText = null;
+      }
+    }
+
     final meeting = Meeting(
       id: id,
       createdAt: DateTime.now(),
@@ -51,6 +86,7 @@ class ImportService {
       title: title,
       status: MeetingStatus.recorded,
       type: type,
+      rawTranscript: documentText?.trim().isEmpty ?? true ? null : documentText,
     );
 
     await _repository.save(meeting);
@@ -70,7 +106,8 @@ class ImportService {
   /// This reads metadata only - much faster than decoding the file.
   Future<int> _getAudioDuration(String filePath) async {
     try {
-      final result = await _channel.invokeMethod<int>('getAudioDuration', {'path': filePath});
+      final result = await _channel
+          .invokeMethod<int>('getAudioDuration', {'path': filePath});
       return result ?? 0;
     } catch (_) {
       return 0;

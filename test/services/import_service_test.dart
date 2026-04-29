@@ -24,7 +24,11 @@ void main() {
     meetingsDir = Directory(p.join(tempDir.path, 'meetings'));
     await meetingsDir.create();
     repo = _FakeRepository();
-    service = ImportService(repo, getMeetingsDir: () async => meetingsDir);
+    service = ImportService(
+      repo,
+      getMeetingsDir: () async => meetingsDir,
+      documentTextExtractor: (_) async => '',
+    );
   });
 
   tearDown(() async {
@@ -60,6 +64,37 @@ void main() {
     expect(meeting.title, 'report');
     expect(File(meeting.audioPath).existsSync(), isTrue);
     expect(repo.saved, hasLength(1));
+  });
+
+  test('stores extracted PDF text as document content', () async {
+    service = ImportService(
+      repo,
+      getMeetingsDir: () async => meetingsDir,
+      documentTextExtractor: (_) async => 'Extracted document text',
+    );
+    final source = await makeSourceFile('report.pdf');
+
+    final meeting = await service.importFile(source.path);
+
+    expect(meeting!.rawTranscript, 'Extracted document text');
+    expect(meeting.transcript, 'Extracted document text');
+    expect(repo.saved.single.rawTranscript, 'Extracted document text');
+  });
+
+  test('imports PDF when text extraction fails', () async {
+    service = ImportService(
+      repo,
+      getMeetingsDir: () async => meetingsDir,
+      documentTextExtractor: (_) async => throw Exception('scanned PDF'),
+    );
+    final source = await makeSourceFile('scan.pdf');
+
+    final meeting = await service.importFile(source.path);
+
+    expect(meeting, isNotNull);
+    expect(meeting!.type, MeetingType.document);
+    expect(meeting.rawTranscript, isNull);
+    expect(repo.saved.single.rawTranscript, isNull);
   });
 
   test('returns null for unsupported extension', () async {

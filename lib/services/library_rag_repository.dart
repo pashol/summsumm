@@ -1,7 +1,8 @@
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
-import 'package:mobile_rag_engine/src/rust/api/document_parser.dart' as doc_parser;
+import 'package:mobile_rag_engine/src/rust/api/document_parser.dart'
+    as doc_parser;
 
 import '../models/library_rag.dart';
 import '../models/meeting.dart';
@@ -24,7 +25,8 @@ class LibraryRagRepository {
     DocumentTextExtractor? documentTextExtractor,
   })  : _ragService = ragService,
         _metadataStore = metadataStore,
-        _documentTextExtractor = documentTextExtractor ?? _defaultDocumentTextExtractor;
+        _documentTextExtractor =
+            documentTextExtractor ?? _defaultDocumentTextExtractor;
 
   Future<LibraryIndexEstimate> estimate(List<Meeting> meetings) async {
     var meetingCount = 0;
@@ -55,7 +57,14 @@ class LibraryRagRepository {
     void Function(LibraryIndexProgress progress)? onProgress,
   }) async {
     final eligible = <_IndexCandidate>[];
-    for (final meeting in meetings) {
+    for (var i = 0; i < meetings.length; i++) {
+      final meeting = meetings[i];
+      onProgress?.call(LibraryIndexProgress(
+        indexedItems: i,
+        totalItems: meetings.length,
+        failedItems: 0,
+        currentTitle: meeting.title,
+      ));
       final text = await _textFor(meeting);
       if (text.trim().isEmpty) continue;
       eligible.add(_IndexCandidate(meeting: meeting, text: text));
@@ -116,7 +125,8 @@ class LibraryRagRepository {
     return metadata;
   }
 
-  Future<LibraryRagSearchResult> search(String query) => _ragService.search(query);
+  Future<LibraryRagSearchResult> search(String query) =>
+      _ragService.search(query);
 
   Future<LibraryRagMetadata> loadMetadata() => _metadataStore.load();
 

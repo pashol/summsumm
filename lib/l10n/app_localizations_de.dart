@@ -202,6 +202,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get meetingDetailTabTranscript => 'Transkript';
 
   @override
+  String get meetingDetailTabContent => 'Inhalt';
+
+  @override
   String get meetingDetailTabChat => 'Chat';
 
   @override

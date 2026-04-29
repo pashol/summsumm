@@ -313,6 +313,11 @@
     "description": "Tab label for transcript view"
   },
 
+  "meetingDetailTabContent": "Content",
+  "@meetingDetailTabContent": {
+    "description": "Tab label for imported document content view"
+  },
+
   "meetingDetailTabChat": "Chat",
   "@meetingDetailTabChat": {
     "description": "Tab label for chat view"

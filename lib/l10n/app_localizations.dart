@@ -458,6 +458,12 @@ abstract class AppLocalizations {
   /// **'Transcript'**
   String get meetingDetailTabTranscript;
 
+  /// Tab label for imported document content view
+  ///
+  /// In en, this message translates to:
+  /// **'Content'**
+  String get meetingDetailTabContent;
+
   /// Tab label for chat view
   ///
   /// In en, this message translates to:

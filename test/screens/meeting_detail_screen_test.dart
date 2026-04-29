@@ -18,6 +18,16 @@ class _LoadedMeetings extends MeetingLibraryNotifier {
   }
 }
 
+class _LoadedDocument extends MeetingLibraryNotifier {
+  @override
+  Future<List<Meeting>> build() async => [_documentWithContent];
+
+  @override
+  Future<void> refresh() async {
+    state = AsyncData([_documentWithContent]);
+  }
+}
+
 class _NoArchivedMeetings extends ArchivedMeetingsNotifier {
   @override
   Future<List<Meeting>> build() async => [];
@@ -45,6 +55,17 @@ final _meetingWithTranscript = Meeting(
       createdAt: DateTime.utc(2026, 4, 20, 11),
     ),
   ],
+);
+
+final _documentWithContent = Meeting(
+  id: 'document-1',
+  createdAt: DateTime.utc(2026, 4, 21, 10),
+  durationSec: 0,
+  audioPath: '/tmp/report.pdf',
+  title: 'Report',
+  status: MeetingStatus.recorded,
+  type: MeetingType.document,
+  rawTranscript: 'Extracted document text.',
 );
 
 void main() {
@@ -213,5 +234,32 @@ void main() {
 
     final tabBar = tester.widget<TabBar>(find.byType(TabBar));
     expect(tabBar.controller?.index, 1);
+  });
+
+  testWidgets('document detail labels second tab as content and shows text',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          meetingLibraryProvider.overrideWith(_LoadedDocument.new),
+          archivedMeetingsProvider.overrideWith(_NoArchivedMeetings.new),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: MeetingDetailScreen(meetingId: 'document-1'),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Content'), findsOneWidget);
+    expect(find.text('Transcript'), findsNothing);
+
+    await tester.tap(find.text('Content'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Extracted document text.'), findsOneWidget);
   });
 }

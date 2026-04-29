@@ -77,6 +77,7 @@
 
   "meetingDetailTabSummary": "Zusammenfassung",
   "meetingDetailTabTranscript": "Transkript",
+  "meetingDetailTabContent": "Inhalt",
   "meetingDetailTabChat": "Chat",
   "meetingDetailDuration": "Dauer",
   "meetingDetailRecorded": "Aufgenommen",
