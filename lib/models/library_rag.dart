@@ -45,6 +45,24 @@ class LibraryIndexProgress {
   double? get fraction => totalItems == 0 ? null : indexedItems / totalItems;
 }
 
+enum LibraryIndexInspectionStatus { notIndexed, ready, stale }
+
+class LibraryIndexInspection {
+  final LibraryIndexInspectionStatus status;
+  final int eligibleItems;
+  final int indexedItems;
+  final int staleItems;
+
+  const LibraryIndexInspection({
+    required this.status,
+    this.eligibleItems = 0,
+    this.indexedItems = 0,
+    this.staleItems = 0,
+  });
+
+  bool get hasUsableIndex => indexedItems > 0;
+}
+
 class IndexedLibrarySource {
   final String libraryItemId;
   final int ragSourceId;

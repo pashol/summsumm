@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:summsumm/models/library_rag.dart';
 import 'package:summsumm/models/meeting.dart';
@@ -32,12 +34,41 @@ void main() {
       documentTextExtractor: (_) async => '',
     );
 
-    await repository.indexAll([_meeting(id: 'a', transcript: 'alpha beta gamma')]);
+    await repository
+        .indexAll([_meeting(id: 'a', transcript: 'alpha beta gamma')]);
 
     final metadata = await store.load();
     expect(metadata.sources.single.libraryItemId, 'a');
     expect(metadata.sources.single.ragSourceId, 99);
     expect(metadata.sources.single.contentType, LibraryContentType.transcript);
+  });
+
+  test('indexAll reports progress before extracting slow document text',
+      () async {
+    final extractionStarted = Completer<void>();
+    final finishExtraction = Completer<void>();
+    final progressEvents = <LibraryIndexProgress>[];
+    final repository = LibraryRagRepository(
+      ragService: LibraryRagService(client: FakeLibraryRagClient()),
+      metadataStore: _MemoryMetadataStore(),
+      documentTextExtractor: (_) async {
+        extractionStarted.complete();
+        await finishExtraction.future;
+        return 'document text';
+      },
+    );
+
+    final indexing = repository.indexAll(
+      [_document(id: 'doc')],
+      onProgress: progressEvents.add,
+    );
+    await extractionStarted.future;
+
+    expect(progressEvents, isNotEmpty);
+    expect(progressEvents.last.currentTitle, 'Document doc');
+
+    finishExtraction.complete();
+    await indexing;
   });
 }
 
@@ -49,6 +80,16 @@ Meeting _meeting({required String id, required String transcript}) => Meeting(
       title: 'Meeting $id',
       rawTranscript: transcript,
       status: MeetingStatus.transcribed,
+    );
+
+Meeting _document({required String id}) => Meeting(
+      id: id,
+      createdAt: DateTime.utc(2026, 4, 28),
+      durationSec: 0,
+      audioPath: '/tmp/$id.pdf',
+      title: 'Document $id',
+      status: MeetingStatus.done,
+      type: MeetingType.document,
     );
 
 class _MemoryMetadataStore extends LibraryRagMetadataStore {
