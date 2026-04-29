@@ -85,11 +85,28 @@ class MobileLibraryRagClient implements LibraryRagClient {
   Future<void> clearAllData() => MobileRag.instance.clearAllData();
 }
 
+class FakeLibraryRagDocument {
+  final String text;
+  final String name;
+  final String metadata;
+  final int sourceId;
+
+  const FakeLibraryRagDocument({
+    required this.text,
+    required this.name,
+    required this.metadata,
+    required this.sourceId,
+  });
+}
+
 class FakeLibraryRagClient implements LibraryRagClient {
   int initializeCalls = 0;
+  int nextSourceId = 99;
   String? lastText;
   String? lastName;
   String? lastMetadata;
+  final List<FakeLibraryRagDocument> addedDocuments = [];
+  final List<int> removedSourceIds = [];
   LibraryRagSearchResult searchResult = const LibraryRagSearchResult(
     contextText: '',
     chunks: [],
@@ -101,15 +118,28 @@ class FakeLibraryRagClient implements LibraryRagClient {
   }
 
   @override
-  Future<int> addDocument(String text, {required String name, required String metadata}) async {
+  Future<int> addDocument(
+    String text, {
+    required String name,
+    required String metadata,
+  }) async {
     lastText = text;
     lastName = name;
     lastMetadata = metadata;
-    return 99;
+    final sourceId = nextSourceId++;
+    addedDocuments.add(FakeLibraryRagDocument(
+      text: text,
+      name: name,
+      metadata: metadata,
+      sourceId: sourceId,
+    ));
+    return sourceId;
   }
 
   @override
-  Future<void> removeSource(int sourceId) async {}
+  Future<void> removeSource(int sourceId) async {
+    removedSourceIds.add(sourceId);
+  }
 
   @override
   Future<LibraryRagSearchResult> search(String query) async => searchResult;

@@ -43,6 +43,23 @@ void main() {
     expect(metadata.sources.single.contentType, LibraryContentType.transcript);
   });
 
+  test('fake rag client records added and removed sources', () async {
+    final client = FakeLibraryRagClient()..nextSourceId = 7;
+    final service = LibraryRagService(client: client);
+
+    final sourceId = await service.addSource(
+      text: 'alpha beta gamma',
+      title: 'Source title',
+      metadataJson: '{"libraryItemId":"a"}',
+    );
+    await service.removeSource(sourceId);
+
+    expect(sourceId, 7);
+    expect(client.addedDocuments.single.text, 'alpha beta gamma');
+    expect(client.addedDocuments.single.name, 'Source title');
+    expect(client.removedSourceIds, [7]);
+  });
+
   test('indexAll reports progress before extracting slow document text',
       () async {
     final extractionStarted = Completer<void>();
