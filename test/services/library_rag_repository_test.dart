@@ -177,6 +177,29 @@ void main() {
     expect(inspection.indexedItems, 1);
   });
 
+  test('estimate initializes rag before extracting document text', () async {
+    final client = FakeLibraryRagClient();
+    final service = LibraryRagService(client: client);
+    final repository = LibraryRagRepository(
+      ragService: service,
+      metadataStore: _MemoryMetadataStore(),
+      documentTextExtractor: (_) async {
+        if (client.initializeCalls == 0) {
+          throw StateError('rag not initialized');
+        }
+        return 'document content here';
+      },
+    );
+
+    final estimate = await repository.estimate([
+      _document(id: 'doc1'),
+    ]);
+
+    expect(client.initializeCalls, 1);
+    expect(estimate.documentCount, 1);
+    expect(estimate.hasEligibleContent, isTrue);
+  });
+
   test('inspectIndex returns notIndexed when no eligible content exists', () async {
     final repository = LibraryRagRepository(
       ragService: LibraryRagService(client: FakeLibraryRagClient()),

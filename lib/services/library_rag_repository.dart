@@ -258,6 +258,7 @@ class LibraryRagRepository {
   Future<String> _textFor(Meeting meeting) async {
     if (meeting.type == MeetingType.document) {
       if (meeting.audioPath.isEmpty) return '';
+      await _ragService.initialize();
       return _documentTextExtractor(meeting.audioPath);
     }
     return meeting.transcript ?? '';
