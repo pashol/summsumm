@@ -20,6 +20,15 @@ class _AskLibraryScreenState extends ConsumerState<AskLibraryScreen> {
   final _scrollController = ScrollController();
 
   @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      if (!mounted) return;
+      ref.read(libraryRagSetupProvider.notifier).refreshReadiness();
+    });
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     _scrollController.dispose();
@@ -49,6 +58,10 @@ class _AskLibraryScreenState extends ConsumerState<AskLibraryScreen> {
             chat: chat,
             controller: _controller,
             scrollController: _scrollController,
+            isStale: setup.readiness == LibraryRagReadiness.stale,
+            isIndexing: false,
+            staleError: setup.error,
+            onUpdateIndex: () => ref.read(libraryRagSetupProvider.notifier).updateIndex(),
             onSend: _send,
             onCitationTap: _openCitation,
           ),
@@ -162,6 +175,10 @@ class _ChatView extends StatelessWidget {
   final AskLibraryChatState chat;
   final TextEditingController controller;
   final ScrollController scrollController;
+  final bool isStale;
+  final bool isIndexing;
+  final String? staleError;
+  final VoidCallback onUpdateIndex;
   final VoidCallback onSend;
   final ValueChanged<LibraryCitation> onCitationTap;
 
@@ -169,6 +186,10 @@ class _ChatView extends StatelessWidget {
     required this.chat,
     required this.controller,
     required this.scrollController,
+    required this.isStale,
+    required this.isIndexing,
+    required this.staleError,
+    required this.onUpdateIndex,
     required this.onSend,
     required this.onCitationTap,
   });
@@ -177,6 +198,20 @@ class _ChatView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        if (isStale)
+          MaterialBanner(
+            content: Text(
+              staleError == null
+                  ? 'Library changed. Answers may miss recent updates.'
+                  : 'Library update failed. Answers may miss recent updates.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: isIndexing ? null : onUpdateIndex,
+                child: const Text('Update index'),
+              ),
+            ],
+          ),
         Expanded(
           child: ListView.builder(
             controller: scrollController,
@@ -233,12 +268,12 @@ class _ChatView extends StatelessWidget {
                       hintText: 'Ask about your library...',
                       border: OutlineInputBorder(),
                     ),
-                    onSubmitted: (_) => onSend(),
+                    onSubmitted: chat.isStreaming || isIndexing ? null : (_) => onSend(),
                   ),
                 ),
                 const SizedBox(width: 8),
                 IconButton(
-                  onPressed: chat.isStreaming ? null : onSend,
+                  onPressed: chat.isStreaming || isIndexing ? null : onSend,
                   icon: const Icon(Icons.send),
                 ),
               ],
