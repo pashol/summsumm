@@ -12,7 +12,8 @@ final libraryRagServiceProvider = Provider<LibraryRagService>((ref) {
   return LibraryRagService();
 });
 
-final libraryRagMetadataStoreProvider = Provider<LibraryRagMetadataStore>((ref) {
+final libraryRagMetadataStoreProvider =
+    Provider<LibraryRagMetadataStore>((ref) {
   return LibraryRagMetadataStore();
 });
 
@@ -57,18 +58,32 @@ class LibraryRagSetupNotifier extends Notifier<LibraryRagSetupState> {
   LibraryRagSetupState build() {
     final enabled = ref.watch(settingsProvider).localLibraryChatEnabled;
     if (!enabled) return const LibraryRagSetupState();
-    return const LibraryRagSetupState(readiness: LibraryRagReadiness.enabledNotIndexed);
+    return const LibraryRagSetupState(
+      readiness: LibraryRagReadiness.enabledNotIndexed,
+    );
   }
 
   Future<void> loadEstimate() async {
-    final library = await ref.read(meetingLibraryProvider.future);
-    final estimate = await ref.read(libraryRagRepositoryProvider).estimate(library);
-    state = state.copyWith(estimate: estimate, clearError: true);
+    try {
+      final library = await ref.read(meetingLibraryProvider.future);
+      final estimate =
+          await ref.read(libraryRagRepositoryProvider).estimate(library);
+      state = state.copyWith(estimate: estimate, clearError: true);
+    } catch (e, st) {
+      debugPrint('loadEstimate failed: $e\n$st');
+      state = state.copyWith(
+        readiness: LibraryRagReadiness.failed,
+        error: e.toString(),
+      );
+    }
   }
 
   Future<void> enableAndEstimate() async {
     await ref.read(settingsProvider.notifier).setLocalLibraryChatEnabled(true);
-    state = state.copyWith(readiness: LibraryRagReadiness.enabledNotIndexed, clearError: true);
+    state = state.copyWith(
+      readiness: LibraryRagReadiness.enabledNotIndexed,
+      clearError: true,
+    );
     await loadEstimate();
   }
 
@@ -86,10 +101,20 @@ class LibraryRagSetupNotifier extends Notifier<LibraryRagSetupState> {
     }
     try {
       final library = await ref.read(meetingLibraryProvider.future);
-      final inspection = await ref.read(libraryRagRepositoryProvider).inspectIndex(library);
+      final inspection =
+          await ref.read(libraryRagRepositoryProvider).inspectIndex(library);
+      if (inspection.status == LibraryIndexInspectionStatus.notIndexed) {
+        state = state.copyWith(
+          readiness: LibraryRagReadiness.enabledNotIndexed,
+          clearError: true,
+        );
+        await loadEstimate();
+        return;
+      }
       state = state.copyWith(
         readiness: switch (inspection.status) {
-          LibraryIndexInspectionStatus.notIndexed => LibraryRagReadiness.enabledNotIndexed,
+          LibraryIndexInspectionStatus.notIndexed =>
+            LibraryRagReadiness.enabledNotIndexed,
           LibraryIndexInspectionStatus.ready => LibraryRagReadiness.ready,
           LibraryIndexInspectionStatus.stale => LibraryRagReadiness.stale,
         },
@@ -111,7 +136,10 @@ class LibraryRagSetupNotifier extends Notifier<LibraryRagSetupState> {
   Future<void> _performSync({required bool preserveStaleOnError}) async {
     final previousReadiness = state.readiness;
     final library = await ref.read(meetingLibraryProvider.future);
-    state = state.copyWith(readiness: LibraryRagReadiness.indexing, clearError: true);
+    state = state.copyWith(
+      readiness: LibraryRagReadiness.indexing,
+      clearError: true,
+    );
     try {
       await ref.read(libraryRagRepositoryProvider).syncLibrary(
         library,
@@ -123,7 +151,8 @@ class LibraryRagSetupNotifier extends Notifier<LibraryRagSetupState> {
     } catch (e, st) {
       debugPrint('updateIndex failed: $e\n$st');
       state = state.copyWith(
-        readiness: preserveStaleOnError && previousReadiness == LibraryRagReadiness.stale
+        readiness: preserveStaleOnError &&
+                previousReadiness == LibraryRagReadiness.stale
             ? LibraryRagReadiness.stale
             : LibraryRagReadiness.failed,
         error: e.toString(),
