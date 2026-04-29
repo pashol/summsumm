@@ -807,4 +807,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get meetingDetailAudioMissing => 'Audio file missing';
+
+  @override
+  String get askLibraryStaleBanner =>
+      'Library changed. Answers may miss recent updates.';
+
+  @override
+  String get askLibraryStaleBannerError =>
+      'Library update failed. Answers may miss recent updates.';
+
+  @override
+  String get askLibraryUpdateIndexButton => 'Update index';
 }

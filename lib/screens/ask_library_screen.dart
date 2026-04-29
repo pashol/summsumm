@@ -22,10 +22,7 @@ class _AskLibraryScreenState extends ConsumerState<AskLibraryScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
-      if (!mounted) return;
-      ref.read(libraryRagSetupProvider.notifier).refreshReadiness();
-    });
+    ref.read(libraryRagSetupProvider.notifier).refreshReadiness();
   }
 
   @override
@@ -59,7 +56,6 @@ class _AskLibraryScreenState extends ConsumerState<AskLibraryScreen> {
             controller: _controller,
             scrollController: _scrollController,
             isStale: setup.readiness == LibraryRagReadiness.stale,
-            isIndexing: false,
             staleError: setup.error,
             onUpdateIndex: () => ref.read(libraryRagSetupProvider.notifier).updateIndex(),
             onSend: _send,
@@ -176,7 +172,6 @@ class _ChatView extends StatelessWidget {
   final TextEditingController controller;
   final ScrollController scrollController;
   final bool isStale;
-  final bool isIndexing;
   final String? staleError;
   final VoidCallback onUpdateIndex;
   final VoidCallback onSend;
@@ -187,7 +182,6 @@ class _ChatView extends StatelessWidget {
     required this.controller,
     required this.scrollController,
     required this.isStale,
-    required this.isIndexing,
     required this.staleError,
     required this.onUpdateIndex,
     required this.onSend,
@@ -196,19 +190,20 @@ class _ChatView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         if (isStale)
           MaterialBanner(
             content: Text(
               staleError == null
-                  ? 'Library changed. Answers may miss recent updates.'
-                  : 'Library update failed. Answers may miss recent updates.',
+                  ? l10n.askLibraryStaleBanner
+                  : l10n.askLibraryStaleBannerError,
             ),
             actions: [
               TextButton(
-                onPressed: isIndexing ? null : onUpdateIndex,
-                child: const Text('Update index'),
+                onPressed: onUpdateIndex,
+                child: Text(l10n.askLibraryUpdateIndexButton),
               ),
             ],
           ),
@@ -268,12 +263,12 @@ class _ChatView extends StatelessWidget {
                       hintText: 'Ask about your library...',
                       border: OutlineInputBorder(),
                     ),
-                    onSubmitted: chat.isStreaming || isIndexing ? null : (_) => onSend(),
+                    onSubmitted: chat.isStreaming ? null : (_) => onSend(),
                   ),
                 ),
                 const SizedBox(width: 8),
                 IconButton(
-                  onPressed: chat.isStreaming || isIndexing ? null : onSend,
+                  onPressed: chat.isStreaming ? null : onSend,
                   icon: const Icon(Icons.send),
                 ),
               ],

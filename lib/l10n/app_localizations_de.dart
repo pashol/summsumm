@@ -812,4 +812,15 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get meetingDetailAudioMissing => 'Audiodatei fehlt';
+
+  @override
+  String get askLibraryStaleBanner =>
+      'Bibliothek geändert. Antworten könnten aktuelle Änderungen vermissen.';
+
+  @override
+  String get askLibraryStaleBannerError =>
+      'Bibliotheksaktualisierung fehlgeschlagen. Antworten könnten aktuelle Änderungen vermissen.';
+
+  @override
+  String get askLibraryUpdateIndexButton => 'Index aktualisieren';
 }

@@ -1264,5 +1264,20 @@
   "meetingDetailAudioMissing": "Audio file missing",
   "@meetingDetailAudioMissing": {
     "description": "Button label when audio file is missing and cannot be transcribed"
+  },
+
+  "askLibraryStaleBanner": "Library changed. Answers may miss recent updates.",
+  "@askLibraryStaleBanner": {
+    "description": "Banner shown when library index is stale"
+  },
+
+  "askLibraryStaleBannerError": "Library update failed. Answers may miss recent updates.",
+  "@askLibraryStaleBannerError": {
+    "description": "Banner shown when library update failed"
+  },
+
+  "askLibraryUpdateIndexButton": "Update index",
+  "@askLibraryUpdateIndexButton": {
+    "description": "Button to update library index"
   }
 }

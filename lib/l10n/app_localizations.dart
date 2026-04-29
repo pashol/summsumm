@@ -1573,6 +1573,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Audio file missing'**
   String get meetingDetailAudioMissing;
+
+  /// Banner shown when library index is stale
+  ///
+  /// In en, this message translates to:
+  /// **'Library changed. Answers may miss recent updates.'**
+  String get askLibraryStaleBanner;
+
+  /// Banner shown when library update failed
+  ///
+  /// In en, this message translates to:
+  /// **'Library update failed. Answers may miss recent updates.'**
+  String get askLibraryStaleBannerError;
+
+  /// Button to update library index
+  ///
+  /// In en, this message translates to:
+  /// **'Update index'**
+  String get askLibraryUpdateIndexButton;
 }
 
 class _AppLocalizationsDelegate

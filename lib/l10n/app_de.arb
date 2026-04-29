@@ -435,5 +435,20 @@
   "localLibraryChatSubtitleDisabled": "Indexierung für Bibliothek fragen ist deaktiviert",
   "@localLibraryChatSubtitleDisabled": {
     "description": "Subtitle when local library chat is disabled"
+  },
+
+  "askLibraryStaleBanner": "Bibliothek geändert. Antworten könnten aktuelle Änderungen vermissen.",
+  "@askLibraryStaleBanner": {
+    "description": "Banner shown when library index is stale"
+  },
+
+  "askLibraryStaleBannerError": "Bibliotheksaktualisierung fehlgeschlagen. Antworten könnten aktuelle Änderungen vermissen.",
+  "@askLibraryStaleBannerError": {
+    "description": "Banner shown when library update failed"
+  },
+
+  "askLibraryUpdateIndexButton": "Index aktualisieren",
+  "@askLibraryUpdateIndexButton": {
+    "description": "Button to update library index"
   }
 }
