@@ -157,6 +157,40 @@ void main() {
     expect(inspection.staleItems, 1);
   });
 
+  test('inspectIndex handles documents with extracted text', () async {
+    final store = _MemoryMetadataStore();
+    final repository = LibraryRagRepository(
+      ragService: LibraryRagService(client: FakeLibraryRagClient()),
+      metadataStore: store,
+      documentTextExtractor: (_) async => 'document content here',
+    );
+    await repository.indexAll([
+      _document(id: 'doc1'),
+    ]);
+
+    final inspection = await repository.inspectIndex([
+      _document(id: 'doc1'),
+    ]);
+
+    expect(inspection.status, LibraryIndexInspectionStatus.ready);
+    expect(inspection.eligibleItems, 1);
+    expect(inspection.indexedItems, 1);
+  });
+
+  test('inspectIndex returns notIndexed when no eligible content exists', () async {
+    final repository = LibraryRagRepository(
+      ragService: LibraryRagService(client: FakeLibraryRagClient()),
+      metadataStore: _MemoryMetadataStore(),
+      documentTextExtractor: (_) async => '',
+    );
+
+    final inspection = await repository.inspectIndex(const []);
+
+    expect(inspection.status, LibraryIndexInspectionStatus.notIndexed);
+    expect(inspection.eligibleItems, 0);
+    expect(inspection.indexedItems, 0);
+  });
+
   test('indexAll reports progress before extracting slow document text',
       () async {
     final extractionStarted = Completer<void>();

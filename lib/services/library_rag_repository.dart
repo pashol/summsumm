@@ -138,7 +138,7 @@ class LibraryRagRepository {
       for (final source in metadata.sources) source.libraryItemId: source,
     };
 
-    var indexedItems = metadata.sources.length;
+    final indexedItems = metadata.sources.length;
     var staleItems = 0;
 
     for (final candidate in candidates) {
