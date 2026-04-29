@@ -130,6 +130,58 @@ class LibraryRagRepository {
 
   Future<LibraryRagMetadata> loadMetadata() => _metadataStore.load();
 
+  Future<LibraryIndexInspection> inspectIndex(List<Meeting> meetings) async {
+    final metadata = await _metadataStore.load();
+    final candidates = await _eligibleCandidates(meetings);
+    final activeIds = candidates.map((candidate) => candidate.meeting.id).toSet();
+    final metadataByItem = {
+      for (final source in metadata.sources) source.libraryItemId: source,
+    };
+
+    var indexedItems = metadata.sources.length;
+    var staleItems = 0;
+
+    for (final candidate in candidates) {
+      final source = metadataByItem[candidate.meeting.id];
+      if (source == null) {
+        staleItems++;
+        continue;
+      }
+      if (source.contentHash != _hash(candidate.text)) {
+        staleItems++;
+      }
+    }
+
+    for (final source in metadata.sources) {
+      if (!activeIds.contains(source.libraryItemId)) {
+        staleItems++;
+      }
+    }
+
+    final status = metadata.sources.isEmpty
+        ? LibraryIndexInspectionStatus.notIndexed
+        : staleItems == 0
+            ? LibraryIndexInspectionStatus.ready
+            : LibraryIndexInspectionStatus.stale;
+
+    return LibraryIndexInspection(
+      status: status,
+      eligibleItems: candidates.length,
+      indexedItems: indexedItems,
+      staleItems: staleItems,
+    );
+  }
+
+  Future<List<_IndexCandidate>> _eligibleCandidates(List<Meeting> meetings) async {
+    final eligible = <_IndexCandidate>[];
+    for (final meeting in meetings) {
+      final text = await _textFor(meeting);
+      if (text.trim().isEmpty) continue;
+      eligible.add(_IndexCandidate(meeting: meeting, text: text));
+    }
+    return eligible;
+  }
+
   Future<String> _textFor(Meeting meeting) async {
     if (meeting.type == MeetingType.document) {
       if (meeting.audioPath.isEmpty) return '';

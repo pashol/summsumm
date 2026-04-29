@@ -60,6 +60,103 @@ void main() {
     expect(client.removedSourceIds, [7]);
   });
 
+  test('inspectIndex returns notIndexed when metadata is empty and content exists', () async {
+    final repository = LibraryRagRepository(
+      ragService: LibraryRagService(client: FakeLibraryRagClient()),
+      metadataStore: _MemoryMetadataStore(),
+      documentTextExtractor: (_) async => '',
+    );
+
+    final inspection = await repository.inspectIndex([
+      _meeting(id: 'a', transcript: 'alpha beta gamma'),
+    ]);
+
+    expect(inspection.status, LibraryIndexInspectionStatus.notIndexed);
+    expect(inspection.eligibleItems, 1);
+    expect(inspection.indexedItems, 0);
+  });
+
+  test('inspectIndex returns ready when metadata matches content hash', () async {
+    final store = _MemoryMetadataStore();
+    final repository = LibraryRagRepository(
+      ragService: LibraryRagService(client: FakeLibraryRagClient()),
+      metadataStore: store,
+      documentTextExtractor: (_) async => '',
+    );
+    await repository.indexAll([
+      _meeting(id: 'a', transcript: 'alpha beta gamma'),
+    ]);
+
+    final inspection = await repository.inspectIndex([
+      _meeting(id: 'a', transcript: 'alpha beta gamma'),
+    ]);
+
+    expect(inspection.status, LibraryIndexInspectionStatus.ready);
+    expect(inspection.eligibleItems, 1);
+    expect(inspection.indexedItems, 1);
+    expect(inspection.staleItems, 0);
+  });
+
+  test('inspectIndex returns stale when a new eligible item appears', () async {
+    final store = _MemoryMetadataStore();
+    final repository = LibraryRagRepository(
+      ragService: LibraryRagService(client: FakeLibraryRagClient()),
+      metadataStore: store,
+      documentTextExtractor: (_) async => '',
+    );
+    await repository.indexAll([
+      _meeting(id: 'a', transcript: 'alpha beta gamma'),
+    ]);
+
+    final inspection = await repository.inspectIndex([
+      _meeting(id: 'a', transcript: 'alpha beta gamma'),
+      _meeting(id: 'b', transcript: 'delta epsilon'),
+    ]);
+
+    expect(inspection.status, LibraryIndexInspectionStatus.stale);
+    expect(inspection.eligibleItems, 2);
+    expect(inspection.indexedItems, 1);
+    expect(inspection.staleItems, 1);
+  });
+
+  test('inspectIndex returns stale when indexed content changes', () async {
+    final store = _MemoryMetadataStore();
+    final repository = LibraryRagRepository(
+      ragService: LibraryRagService(client: FakeLibraryRagClient()),
+      metadataStore: store,
+      documentTextExtractor: (_) async => '',
+    );
+    await repository.indexAll([
+      _meeting(id: 'a', transcript: 'alpha beta gamma'),
+    ]);
+
+    final inspection = await repository.inspectIndex([
+      _meeting(id: 'a', transcript: 'changed transcript'),
+    ]);
+
+    expect(inspection.status, LibraryIndexInspectionStatus.stale);
+    expect(inspection.staleItems, 1);
+  });
+
+  test('inspectIndex returns stale when metadata points to removed item', () async {
+    final store = _MemoryMetadataStore();
+    final repository = LibraryRagRepository(
+      ragService: LibraryRagService(client: FakeLibraryRagClient()),
+      metadataStore: store,
+      documentTextExtractor: (_) async => '',
+    );
+    await repository.indexAll([
+      _meeting(id: 'a', transcript: 'alpha beta gamma'),
+    ]);
+
+    final inspection = await repository.inspectIndex(const []);
+
+    expect(inspection.status, LibraryIndexInspectionStatus.stale);
+    expect(inspection.eligibleItems, 0);
+    expect(inspection.indexedItems, 1);
+    expect(inspection.staleItems, 1);
+  });
+
   test('indexAll reports progress before extracting slow document text',
       () async {
     final extractionStarted = Completer<void>();
