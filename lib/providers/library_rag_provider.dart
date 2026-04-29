@@ -75,7 +75,7 @@ class LibraryRagSetupNotifier extends Notifier<LibraryRagSetupState> {
     final library = await ref.read(meetingLibraryProvider.future);
     state = state.copyWith(readiness: LibraryRagReadiness.indexing, clearError: true);
     try {
-      await ref.read(libraryRagRepositoryProvider).indexAll(
+      await ref.read(libraryRagRepositoryProvider).syncLibrary(
         library,
         onProgress: (progress) {
           state = state.copyWith(progress: progress);
@@ -85,6 +85,52 @@ class LibraryRagSetupNotifier extends Notifier<LibraryRagSetupState> {
     } catch (e) {
       state = state.copyWith(
         readiness: LibraryRagReadiness.failed,
+        error: e.toString(),
+      );
+    }
+  }
+
+  Future<void> refreshReadiness() async {
+    final enabled = ref.read(settingsProvider).localLibraryChatEnabled;
+    if (!enabled) {
+      state = const LibraryRagSetupState();
+      return;
+    }
+    final library = await ref.read(meetingLibraryProvider.future);
+    final inspection = await ref.read(libraryRagRepositoryProvider).inspectIndex(library);
+    state = state.copyWith(
+      readiness: switch (inspection.status) {
+        LibraryIndexInspectionStatus.notIndexed => LibraryRagReadiness.enabledNotIndexed,
+        LibraryIndexInspectionStatus.ready => LibraryRagReadiness.ready,
+        LibraryIndexInspectionStatus.stale => LibraryRagReadiness.stale,
+      },
+      clearError: true,
+    );
+  }
+
+  Future<void> updateIndex() async {
+    final previousReadiness = state.readiness;
+    final library = await ref.read(meetingLibraryProvider.future);
+    state = state.copyWith(readiness: LibraryRagReadiness.indexing, clearError: true);
+    try {
+      final metadata = await ref.read(libraryRagRepositoryProvider).syncLibrary(
+        library,
+        onProgress: (progress) {
+          state = state.copyWith(progress: progress);
+        },
+      );
+      state = state.copyWith(
+        readiness: LibraryRagReadiness.ready,
+        progress: LibraryIndexProgress(
+          indexedItems: metadata.sources.length,
+          totalItems: metadata.sources.length,
+        ),
+      );
+    } catch (e) {
+      state = state.copyWith(
+        readiness: previousReadiness == LibraryRagReadiness.stale
+            ? LibraryRagReadiness.stale
+            : LibraryRagReadiness.failed,
         error: e.toString(),
       );
     }
