@@ -29,6 +29,7 @@ migrate_working_dir/
 **/ios/Flutter/.last_build_id
 .dart_tool/
 .rag-engine-cache/
+examples/
 .flutter-plugins
 .flutter-plugins-dependencies
 build/

@@ -14,7 +14,7 @@ Future<String> _extractPdfText(String path) async {
   final bytes = await File(path).readAsBytes();
   final document = PdfDocument(inputBytes: bytes);
   try {
-    return PdfTextExtractor(document).extractText();
+    return PdfTextExtractor(document).extractText(layoutText: true);
   } finally {
     document.dispose();
   }

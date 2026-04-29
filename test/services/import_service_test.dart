@@ -1,7 +1,9 @@
+import 'dart:ui';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
+import 'package:syncfusion_flutter_pdf/pdf.dart';
 import 'package:summsumm/models/meeting.dart';
 import 'package:summsumm/services/import_service.dart';
 import 'package:summsumm/services/meeting_repository.dart';
@@ -39,6 +41,21 @@ void main() {
     final f = File(p.join(tempDir.path, name));
     await f.writeAsString(content);
     return f;
+  }
+
+  Future<File> makePositionedPdf(String name) async {
+    final document = PdfDocument();
+    try {
+      final page = document.pages.add();
+      final font = PdfStandardFont(PdfFontFamily.helvetica, 12);
+      page.graphics.drawString('Hallo', font, bounds: Rect.fromLTWH(0, 0, 40, 20));
+      page.graphics.drawString('Welt', font, bounds: Rect.fromLTWH(48, 0, 40, 20));
+      final file = File(p.join(tempDir.path, name));
+      await file.writeAsBytes(await document.save());
+      return file;
+    } finally {
+      document.dispose();
+    }
   }
 
   test('imports audio file as MeetingType.meeting', () async {
@@ -79,6 +96,20 @@ void main() {
     expect(meeting!.rawTranscript, 'Extracted document text');
     expect(meeting.transcript, 'Extracted document text');
     expect(repo.saved.single.rawTranscript, 'Extracted document text');
+  });
+
+  test('default PDF extraction keeps words on the same line', () async {
+    service = ImportService(
+      repo,
+      getMeetingsDir: () async => meetingsDir,
+    );
+    final source = await makePositionedPdf('layout.pdf');
+
+    final meeting = await service.importFile(source.path);
+
+    expect(meeting, isNotNull);
+    expect(meeting!.rawTranscript, contains('Hallo Welt'));
+    expect(meeting.rawTranscript, isNot(contains('Hallo\n')));
   });
 
   test('imports PDF when text extraction fails', () async {
