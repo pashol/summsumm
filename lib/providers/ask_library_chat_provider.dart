@@ -42,6 +42,12 @@ class AskLibraryChatNotifier extends StateNotifier<AskLibraryChatState> {
 
   AskLibraryChatNotifier(this._ref) : super(const AskLibraryChatState());
 
+  void newChat() {
+    _streamSub?.cancel();
+    _streamSub = null;
+    state = const AskLibraryChatState();
+  }
+
   Future<void> sendMessage(String question) async {
     final trimmed = question.trim();
     if (state.isStreaming || trimmed.isEmpty) return;

@@ -39,19 +39,32 @@ class _AskLibraryScreenState extends ConsumerState<AskLibraryScreen> {
     final setup = ref.watch(libraryRagSetupProvider);
     final chat = ref.watch(askLibraryChatProvider);
     return Scaffold(
-      appBar: AppBar(title: Text(AppLocalizations.of(context)!.askLibraryTitle)),
+      appBar: AppBar(
+        title: Text(AppLocalizations.of(context)!.askLibraryTitle),
+        actions: [
+          if (chat.messages.isNotEmpty)
+            IconButton(
+              tooltip: 'New chat',
+              onPressed: _newChat,
+              icon: const Icon(Icons.add_comment_outlined),
+            ),
+        ],
+      ),
       body: switch (setup.readiness) {
         LibraryRagReadiness.disabled => _SetupView(
-            text: 'Enable local library chat to index your transcripts and documents for contextual search.',
+            text:
+                'Enable local library chat to index your transcripts and documents for contextual search.',
             buttonText: 'Enable',
-            onPressed: () => ref.read(libraryRagSetupProvider.notifier).enableAndEstimate(),
+            onPressed: () =>
+                ref.read(libraryRagSetupProvider.notifier).enableAndEstimate(),
           ),
         LibraryRagReadiness.enabledNotIndexed => _EstimateView(setup: setup),
         LibraryRagReadiness.indexing => _IndexingView(setup: setup),
         LibraryRagReadiness.failed => _SetupView(
             text: setup.error ?? 'Local library chat failed.',
             buttonText: 'Retry',
-            onPressed: () => ref.read(libraryRagSetupProvider.notifier).loadEstimate(),
+            onPressed: () =>
+                ref.read(libraryRagSetupProvider.notifier).loadEstimate(),
           ),
         LibraryRagReadiness.ready || LibraryRagReadiness.stale => _ChatView(
             chat: chat,
@@ -59,7 +72,8 @@ class _AskLibraryScreenState extends ConsumerState<AskLibraryScreen> {
             scrollController: _scrollController,
             isStale: setup.readiness == LibraryRagReadiness.stale,
             staleError: setup.error,
-            onUpdateIndex: () => ref.read(libraryRagSetupProvider.notifier).updateIndex(),
+            onUpdateIndex: () =>
+                ref.read(libraryRagSetupProvider.notifier).updateIndex(),
             onSend: _send,
             onCitationTap: _openCitation,
           ),
@@ -73,13 +87,19 @@ class _AskLibraryScreenState extends ConsumerState<AskLibraryScreen> {
     ref.read(askLibraryChatProvider.notifier).sendMessage(text);
   }
 
+  void _newChat() {
+    _controller.clear();
+    ref.read(askLibraryChatProvider.notifier).newChat();
+  }
+
   void _openCitation(LibraryCitation citation) {
     Navigator.push<void>(
       context,
       SpringPageRoute(
         builder: (_) => MeetingDetailScreen(
           meetingId: citation.libraryItemId,
-          initialTabIndex: citation.contentType == LibraryContentType.transcript ? 1 : 0,
+          initialTabIndex:
+              citation.contentType == LibraryContentType.transcript ? 1 : 0,
         ),
       ),
     );
@@ -91,7 +111,8 @@ class _SetupView extends StatelessWidget {
   final String buttonText;
   final VoidCallback onPressed;
 
-  const _SetupView({required this.text, required this.buttonText, required this.onPressed});
+  const _SetupView(
+      {required this.text, required this.buttonText, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
@@ -134,7 +155,8 @@ class _EstimateView extends ConsumerWidget {
             const SizedBox(height: 16),
             FilledButton(
               onPressed: estimate?.hasEligibleContent == true
-                  ? () => ref.read(libraryRagSetupProvider.notifier).indexLibrary()
+                  ? () =>
+                      ref.read(libraryRagSetupProvider.notifier).indexLibrary()
                   : null,
               child: const Text('Start indexing'),
             ),
@@ -222,7 +244,9 @@ class _ChatView extends StatelessWidget {
             itemBuilder: (context, index) {
               final message = chat.messages[index];
               return Align(
-                alignment: message.role == 'user' ? Alignment.centerRight : Alignment.centerLeft,
+                alignment: message.role == 'user'
+                    ? Alignment.centerRight
+                    : Alignment.centerLeft,
                 child: Card(
                   child: Padding(
                     padding: const EdgeInsets.all(12),
@@ -252,7 +276,9 @@ class _ChatView extends StatelessWidget {
             },
           ),
         ),
-        if (chat.error != null) Text(chat.error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+        if (chat.error != null)
+          Text(chat.error!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error)),
         SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(8.0),
