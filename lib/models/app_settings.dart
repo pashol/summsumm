@@ -23,6 +23,7 @@ class AppSettings {
   final String streamingModelLanguage;
   final bool compressAudioStorage;
   final bool localLibraryChatEnabled;
+  final bool showExtractedPdfTextOnly;
   final Map<String, String> promptOverrides;
   final List<CustomPrompt> customPrompts;
   final String? selectedCustomPromptId;
@@ -45,6 +46,7 @@ class AppSettings {
     this.streamingModelLanguage = 'English',
     this.compressAudioStorage = false,
     this.localLibraryChatEnabled = false,
+    this.showExtractedPdfTextOnly = false,
     this.promptOverrides = const {},
     this.customPrompts = const [],
     this.selectedCustomPromptId,
@@ -69,6 +71,7 @@ class AppSettings {
           streamingModelLanguage: 'English',
           compressAudioStorage: false,
           localLibraryChatEnabled: false,
+          showExtractedPdfTextOnly: false,
           promptOverrides: const {},
           customPrompts: const [],
           selectedCustomPromptId: null,
@@ -92,6 +95,7 @@ class AppSettings {
     String? streamingModelLanguage,
     bool? compressAudioStorage,
     bool? localLibraryChatEnabled,
+    bool? showExtractedPdfTextOnly,
     Map<String, String>? promptOverrides,
     List<CustomPrompt>? customPrompts,
     String? selectedCustomPromptId,
@@ -114,6 +118,8 @@ class AppSettings {
         streamingModelLanguage: streamingModelLanguage ?? this.streamingModelLanguage,
         compressAudioStorage: compressAudioStorage ?? this.compressAudioStorage,
         localLibraryChatEnabled: localLibraryChatEnabled ?? this.localLibraryChatEnabled,
+        showExtractedPdfTextOnly:
+            showExtractedPdfTextOnly ?? this.showExtractedPdfTextOnly,
         promptOverrides: promptOverrides ?? this.promptOverrides,
         customPrompts: customPrompts ?? this.customPrompts,
         selectedCustomPromptId: selectedCustomPromptId ?? this.selectedCustomPromptId,
@@ -137,6 +143,7 @@ class AppSettings {
         'streamingModelLanguage': streamingModelLanguage,
         'compressAudioStorage': compressAudioStorage,
         'localLibraryChatEnabled': localLibraryChatEnabled,
+        'showExtractedPdfTextOnly': showExtractedPdfTextOnly,
         'promptOverrides': promptOverrides,
         'customPrompts': customPrompts.map((p) => p.toJson()).toList(),
         'selectedCustomPromptId': selectedCustomPromptId,
@@ -165,6 +172,8 @@ class AppSettings {
         streamingModelLanguage: json['streamingModelLanguage'] as String? ?? 'English',
         compressAudioStorage: json['compressAudioStorage'] as bool? ?? false,
         localLibraryChatEnabled: json['localLibraryChatEnabled'] as bool? ?? false,
+        showExtractedPdfTextOnly:
+            json['showExtractedPdfTextOnly'] as bool? ?? false,
         promptOverrides: (json['promptOverrides'] as Map<String, dynamic>?)?.map(
               (k, v) => MapEntry(k, v?.toString() ?? ''),
             ) ??
@@ -205,13 +214,14 @@ class AppSettings {
         other.streamingModelLanguage == streamingModelLanguage &&
         other.compressAudioStorage == compressAudioStorage &&
         other.localLibraryChatEnabled == localLibraryChatEnabled &&
+        other.showExtractedPdfTextOnly == showExtractedPdfTextOnly &&
         other.promptOverrides == promptOverrides &&
         listEquals(other.customPrompts, customPrompts) &&
         other.selectedCustomPromptId == selectedCustomPromptId;
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
         provider,
         openrouterModel,
         openaiModel,
@@ -229,10 +239,11 @@ class AppSettings {
         streamingModelLanguage,
         compressAudioStorage,
         localLibraryChatEnabled,
+        showExtractedPdfTextOnly,
         promptOverrides,
         Object.hashAll(customPrompts),
         selectedCustomPromptId,
-      );
+      ]);
 }
 
 class CuratedModel {
