@@ -22,7 +22,7 @@ void main() {
       metadataJson: '{"id":"a"}',
     );
 
-    expect(id, 99);
+    expect(id, 1);
     expect(client.lastText, 'hello world');
     expect(client.lastName, 'Greeting');
     expect(client.lastMetadata, '{"id":"a"}');

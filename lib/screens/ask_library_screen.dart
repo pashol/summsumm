@@ -22,7 +22,9 @@ class _AskLibraryScreenState extends ConsumerState<AskLibraryScreen> {
   @override
   void initState() {
     super.initState();
-    ref.read(libraryRagSetupProvider.notifier).refreshReadiness();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(libraryRagSetupProvider.notifier).refreshReadiness();
+    });
   }
 
   @override

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
+// ignore: implementation_imports
 import 'package:mobile_rag_engine/src/rust/api/document_parser.dart'
     as doc_parser;
 
