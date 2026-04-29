@@ -82,33 +82,15 @@ class LibraryRagRepository {
       ));
 
       try {
-        final sourceKind = candidate.meeting.type == MeetingType.document
-            ? LibrarySourceKind.document
-            : LibrarySourceKind.meeting;
-        final contentType = candidate.meeting.type == MeetingType.document
-            ? LibraryContentType.document
-            : LibraryContentType.transcript;
-        final sourceMetadata = {
-          'libraryItemId': candidate.meeting.id,
-          'sourceKind': sourceKind.name,
-          'contentType': contentType.name,
-          'title': candidate.meeting.title,
-          'createdAt': candidate.meeting.createdAt.toUtc().toIso8601String(),
-        };
         final ragSourceId = await _ragService.addSource(
           text: candidate.text,
           title: candidate.meeting.title,
-          metadataJson: jsonEncode(sourceMetadata),
+          metadataJson: _metadataJson(candidate.meeting),
         );
-        indexed.add(IndexedLibrarySource(
-          libraryItemId: candidate.meeting.id,
+        indexed.add(_indexedSource(
+          meeting: candidate.meeting,
+          text: candidate.text,
           ragSourceId: ragSourceId,
-          sourceKind: sourceKind,
-          contentType: contentType,
-          title: candidate.meeting.title,
-          contentHash: _hash(candidate.text),
-          contentLength: candidate.text.length,
-          indexedAt: DateTime.now().toUtc(),
         ));
       } catch (_) {
         failed++;
@@ -172,6 +154,96 @@ class LibraryRagRepository {
     );
   }
 
+  Future<LibraryRagMetadata> syncLibrary(
+    List<Meeting> meetings, {
+    void Function(LibraryIndexProgress progress)? onProgress,
+  }) async {
+    final previous = await _metadataStore.load();
+    final previousByItem = {
+      for (final source in previous.sources) source.libraryItemId: source,
+    };
+    final candidates = await _eligibleCandidates(meetings);
+    final activeIds = candidates.map((candidate) => candidate.meeting.id).toSet();
+    final nextSources = <IndexedLibrarySource>[];
+    var failed = 0;
+    var processed = 0;
+
+    for (final source in previous.sources) {
+      if (!activeIds.contains(source.libraryItemId)) {
+        try {
+          await _ragService.removeSource(source.ragSourceId);
+        } catch (_) {
+          failed++;
+          nextSources.add(source);
+        }
+      }
+    }
+
+    for (final candidate in candidates) {
+      onProgress?.call(LibraryIndexProgress(
+        indexedItems: processed,
+        totalItems: candidates.length,
+        failedItems: failed,
+        currentTitle: candidate.meeting.title,
+      ));
+
+      final previousSource = previousByItem[candidate.meeting.id];
+      final nextHash = _hash(candidate.text);
+      if (previousSource != null && previousSource.contentHash == nextHash) {
+        nextSources.add(IndexedLibrarySource(
+          libraryItemId: previousSource.libraryItemId,
+          ragSourceId: previousSource.ragSourceId,
+          sourceKind: previousSource.sourceKind,
+          contentType: previousSource.contentType,
+          title: candidate.meeting.title,
+          contentHash: previousSource.contentHash,
+          contentLength: candidate.text.length,
+          indexedAt: previousSource.indexedAt,
+        ));
+        processed++;
+        continue;
+      }
+
+      var oldSourceRemoved = previousSource == null;
+      if (previousSource != null) {
+        try {
+          await _ragService.removeSource(previousSource.ragSourceId);
+          oldSourceRemoved = true;
+        } catch (_) {
+          failed++;
+          nextSources.add(previousSource);
+        }
+      }
+
+      if (oldSourceRemoved) {
+        try {
+          final ragSourceId = await _ragService.addSource(
+            text: candidate.text,
+            title: candidate.meeting.title,
+            metadataJson: _metadataJson(candidate.meeting),
+          );
+          nextSources.add(_indexedSource(
+            meeting: candidate.meeting,
+            text: candidate.text,
+            ragSourceId: ragSourceId,
+          ));
+        } catch (_) {
+          failed++;
+        }
+      }
+      processed++;
+    }
+
+    final metadata = LibraryRagMetadata(sources: nextSources);
+    await _metadataStore.save(metadata);
+    onProgress?.call(LibraryIndexProgress(
+      indexedItems: processed,
+      totalItems: candidates.length,
+      failedItems: failed,
+    ));
+    return metadata;
+  }
+
   Future<List<_IndexCandidate>> _eligibleCandidates(List<Meeting> meetings) async {
     final eligible = <_IndexCandidate>[];
     for (final meeting in meetings) {
@@ -188,6 +260,45 @@ class LibraryRagRepository {
       return _documentTextExtractor(meeting.audioPath);
     }
     return meeting.transcript ?? '';
+  }
+
+  IndexedLibrarySource _indexedSource({
+    required Meeting meeting,
+    required String text,
+    required int ragSourceId,
+  }) {
+    final sourceKind = meeting.type == MeetingType.document
+        ? LibrarySourceKind.document
+        : LibrarySourceKind.meeting;
+    final contentType = meeting.type == MeetingType.document
+        ? LibraryContentType.document
+        : LibraryContentType.transcript;
+    return IndexedLibrarySource(
+      libraryItemId: meeting.id,
+      ragSourceId: ragSourceId,
+      sourceKind: sourceKind,
+      contentType: contentType,
+      title: meeting.title,
+      contentHash: _hash(text),
+      contentLength: text.length,
+      indexedAt: DateTime.now().toUtc(),
+    );
+  }
+
+  String _metadataJson(Meeting meeting) {
+    final sourceKind = meeting.type == MeetingType.document
+        ? LibrarySourceKind.document
+        : LibrarySourceKind.meeting;
+    final contentType = meeting.type == MeetingType.document
+        ? LibraryContentType.document
+        : LibraryContentType.transcript;
+    return jsonEncode({
+      'libraryItemId': meeting.id,
+      'sourceKind': sourceKind.name,
+      'contentType': contentType.name,
+      'title': meeting.title,
+      'createdAt': meeting.createdAt.toUtc().toIso8601String(),
+    });
   }
 
   String _hash(String text) => sha256.convert(utf8.encode(text)).toString();

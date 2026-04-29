@@ -218,14 +218,127 @@ void main() {
     finishExtraction.complete();
     await indexing;
   });
+
+  test('syncLibrary adds new eligible items', () async {
+    final client = FakeLibraryRagClient()..nextSourceId = 10;
+    final store = _MemoryMetadataStore();
+    final repository = LibraryRagRepository(
+      ragService: LibraryRagService(client: client),
+      metadataStore: store,
+      documentTextExtractor: (_) async => '',
+    );
+
+    await repository.syncLibrary([
+      _meeting(id: 'a', transcript: 'alpha beta gamma'),
+    ]);
+
+    final metadata = await store.load();
+    expect(client.addedDocuments.length, 1);
+    expect(client.removedSourceIds, isEmpty);
+    expect(metadata.sources.single.libraryItemId, 'a');
+    expect(metadata.sources.single.ragSourceId, 10);
+  });
+
+  test('syncLibrary preserves unchanged items without re-adding them', () async {
+    final client = FakeLibraryRagClient()..nextSourceId = 10;
+    final store = _MemoryMetadataStore();
+    final repository = LibraryRagRepository(
+      ragService: LibraryRagService(client: client),
+      metadataStore: store,
+      documentTextExtractor: (_) async => '',
+    );
+    await repository.syncLibrary([
+      _meeting(id: 'a', transcript: 'alpha beta gamma'),
+    ]);
+    client.addedDocuments.clear();
+
+    await repository.syncLibrary([
+      _meeting(id: 'a', transcript: 'alpha beta gamma'),
+    ]);
+
+    final metadata = await store.load();
+    expect(client.addedDocuments, isEmpty);
+    expect(client.removedSourceIds, isEmpty);
+    expect(metadata.sources.single.ragSourceId, 10);
+  });
+
+  test('syncLibrary replaces changed items by removing old source first', () async {
+    final client = FakeLibraryRagClient()..nextSourceId = 10;
+    final store = _MemoryMetadataStore();
+    final repository = LibraryRagRepository(
+      ragService: LibraryRagService(client: client),
+      metadataStore: store,
+      documentTextExtractor: (_) async => '',
+    );
+    await repository.syncLibrary([
+      _meeting(id: 'a', transcript: 'alpha beta gamma'),
+    ]);
+    client.addedDocuments.clear();
+
+    await repository.syncLibrary([
+      _meeting(id: 'a', transcript: 'changed transcript'),
+    ]);
+
+    final metadata = await store.load();
+    expect(client.removedSourceIds, [10]);
+    expect(client.addedDocuments.single.sourceId, 11);
+    expect(metadata.sources.single.ragSourceId, 11);
+  });
+
+  test('syncLibrary removes deleted items', () async {
+    final client = FakeLibraryRagClient()..nextSourceId = 10;
+    final store = _MemoryMetadataStore();
+    final repository = LibraryRagRepository(
+      ragService: LibraryRagService(client: client),
+      metadataStore: store,
+      documentTextExtractor: (_) async => '',
+    );
+    await repository.syncLibrary([
+      _meeting(id: 'a', transcript: 'alpha beta gamma'),
+    ]);
+
+    await repository.syncLibrary(const []);
+
+    final metadata = await store.load();
+    expect(client.removedSourceIds, [10]);
+    expect(metadata.sources, isEmpty);
+  });
+
+  test('syncLibrary refreshes title metadata without re-embedding', () async {
+    final client = FakeLibraryRagClient()..nextSourceId = 10;
+    final store = _MemoryMetadataStore();
+    final repository = LibraryRagRepository(
+      ragService: LibraryRagService(client: client),
+      metadataStore: store,
+      documentTextExtractor: (_) async => '',
+    );
+    await repository.syncLibrary([
+      _meeting(id: 'a', transcript: 'alpha beta gamma'),
+    ]);
+    client.addedDocuments.clear();
+
+    await repository.syncLibrary([
+      _meeting(id: 'a', transcript: 'alpha beta gamma', title: 'Renamed meeting'),
+    ]);
+
+    final metadata = await store.load();
+    expect(client.addedDocuments, isEmpty);
+    expect(client.removedSourceIds, isEmpty);
+    expect(metadata.sources.single.title, 'Renamed meeting');
+    expect(metadata.sources.single.ragSourceId, 10);
+  });
 }
 
-Meeting _meeting({required String id, required String transcript}) => Meeting(
+Meeting _meeting({
+  required String id,
+  required String transcript,
+  String? title,
+}) => Meeting(
       id: id,
       createdAt: DateTime.utc(2026, 4, 28),
       durationSec: 60,
       audioPath: '/tmp/$id.m4a',
-      title: 'Meeting $id',
+      title: title ?? 'Meeting $id',
       rawTranscript: transcript,
       status: MeetingStatus.transcribed,
     );
