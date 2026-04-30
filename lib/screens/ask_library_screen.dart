@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/library_rag.dart';
 import '../providers/ask_library_chat_provider.dart';
 import '../providers/library_rag_provider.dart';
+import '../utils/markdown_text.dart';
 import '../widgets/spring_page_route.dart';
 import 'meeting_detail_screen.dart';
 
@@ -111,8 +113,11 @@ class _SetupView extends StatelessWidget {
   final String buttonText;
   final VoidCallback onPressed;
 
-  const _SetupView(
-      {required this.text, required this.buttonText, required this.onPressed});
+  const _SetupView({
+    required this.text,
+    required this.buttonText,
+    required this.onPressed,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -253,7 +258,19 @@ class _ChatView extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(message.content),
+                        message.role == 'assistant'
+                            ? MarkdownBody(
+                                data: markdownWithHardLineBreaks(
+                                  message.content,
+                                ),
+                                styleSheet: MarkdownStyleSheet(
+                                  p: TextStyle(
+                                    color:
+                                        Theme.of(context).colorScheme.onSurface,
+                                  ),
+                                ),
+                              )
+                            : Text(message.content),
                         if (message.citations.isNotEmpty) ...[
                           const SizedBox(height: 8),
                           Wrap(
@@ -277,8 +294,10 @@ class _ChatView extends StatelessWidget {
           ),
         ),
         if (chat.error != null)
-          Text(chat.error!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error)),
+          Text(
+            chat.error!,
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
         SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(8.0),

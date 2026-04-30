@@ -36,6 +36,9 @@ class AskLibraryChatState {
 }
 
 class AskLibraryChatNotifier extends StateNotifier<AskLibraryChatState> {
+  static const _maxPromptHistoryMessages = 6;
+  static const _maxRetrievalHistoryMessages = 4;
+
   final Ref _ref;
   StreamSubscription<String>? _streamSub;
   bool _mounted = true;
@@ -62,7 +65,10 @@ class AskLibraryChatNotifier extends StateNotifier<AskLibraryChatState> {
 
     try {
       final repository = _ref.read(libraryRagRepositoryProvider);
-      final search = await repository.search(trimmed);
+      final previousMessages = _previousMessagesExcludingPendingTurn();
+      final search = await repository.search(
+        _buildRetrievalQuery(previousMessages, trimmed),
+      );
       if (search.contextText.trim().isEmpty) {
         final updated = List<AskLibraryMessage>.from(state.messages);
         updated[updated.length - 1] = const AskLibraryMessage(
@@ -80,16 +86,20 @@ class AskLibraryChatNotifier extends StateNotifier<AskLibraryChatState> {
               .read(settingsProvider.notifier)
               .getApiKey(settings.provider) ??
           '';
-      final apiMessages = [
+      final apiMessages = <Map<String, dynamic>>[
         {
           'role': 'system',
           'content':
               'You answer questions using only the provided library context. If the context does not support an answer, say you could not find enough information. Keep answers concise and cite source labels when useful.',
         },
         {
+          'role': 'system',
+          'content': 'Library context for this turn:\n${search.contextText}',
+        },
+        ..._buildPromptHistory(previousMessages),
+        {
           'role': 'user',
-          'content':
-              'Library context:\n${search.contextText}\n\nQuestion: $trimmed',
+          'content': trimmed,
         },
       ];
 
@@ -166,6 +176,48 @@ class AskLibraryChatNotifier extends StateNotifier<AskLibraryChatState> {
       );
     }
     return citations;
+  }
+
+  List<AskLibraryMessage> _previousMessagesExcludingPendingTurn() {
+    if (state.messages.length < 2) return const [];
+    return state.messages.take(state.messages.length - 2).toList();
+  }
+
+  List<Map<String, dynamic>> _buildPromptHistory(
+    List<AskLibraryMessage> messages,
+  ) {
+    final recentMessages = messages.length <= _maxPromptHistoryMessages
+        ? messages
+        : messages.sublist(messages.length - _maxPromptHistoryMessages);
+
+    return recentMessages
+        .map(
+          (message) => {
+            'role': message.role,
+            'content': message.content,
+          },
+        )
+        .toList();
+  }
+
+  String _buildRetrievalQuery(
+    List<AskLibraryMessage> messages,
+    String question,
+  ) {
+    final recentMessages = messages.length <= _maxRetrievalHistoryMessages
+        ? messages
+        : messages.sublist(messages.length - _maxRetrievalHistoryMessages);
+    if (recentMessages.isEmpty) return question;
+
+    final buffer = StringBuffer('Recent conversation:\n');
+    for (final message in recentMessages) {
+      final speaker = message.role == 'assistant' ? 'Assistant' : 'User';
+      buffer.writeln('$speaker: ${message.content}');
+    }
+    buffer
+      ..writeln()
+      ..write('Current question: $question');
+    return buffer.toString();
   }
 
   @override

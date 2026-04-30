@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:summsumm/l10n/app_localizations.dart';
@@ -34,9 +35,13 @@ void main() {
               const AskLibraryChatState(
                 messages: [
                   AskLibraryMessage(
-                      role: 'user', content: 'What did I record?'),
+                    role: 'user',
+                    content: 'What did I record?',
+                  ),
                   AskLibraryMessage(
-                      role: 'assistant', content: 'A project update.'),
+                    role: 'assistant',
+                    content: 'A project update.',
+                  ),
                 ],
               ),
             ),
@@ -58,6 +63,37 @@ void main() {
 
     expect(find.text('What did I record?'), findsNothing);
     expect(find.text('A project update.'), findsNothing);
+  });
+
+  testWidgets('assistant messages render as markdown', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          libraryRagSetupProvider.overrideWith(FakeLibraryRagSetupNotifier.new),
+          askLibraryChatProvider.overrideWith(
+            (ref) => TestAskLibraryChatNotifier(
+              ref,
+              const AskLibraryChatState(
+                messages: [
+                  AskLibraryMessage(role: 'user', content: 'Summarize this'),
+                  AskLibraryMessage(
+                    role: 'assistant',
+                    content: '## Result\n\n- First point\n- Second point',
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: AskLibraryScreen(),
+        ),
+      ),
+    );
+
+    expect(find.byType(MarkdownBody), findsOneWidget);
   });
 }
 
