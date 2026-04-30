@@ -385,6 +385,15 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
     }
   }
 
+  EdgeInsets _textScrollPadding({double top = 16, double right = 16}) {
+    return EdgeInsets.only(
+      left: 16,
+      top: top,
+      right: right,
+      bottom: MediaQuery.of(context).padding.bottom + 16,
+    );
+  }
+
   Widget _buildSummarizingContent(Meeting meeting, AppLocalizations l10n) {
     final currentSummary = meeting.summaries.lastOrNull;
     final content = currentSummary?.content ?? '';
@@ -434,7 +443,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
             child: SingleChildScrollView(
               controller: _summarizingScrollController,
               primary: false,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: _textScrollPadding(top: 0),
               child: MarkdownBody(
                 data: content,
                 styleSheet: MarkdownStyleSheet(
@@ -464,7 +473,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
             child: SingleChildScrollView(
               controller: _summaryScrollController,
               primary: false,
-              padding: const EdgeInsets.all(16),
+              padding: _textScrollPadding(),
               child: MarkdownBody(
                 data: activeContent,
                 styleSheet: MarkdownStyleSheet(
@@ -937,7 +946,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                     child: ListView.builder(
                       controller: _transcriptScrollController,
                       primary: false,
-                      padding: const EdgeInsets.fromLTRB(16, 16, 64, 16),
+                      padding: _textScrollPadding(right: 64),
                       itemCount: meeting.speakerSegments!.length,
                       itemBuilder: (context, index) {
                         final segment = meeting.speakerSegments![index];
@@ -972,7 +981,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                     child: SingleChildScrollView(
                       controller: _transcriptScrollController,
                       primary: false,
-                      padding: const EdgeInsets.fromLTRB(16, 16, 64, 16),
+                      padding: _textScrollPadding(right: 64),
                       child: MarkdownBody(
                         data: markdownWithHardLineBreaks(
                             meeting.transcript ?? ''),
@@ -1033,12 +1042,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
               child: SingleChildScrollView(
                 controller: _transcriptScrollController,
                 primary: false,
-                padding: EdgeInsets.only(
-                  left: 16,
-                  top: 16,
-                  right: 16,
-                  bottom: MediaQuery.of(context).padding.bottom + 16,
-                ),
+                padding: _textScrollPadding(),
                 child: SelectableText(
                   meeting.transcript!,
                   style: Theme.of(context).textTheme.bodyMedium,

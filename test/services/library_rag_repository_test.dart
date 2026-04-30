@@ -60,7 +60,9 @@ void main() {
     expect(client.removedSourceIds, [7]);
   });
 
-  test('inspectIndex returns notIndexed when metadata is empty and content exists', () async {
+  test(
+      'inspectIndex returns notIndexed when metadata is empty and content exists',
+      () async {
     final repository = LibraryRagRepository(
       ragService: LibraryRagService(client: FakeLibraryRagClient()),
       metadataStore: _MemoryMetadataStore(),
@@ -76,7 +78,8 @@ void main() {
     expect(inspection.indexedItems, 0);
   });
 
-  test('inspectIndex returns ready when metadata matches content hash', () async {
+  test('inspectIndex returns ready when metadata matches content hash',
+      () async {
     final store = _MemoryMetadataStore();
     final repository = LibraryRagRepository(
       ragService: LibraryRagService(client: FakeLibraryRagClient()),
@@ -138,7 +141,8 @@ void main() {
     expect(inspection.staleItems, 1);
   });
 
-  test('inspectIndex returns stale when metadata points to removed item', () async {
+  test('inspectIndex returns stale when metadata points to removed item',
+      () async {
     final store = _MemoryMetadataStore();
     final repository = LibraryRagRepository(
       ragService: LibraryRagService(client: FakeLibraryRagClient()),
@@ -177,6 +181,26 @@ void main() {
     expect(inspection.indexedItems, 1);
   });
 
+  test(
+      'documents use cached extracted text before falling back to file extraction',
+      () async {
+    final client = FakeLibraryRagClient();
+    final repository = LibraryRagRepository(
+      ragService: LibraryRagService(client: client),
+      metadataStore: _MemoryMetadataStore(),
+      documentTextExtractor: (_) async =>
+          throw StateError('should not extract'),
+    );
+
+    final estimate = await repository.estimate([
+      _document(id: 'doc1', rawTranscript: 'cached document content'),
+    ]);
+
+    expect(client.initializeCalls, 0);
+    expect(estimate.documentCount, 1);
+    expect(estimate.hasEligibleContent, isTrue);
+  });
+
   test('estimate initializes rag before extracting document text', () async {
     final client = FakeLibraryRagClient();
     final service = LibraryRagService(client: client);
@@ -200,7 +224,8 @@ void main() {
     expect(estimate.hasEligibleContent, isTrue);
   });
 
-  test('inspectIndex returns notIndexed when no eligible content exists', () async {
+  test('inspectIndex returns notIndexed when no eligible content exists',
+      () async {
     final repository = LibraryRagRepository(
       ragService: LibraryRagService(client: FakeLibraryRagClient()),
       metadataStore: _MemoryMetadataStore(),
@@ -262,7 +287,8 @@ void main() {
     expect(metadata.sources.single.ragSourceId, 10);
   });
 
-  test('syncLibrary preserves unchanged items without re-adding them', () async {
+  test('syncLibrary preserves unchanged items without re-adding them',
+      () async {
     final client = FakeLibraryRagClient()..nextSourceId = 10;
     final store = _MemoryMetadataStore();
     final repository = LibraryRagRepository(
@@ -285,7 +311,8 @@ void main() {
     expect(metadata.sources.single.ragSourceId, 10);
   });
 
-  test('syncLibrary replaces changed items by removing old source first', () async {
+  test('syncLibrary replaces changed items by removing old source first',
+      () async {
     final client = FakeLibraryRagClient()..nextSourceId = 10;
     final store = _MemoryMetadataStore();
     final repository = LibraryRagRepository(
@@ -341,7 +368,11 @@ void main() {
     client.addedDocuments.clear();
 
     await repository.syncLibrary([
-      _meeting(id: 'a', transcript: 'alpha beta gamma', title: 'Renamed meeting'),
+      _meeting(
+        id: 'a',
+        transcript: 'alpha beta gamma',
+        title: 'Renamed meeting',
+      ),
     ]);
 
     final metadata = await store.load();
@@ -377,7 +408,8 @@ Meeting _meeting({
   required String id,
   required String transcript,
   String? title,
-}) => Meeting(
+}) =>
+    Meeting(
       id: id,
       createdAt: DateTime.utc(2026, 4, 28),
       durationSec: 60,
@@ -387,7 +419,7 @@ Meeting _meeting({
       status: MeetingStatus.transcribed,
     );
 
-Meeting _document({required String id}) => Meeting(
+Meeting _document({required String id, String? rawTranscript}) => Meeting(
       id: id,
       createdAt: DateTime.utc(2026, 4, 28),
       durationSec: 0,
@@ -395,6 +427,7 @@ Meeting _document({required String id}) => Meeting(
       title: 'Document $id',
       status: MeetingStatus.done,
       type: MeetingType.document,
+      rawTranscript: rawTranscript,
     );
 
 class _MemoryMetadataStore extends LibraryRagMetadataStore {

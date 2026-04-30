@@ -236,6 +236,43 @@ void main() {
     expect(tabBar.controller?.index, 1);
   });
 
+  testWidgets('summary tab keeps text above bottom safe area', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          meetingLibraryProvider.overrideWith(_LoadedMeetings.new),
+          archivedMeetingsProvider.overrideWith(_NoArchivedMeetings.new),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              padding: const EdgeInsets.only(bottom: 24),
+            ),
+            child: child!,
+          ),
+          home: const MeetingDetailScreen(meetingId: 'meeting-1'),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byWidgetPredicate((widget) {
+        if (widget is! SingleChildScrollView) return false;
+        final padding = widget.padding;
+        return padding is EdgeInsets &&
+            padding.left == 16 &&
+            padding.top == 16 &&
+            padding.right == 16 &&
+            padding.bottom == 40;
+      }),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('document detail labels second tab as content and shows text',
       (tester) async {
     await tester.pumpWidget(

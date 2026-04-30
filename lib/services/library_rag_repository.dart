@@ -60,12 +60,14 @@ class LibraryRagRepository {
     final eligible = <_IndexCandidate>[];
     for (var i = 0; i < meetings.length; i++) {
       final meeting = meetings[i];
-      onProgress?.call(LibraryIndexProgress(
-        indexedItems: i,
-        totalItems: meetings.length,
-        failedItems: 0,
-        currentTitle: meeting.title,
-      ),);
+      onProgress?.call(
+        LibraryIndexProgress(
+          indexedItems: i,
+          totalItems: meetings.length,
+          failedItems: 0,
+          currentTitle: meeting.title,
+        ),
+      );
       final text = await _textFor(meeting);
       if (text.trim().isEmpty) continue;
       eligible.add(_IndexCandidate(meeting: meeting, text: text));
@@ -75,12 +77,14 @@ class LibraryRagRepository {
     var failed = 0;
     for (var i = 0; i < eligible.length; i++) {
       final candidate = eligible[i];
-      onProgress?.call(LibraryIndexProgress(
-        indexedItems: i,
-        totalItems: eligible.length,
-        failedItems: failed,
-        currentTitle: candidate.meeting.title,
-      ),);
+      onProgress?.call(
+        LibraryIndexProgress(
+          indexedItems: i,
+          totalItems: eligible.length,
+          failedItems: failed,
+          currentTitle: candidate.meeting.title,
+        ),
+      );
 
       try {
         final ragSourceId = await _ragService.addSource(
@@ -88,11 +92,13 @@ class LibraryRagRepository {
           title: candidate.meeting.title,
           metadataJson: _metadataJson(candidate.meeting),
         );
-        indexed.add(_createIndexedSource(
-          meeting: candidate.meeting,
-          text: candidate.text,
-          ragSourceId: ragSourceId,
-        ),);
+        indexed.add(
+          _createIndexedSource(
+            meeting: candidate.meeting,
+            text: candidate.text,
+            ragSourceId: ragSourceId,
+          ),
+        );
       } catch (_) {
         failed++;
       }
@@ -100,11 +106,13 @@ class LibraryRagRepository {
 
     final metadata = LibraryRagMetadata(sources: indexed);
     await _metadataStore.save(metadata);
-    onProgress?.call(LibraryIndexProgress(
-      indexedItems: indexed.length,
-      totalItems: eligible.length,
-      failedItems: failed,
-    ),);
+    onProgress?.call(
+      LibraryIndexProgress(
+        indexedItems: indexed.length,
+        totalItems: eligible.length,
+        failedItems: failed,
+      ),
+    );
     return metadata;
   }
 
@@ -116,7 +124,8 @@ class LibraryRagRepository {
   Future<LibraryIndexInspection> inspectIndex(List<Meeting> meetings) async {
     final metadata = await _metadataStore.load();
     final candidates = await _eligibleCandidates(meetings);
-    final activeIds = candidates.map((candidate) => candidate.meeting.id).toSet();
+    final activeIds =
+        candidates.map((candidate) => candidate.meeting.id).toSet();
     final metadataByItem = {
       for (final source in metadata.sources) source.libraryItemId: source,
     };
@@ -164,7 +173,8 @@ class LibraryRagRepository {
       for (final source in previous.sources) source.libraryItemId: source,
     };
     final candidates = await _eligibleCandidates(meetings);
-    final activeIds = candidates.map((candidate) => candidate.meeting.id).toSet();
+    final activeIds =
+        candidates.map((candidate) => candidate.meeting.id).toSet();
     final nextSources = <IndexedLibrarySource>[];
     var failed = 0;
     var processed = 0;
@@ -181,26 +191,30 @@ class LibraryRagRepository {
     }
 
     for (final candidate in candidates) {
-      onProgress?.call(LibraryIndexProgress(
-        indexedItems: processed,
-        totalItems: candidates.length,
-        failedItems: failed,
-        currentTitle: candidate.meeting.title,
-      ),);
+      onProgress?.call(
+        LibraryIndexProgress(
+          indexedItems: processed,
+          totalItems: candidates.length,
+          failedItems: failed,
+          currentTitle: candidate.meeting.title,
+        ),
+      );
 
       final previousSource = previousByItem[candidate.meeting.id];
       final nextHash = _hash(candidate.text);
       if (previousSource != null && previousSource.contentHash == nextHash) {
-        nextSources.add(IndexedLibrarySource(
-          libraryItemId: previousSource.libraryItemId,
-          ragSourceId: previousSource.ragSourceId,
-          sourceKind: previousSource.sourceKind,
-          contentType: previousSource.contentType,
-          title: candidate.meeting.title,
-          contentHash: previousSource.contentHash,
-          contentLength: candidate.text.length,
-          indexedAt: previousSource.indexedAt,
-        ),);
+        nextSources.add(
+          IndexedLibrarySource(
+            libraryItemId: previousSource.libraryItemId,
+            ragSourceId: previousSource.ragSourceId,
+            sourceKind: previousSource.sourceKind,
+            contentType: previousSource.contentType,
+            title: candidate.meeting.title,
+            contentHash: previousSource.contentHash,
+            contentLength: candidate.text.length,
+            indexedAt: previousSource.indexedAt,
+          ),
+        );
         processed++;
         continue;
       }
@@ -223,11 +237,13 @@ class LibraryRagRepository {
             title: candidate.meeting.title,
             metadataJson: _metadataJson(candidate.meeting),
           );
-          nextSources.add(_createIndexedSource(
-            meeting: candidate.meeting,
-            text: candidate.text,
-            ragSourceId: ragSourceId,
-          ),);
+          nextSources.add(
+            _createIndexedSource(
+              meeting: candidate.meeting,
+              text: candidate.text,
+              ragSourceId: ragSourceId,
+            ),
+          );
         } catch (_) {
           failed++;
         }
@@ -237,15 +253,19 @@ class LibraryRagRepository {
 
     final metadata = LibraryRagMetadata(sources: nextSources);
     await _metadataStore.save(metadata);
-    onProgress?.call(LibraryIndexProgress(
-      indexedItems: processed,
-      totalItems: candidates.length,
-      failedItems: failed,
-    ),);
+    onProgress?.call(
+      LibraryIndexProgress(
+        indexedItems: processed,
+        totalItems: candidates.length,
+        failedItems: failed,
+      ),
+    );
     return metadata;
   }
 
-  Future<List<_IndexCandidate>> _eligibleCandidates(List<Meeting> meetings) async {
+  Future<List<_IndexCandidate>> _eligibleCandidates(
+    List<Meeting> meetings,
+  ) async {
     final eligible = <_IndexCandidate>[];
     for (final meeting in meetings) {
       final text = await _textFor(meeting);
@@ -257,6 +277,10 @@ class LibraryRagRepository {
 
   Future<String> _textFor(Meeting meeting) async {
     if (meeting.type == MeetingType.document) {
+      final cachedText = meeting.transcript;
+      if (cachedText != null && cachedText.trim().isNotEmpty) {
+        return cachedText;
+      }
       if (meeting.audioPath.isEmpty) return '';
       await _ragService.initialize();
       return _documentTextExtractor(meeting.audioPath);

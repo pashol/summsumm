@@ -9,5 +9,5 @@ else
   printf 'No complete RAG engine cache found; Flutter may need to build Rust artifacts.\n' >&2
 fi
 
-flutter build apk --release
+flutter build apk --release --target-platform android-arm,android-arm64
 "$repo_root/scripts/rag_engine_cache.sh" save

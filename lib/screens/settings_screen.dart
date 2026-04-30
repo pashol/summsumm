@@ -13,6 +13,7 @@ import 'backup_screen.dart';
 import 'settings/ai_models_screen.dart';
 import 'settings/api_connection_screen.dart';
 import 'settings/app_language_screen.dart';
+import 'settings/about_screen.dart';
 import 'settings/summary_language_screen.dart';
 import 'settings/transcription_settings_screen.dart';
 import 'settings/prompt_editor_screen.dart';
@@ -108,12 +109,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 icon: Icons.psychology,
                 title: l10n.settingsAiModelsRow,
                 subtitle: settings.activeModel.isEmpty
-                    ? (settings.provider == 'openrouter' ? l10n.settingsOpenRouter : l10n.settingsOpenAi)
+                    ? (settings.provider == 'openrouter'
+                        ? l10n.settingsOpenRouter
+                        : l10n.settingsOpenAi)
                     : '${settings.provider == 'openrouter' ? l10n.settingsOpenRouter : l10n.settingsOpenAi} — ${settings.activeModel}',
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute<void>(builder: (_) => const AiModelsScreen()),
+                    MaterialPageRoute<void>(
+                      builder: (_) => const AiModelsScreen(),
+                    ),
                   );
                 },
               ),
@@ -125,7 +130,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute<void>(builder: (_) => const ApiConnectionScreen()),
+                    MaterialPageRoute<void>(
+                      builder: (_) => const ApiConnectionScreen(),
+                    ),
                   );
                 },
               ),
@@ -139,7 +146,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onTap: () {
                   ref
                       .read(settingsProvider.notifier)
-                      .setLocalLibraryChatEnabled(!settings.localLibraryChatEnabled);
+                      .setLocalLibraryChatEnabled(
+                        !settings.localLibraryChatEnabled,
+                      );
                 },
               ),
             ],
@@ -152,13 +161,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _SettingsRow(
                 icon: Icons.phone,
                 title: l10n.settingsTranscriptionRow,
-                subtitle: settings.transcriptionStrategy == TranscriptionStrategy.onDevice
+                subtitle: settings.transcriptionStrategy ==
+                        TranscriptionStrategy.onDevice
                     ? l10n.settingsOnDevice
                     : l10n.settingsCloud,
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute<void>(builder: (_) => const TranscriptionSettingsScreen()),
+                    MaterialPageRoute<void>(
+                      builder: (_) => const TranscriptionSettingsScreen(),
+                    ),
                   );
                 },
               ),
@@ -172,11 +184,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _SettingsRow(
                 icon: Icons.summarize,
                 title: l10n.settingsSummaryRow,
-                subtitle: '${_getSummaryStyleTitle(context, settings)}, ${localizedLanguageName(context, settings.language)}',
+                subtitle:
+                    '${_getSummaryStyleTitle(context, settings)}, ${localizedLanguageName(context, settings.language)}',
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute<void>(builder: (_) => const SummaryLanguageScreen()),
+                    MaterialPageRoute<void>(
+                      builder: (_) => const SummaryLanguageScreen(),
+                    ),
                   );
                 },
               ),
@@ -184,11 +199,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _SettingsRow(
                 icon: Icons.edit_note,
                 title: l10n.settingsPromptsRow,
-                subtitle: '${settings.promptOverrides.length} ${l10n.edited}, ${settings.customPrompts.length} ${l10n.custom}',
+                subtitle:
+                    '${settings.promptOverrides.length} ${l10n.edited}, ${settings.customPrompts.length} ${l10n.custom}',
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute<void>(builder: (_) => const PromptEditorScreen()),
+                    MaterialPageRoute<void>(
+                      builder: (_) => const PromptEditorScreen(),
+                    ),
                   );
                 },
               ),
@@ -200,7 +218,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute<void>(builder: (_) => const TtsSettingsScreen()),
+                    MaterialPageRoute<void>(
+                      builder: (_) => const TtsSettingsScreen(),
+                    ),
                   );
                 },
               ),
@@ -222,7 +242,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute<void>(builder: (_) => const AppLanguageScreen()),
+                    MaterialPageRoute<void>(
+                      builder: (_) => const AppLanguageScreen(),
+                    ),
                   );
                 },
               ),
@@ -234,7 +256,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute<void>(builder: (_) => const BackupScreen()),
+                    MaterialPageRoute<void>(
+                      builder: (_) => const BackupScreen(),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+
+          // Section: About
+          _SettingsSection(
+            title: l10n.settingsAboutSection,
+            children: [
+              _SettingsRow(
+                icon: Icons.info_outline,
+                title: l10n.settingsAboutRow,
+                subtitle: l10n.appTitle,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => const AboutScreen(),
+                    ),
                   );
                 },
               ),
@@ -248,7 +292,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
 String _getSummaryStyleTitle(BuildContext context, AppSettings settings) {
   try {
-    return SummaryStyle.values.byName(settings.summaryStyle).localizedTitle(context);
+    return SummaryStyle.values
+        .byName(settings.summaryStyle)
+        .localizedTitle(context);
   } catch (_) {
     return SummaryStyle.structured.localizedTitle(context);
   }

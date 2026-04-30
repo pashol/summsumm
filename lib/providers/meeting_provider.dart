@@ -21,7 +21,8 @@ List<SpeakerSegment> _alignTranscriptToSegments(
 ) {
   if (transcript.isEmpty || segments.isEmpty) return segments;
 
-  final words = transcript.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+  final words =
+      transcript.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
   if (words.isEmpty) return segments;
 
   final totalDuration = segments.fold<double>(
@@ -33,7 +34,9 @@ List<SpeakerSegment> _alignTranscriptToSegments(
   int wordIdx = 0;
   return segments.map((seg) {
     final segDuration = seg.endTime - seg.startTime;
-    final wordCount = (words.length * segDuration / totalDuration).round().clamp(0, words.length - wordIdx);
+    final wordCount = (words.length * segDuration / totalDuration)
+        .round()
+        .clamp(0, words.length - wordIdx);
     final segText = words.sublist(wordIdx, wordIdx + wordCount).join(' ');
     wordIdx += wordCount;
     return SpeakerSegment(
@@ -277,6 +280,7 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
     final settings = ref.read(settingsProvider);
     final repository = ref.read(meetingRepositoryProvider);
     final service = ref.read(onDeviceTranscriptionServiceProvider);
+    final processingService = ref.read(processingServiceProvider);
 
     // Skip transcription if already live-transcribed
     if (meeting.wasLiveTranscribed) {
@@ -332,6 +336,8 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
     ref.read(meetingLibraryProvider.notifier).refresh();
 
     try {
+      await processingService.start();
+
       // Initialize service
       await service.initialize(settings.onDeviceModelSize);
 
@@ -405,6 +411,8 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
       await repository.save(state);
       ref.read(meetingLibraryProvider.notifier).refresh();
       rethrow;
+    } finally {
+      await processingService.stop();
     }
   }
 

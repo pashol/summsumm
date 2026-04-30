@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:typed_data';
 import 'package:ffmpeg_kit_flutter_new_audio/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new_audio/return_code.dart';
@@ -9,23 +10,56 @@ import 'package:summsumm/models/transcription_config.dart';
 
 Future<String> _convertToWav(String inputPath) async {
   final tempDir = await getTemporaryDirectory();
-  final outputPath = '${tempDir.path}/sherpa_input_${DateTime.now().millisecondsSinceEpoch}.wav';
-  
-  final cmd = '-y -i "$inputPath" -vn -ac 1 -ar 16000 -acodec pcm_s16le "$outputPath"';
+  final outputPath =
+      '${tempDir.path}/sherpa_input_${DateTime.now().millisecondsSinceEpoch}.wav';
+
+  final cmd =
+      '-y -i "$inputPath" -vn -ac 1 -ar 16000 -acodec pcm_s16le "$outputPath"';
   final session = await FFmpegKit.execute(cmd);
   final returnCode = await session.getReturnCode();
-  
+
   if (!ReturnCode.isSuccess(returnCode)) {
     final logs = await session.getAllLogsAsString();
     throw StateError('Failed to convert audio to WAV: $logs');
   }
-  
+
   return outputPath;
 }
 
 class SherpaAsrEngine {
   sherpa.OfflineRecognizer? _recognizer;
   bool _isInitialized = false;
+
+  static Future<String> transcribeInBackground(
+    WhisperModelConfig config,
+    String audioPath,
+  ) async {
+    final file = File(audioPath);
+    if (!await file.exists()) {
+      throw StateError('Audio file not found: $audioPath');
+    }
+
+    String wavPath = audioPath;
+    bool needsCleanup = false;
+
+    final ext = p.extension(audioPath).toLowerCase();
+    if (ext != '.wav') {
+      wavPath = await _convertToWav(audioPath);
+      needsCleanup = true;
+    }
+
+    try {
+      return await Isolate.run(
+        () => _transcribeWavInWorker(_TranscriptionJob(config, wavPath)),
+      );
+    } finally {
+      if (needsCleanup) {
+        try {
+          await File(wavPath).delete();
+        } catch (_) {}
+      }
+    }
+  }
 
   Future<void> loadModel(WhisperModelConfig config) async {
     if (_isInitialized) return;
@@ -91,7 +125,7 @@ class SherpaAsrEngine {
       final result = _recognizer!.getResult(stream);
       final text = result.text;
       stream.free();
-      
+
       return text;
     } finally {
       if (needsCleanup) {
@@ -124,4 +158,69 @@ class SherpaAsrEngine {
   }
 
   bool get isInitialized => _isInitialized;
+}
+
+class _TranscriptionJob {
+  const _TranscriptionJob(this.config, this.wavPath);
+
+  final WhisperModelConfig config;
+  final String wavPath;
+}
+
+String _transcribeWavInWorker(_TranscriptionJob job) {
+  sherpa.initBindings();
+
+  final whisperConfig = sherpa.OfflineWhisperModelConfig(
+    encoder: job.config.encoderPath,
+    decoder: job.config.decoderPath,
+  );
+
+  final modelConfig = sherpa.OfflineModelConfig(
+    whisper: whisperConfig,
+    tokens: job.config.tokensPath,
+    numThreads: 4,
+    debug: false,
+    provider: 'cpu',
+  );
+
+  final recognizer = sherpa.OfflineRecognizer(
+    sherpa.OfflineRecognizerConfig(model: modelConfig),
+  );
+
+  try {
+    final wave = sherpa.readWave(job.wavPath);
+    if (wave.samples.isEmpty) {
+      throw StateError('Audio file contains no samples: ${job.wavPath}');
+    }
+
+    final samples = wave.sampleRate == 16000
+        ? wave.samples
+        : _resampleSamplesTo16k(wave.samples, wave.sampleRate);
+
+    final stream = recognizer.createStream();
+    try {
+      stream.acceptWaveform(samples: samples, sampleRate: 16000);
+      recognizer.decode(stream);
+      return recognizer.getResult(stream).text;
+    } finally {
+      stream.free();
+    }
+  } finally {
+    recognizer.free();
+  }
+}
+
+Float32List _resampleSamplesTo16k(Float32List samples, int sourceRate) {
+  if (sourceRate == 16000) return samples;
+  final ratio = 16000.0 / sourceRate;
+  final newLength = (samples.length * ratio).round();
+  final result = Float32List(newLength);
+  for (var i = 0; i < newLength; i++) {
+    final srcIdx = i / ratio;
+    final idx0 = srcIdx.floor();
+    final idx1 = (idx0 + 1).clamp(0, samples.length - 1);
+    final frac = srcIdx - idx0;
+    result[i] = samples[idx0] * (1 - frac) + samples[idx1] * frac;
+  }
+  return result;
 }

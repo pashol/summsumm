@@ -1,8 +1,7 @@
 import 'dart:io';
-import 'dart:isolate';
 
 import 'package:flutter/services.dart';
-import 'package:syncfusion_flutter_pdf/pdf.dart';
+import 'package:mobile_rag_engine/mobile_rag_engine.dart' as rag;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:summsumm/models/meeting.dart';
@@ -10,17 +9,6 @@ import 'package:summsumm/services/meeting_repository.dart';
 import 'package:uuid/uuid.dart';
 
 typedef DocumentTextExtractor = Future<String> Function(String path);
-
-const _largePdfThresholdBytes = 1536 * 1024;
-
-String _extractPdfTextFromBytes(List<int> bytes) {
-  final document = PdfDocument(inputBytes: bytes);
-  try {
-    return PdfTextExtractor(document).extractText();
-  } finally {
-    document.dispose();
-  }
-}
 
 String _normalizeDocumentText(String text) {
   const paragraphBreak = '\u0000PDF_PARAGRAPH_BREAK\u0000';
@@ -34,12 +22,17 @@ String _normalizeDocumentText(String text) {
       .trim();
 }
 
-Future<String> _extractPdfText(String path) async {
-  final bytes = await File(path).readAsBytes();
-  if (bytes.length > _largePdfThresholdBytes) {
-    return Isolate.run(() => _extractPdfTextFromBytes(bytes));
+Future<String> _extractDocumentText(String path) async {
+  if (!rag.MobileRag.isInitialized) {
+    await rag.MobileRag.initialize(
+      tokenizerAsset: 'assets/rag/tokenizer.json',
+      modelAsset: 'assets/rag/model.onnx',
+      databaseName: 'library_rag.sqlite',
+      threadLevel: rag.ThreadUseLevel.medium,
+      deferIndexWarmup: true,
+    );
   }
-  return _extractPdfTextFromBytes(bytes);
+  return rag.extractTextFromFile(filePath: path);
 }
 
 class ImportService {
@@ -53,7 +46,7 @@ class ImportService {
     Future<Directory> Function()? getMeetingsDir,
     DocumentTextExtractor? documentTextExtractor,
   })  : _getMeetingsDir = getMeetingsDir,
-        _documentTextExtractor = documentTextExtractor ?? _extractPdfText;
+        _documentTextExtractor = documentTextExtractor ?? _extractDocumentText;
 
   static const _audioExtensions = {
     'm4a',

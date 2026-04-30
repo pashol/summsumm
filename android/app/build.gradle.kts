@@ -13,6 +13,22 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+val pubCacheDir = System.getenv("PUB_CACHE") ?: "${System.getProperty("user.home")}/.pub-cache"
+val sherpaOnnxRuntimeJniLibsDir = layout.buildDirectory.dir("generated/sherpaOnnxRuntimeJniLibs")
+
+val stageSherpaOnnxRuntimeJniLibs by tasks.registering(Copy::class) {
+    from("$pubCacheDir/hosted/pub.dev/sherpa_onnx_android_arm64-1.12.39/android/src/main/jniLibs/arm64-v8a/libonnxruntime.so") {
+        into("arm64-v8a")
+    }
+    from("$pubCacheDir/hosted/pub.dev/sherpa_onnx_android_armeabi-1.12.39/android/src/main/jniLibs/armeabi-v7a/libonnxruntime.so") {
+        into("armeabi-v7a")
+    }
+    from("$pubCacheDir/hosted/pub.dev/sherpa_onnx_android_x86_64-1.12.39/android/src/main/jniLibs/x86_64/libonnxruntime.so") {
+        into("x86_64")
+    }
+    into(sherpaOnnxRuntimeJniLibsDir)
+}
+
 android {
     namespace = "app.summsumm"
     compileSdk = 36
@@ -42,6 +58,13 @@ android {
         jniLibs {
             pickFirsts += "lib/arm64-v8a/libonnxruntime.so"
             pickFirsts += "lib/armeabi-v7a/libonnxruntime.so"
+            pickFirsts += "lib/x86_64/libonnxruntime.so"
+        }
+    }
+
+    sourceSets {
+        getByName("main") {
+            jniLibs.srcDir(sherpaOnnxRuntimeJniLibsDir)
         }
     }
 
@@ -79,4 +102,8 @@ flutter {
 dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.core:core:1.15.0")
+}
+
+tasks.named("preBuild") {
+    dependsOn(stageSherpaOnnxRuntimeJniLibs)
 }
