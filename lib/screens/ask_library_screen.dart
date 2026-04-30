@@ -3,10 +3,14 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/app_localizations.dart';
+import '../models/chat_message.dart';
 import '../models/library_rag.dart';
+import '../providers/ask_library_chat_history_provider.dart';
 import '../providers/ask_library_chat_provider.dart';
+import '../providers/ask_library_session_provider.dart';
 import '../providers/library_rag_provider.dart';
 import '../utils/markdown_text.dart';
+import '../widgets/chat_history_drawer.dart';
 import '../widgets/spring_page_route.dart';
 import 'meeting_detail_screen.dart';
 
@@ -40,18 +44,39 @@ class _AskLibraryScreenState extends ConsumerState<AskLibraryScreen> {
   Widget build(BuildContext context) {
     final setup = ref.watch(libraryRagSetupProvider);
     final chat = ref.watch(askLibraryChatProvider);
+    final session = ref.watch(askLibrarySessionProvider);
+
+    ref.listen(askLibraryChatProvider, (previous, next) {
+      if (previous?.isStreaming == true &&
+          next.isStreaming == false &&
+          next.error == null) {
+        _saveSessionFromChat(next);
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
         title: Text(AppLocalizations.of(context)!.askLibraryTitle),
         actions: [
           if (chat.messages.isNotEmpty)
             IconButton(
               tooltip: 'New chat',
-              onPressed: _newChat,
+              onPressed: () {
+                ref.read(askLibrarySessionProvider.notifier).saveCurrentSession();
+                ref.read(askLibrarySessionProvider.notifier).newSession();
+                _newChat();
+              },
               icon: const Icon(Icons.add_comment_outlined),
             ),
         ],
       ),
+      drawer: const ChatHistoryDrawer(),
       body: switch (setup.readiness) {
         LibraryRagReadiness.disabled => _SetupView(
             text:
@@ -70,6 +95,7 @@ class _AskLibraryScreenState extends ConsumerState<AskLibraryScreen> {
           ),
         LibraryRagReadiness.ready || LibraryRagReadiness.stale => _ChatView(
             chat: chat,
+            session: session,
             controller: _controller,
             scrollController: _scrollController,
             isStale: setup.readiness == LibraryRagReadiness.stale,
@@ -86,12 +112,28 @@ class _AskLibraryScreenState extends ConsumerState<AskLibraryScreen> {
   void _send() {
     final text = _controller.text;
     _controller.clear();
+    ref.read(askLibrarySessionProvider.notifier).addMessage(
+      ChatMessage(role: 'user', content: text),
+    );
     ref.read(askLibraryChatProvider.notifier).sendMessage(text);
   }
 
   void _newChat() {
     _controller.clear();
     ref.read(askLibraryChatProvider.notifier).newChat();
+  }
+
+  Future<void> _saveSessionFromChat(AskLibraryChatState chat) async {
+    final assistantMessages =
+        chat.messages.where((m) => m.role == 'assistant').toList();
+    if (assistantMessages.isNotEmpty) {
+      final lastAssistant = assistantMessages.last;
+      ref.read(askLibrarySessionProvider.notifier).addMessage(
+        ChatMessage(role: 'assistant', content: lastAssistant.content),
+      );
+    }
+    await ref.read(askLibrarySessionProvider.notifier).saveCurrentSession();
+    ref.read(askLibraryChatHistoryProvider.notifier).refresh();
   }
 
   void _openCitation(LibraryCitation citation) {
@@ -198,6 +240,7 @@ class _IndexingView extends StatelessWidget {
 
 class _ChatView extends StatelessWidget {
   final AskLibraryChatState chat;
+  final AskLibrarySessionState session;
   final TextEditingController controller;
   final ScrollController scrollController;
   final bool isStale;
@@ -208,6 +251,7 @@ class _ChatView extends StatelessWidget {
 
   const _ChatView({
     required this.chat,
+    required this.session,
     required this.controller,
     required this.scrollController,
     required this.isStale,
@@ -245,9 +289,9 @@ class _ChatView extends StatelessWidget {
               top: 16,
               bottom: MediaQuery.of(context).padding.bottom + 16,
             ),
-            itemCount: chat.messages.length,
+            itemCount: session.messages.length,
             itemBuilder: (context, index) {
-              final message = chat.messages[index];
+              final message = session.messages[index];
               return Align(
                 alignment: message.role == 'user'
                     ? Alignment.centerRight
@@ -271,20 +315,6 @@ class _ChatView extends StatelessWidget {
                                 ),
                               )
                             : Text(message.content),
-                        if (message.citations.isNotEmpty) ...[
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            children: message.citations
-                                .map(
-                                  (citation) => ActionChip(
-                                    label: Text(citation.title),
-                                    onPressed: () => onCitationTap(citation),
-                                  ),
-                                )
-                                .toList(),
-                          ),
-                        ],
                       ],
                     ),
                   ),
