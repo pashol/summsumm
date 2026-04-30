@@ -11,6 +11,7 @@ import 'package:summsumm/models/meeting.dart';
 import 'package:summsumm/models/summary_style.dart';
 import 'package:summsumm/models/app_settings.dart';
 import 'package:summsumm/models/transcription_config.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:summsumm/theme/reduced_motion.dart';
 import 'package:summsumm/providers/meeting_chat_provider.dart';
 import 'package:summsumm/providers/meeting_library_provider.dart';
@@ -61,6 +62,11 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
 
   static bool get _isDesktop =>
       Platform.isWindows || Platform.isMacOS || Platform.isLinux;
+
+  bool _isPdfDocument(Meeting meeting) {
+    return meeting.type == MeetingType.document &&
+        meeting.audioPath.toLowerCase().endsWith('.pdf');
+  }
 
   @override
   void initState() {
@@ -1023,6 +1029,10 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
     MeetingNotifier provider,
     AppLocalizations l10n,
   ) {
+    final settings = ref.watch(settingsProvider);
+    final showPdfViewer = _isPdfDocument(meeting) &&
+        !settings.showExtractedPdfTextOnly;
+
     return Column(
       children: [
         MaterialBanner(
@@ -1032,26 +1042,62 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
               Theme.of(context).colorScheme.surfaceContainerHighest,
         ),
         Expanded(
-          child: _buildTranscriptPane(
-            meeting: meeting,
-            provider: provider,
-            l10n: l10n,
-            child: Scrollbar(
-              thumbVisibility: _isDesktop,
-              controller: _transcriptScrollController,
-              child: SingleChildScrollView(
-                controller: _transcriptScrollController,
-                primary: false,
-                padding: _textScrollPadding(),
-                child: SelectableText(
-                  meeting.transcript!,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ),
-            ),
-          ),
+          child: showPdfViewer
+              ? _buildPdfContentPane(meeting, l10n)
+              : _buildExtractedDocumentTextPane(meeting, provider, l10n),
         ),
       ],
+    );
+  }
+
+  Widget _buildPdfContentPane(Meeting meeting, AppLocalizations l10n) {
+    final path = meeting.audioPath;
+    if (path.isEmpty || !File(path).existsSync()) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            l10n.meetingDetailPdfFileMissing,
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    return SfPdfViewer.file(File(path));
+  }
+
+  Widget _buildExtractedDocumentTextPane(
+    Meeting meeting,
+    MeetingNotifier provider,
+    AppLocalizations l10n,
+  ) {
+    return _buildTranscriptPane(
+      meeting: meeting,
+      provider: provider,
+      l10n: l10n,
+      child: Scrollbar(
+        thumbVisibility: _isDesktop,
+        controller: _transcriptScrollController,
+        child: SingleChildScrollView(
+          controller: _transcriptScrollController,
+          primary: false,
+          padding: _textScrollPadding(),
+          child: SelectableText(
+            meeting.transcript ?? '',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
+      ),
+    );
+  }
+
+  EdgeInsets _textScrollPadding() {
+    return EdgeInsets.only(
+      left: 16,
+      top: 16,
+      right: 16,
+      bottom: MediaQuery.of(context).padding.bottom + 16,
     );
   }
 

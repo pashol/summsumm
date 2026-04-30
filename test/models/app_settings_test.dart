@@ -29,4 +29,32 @@ void main() {
 
     expect(decoded.localLibraryChatEnabled, isFalse);
   });
+
+  test('defaults to inline PDF display', () {
+    const settings = AppSettings.defaults();
+
+    expect(settings.showExtractedPdfTextOnly, isFalse);
+  });
+
+  test('serializes extracted PDF text display setting', () {
+    const settings = AppSettings.defaults();
+    final enabled = settings.copyWith(showExtractedPdfTextOnly: true);
+
+    final decoded = AppSettings.fromJson(enabled.toJson());
+
+    expect(decoded.showExtractedPdfTextOnly, isTrue);
+  });
+
+  test('missing extracted PDF text display setting migrates to inline display', () {
+    final decoded = AppSettings.fromJson(const {
+      'provider': 'openrouter',
+      'openrouterModel': '',
+      'openaiModel': '',
+      'language': 'Same as input',
+      'summaryStyle': 'structured',
+      'ttsSpeed': 1.0,
+    });
+
+    expect(decoded.showExtractedPdfTextOnly, isFalse);
+  });
 }

@@ -132,6 +132,16 @@
     "description": "Option to use device system locale"
   },
 
+  "settingsShowExtractedPdfTextOnly": "Show extracted PDF text only",
+  "@settingsShowExtractedPdfTextOnly": {
+    "description": "Settings switch title for displaying extracted text instead of inline PDF documents"
+  },
+
+  "settingsShowExtractedPdfTextOnlySubtitle": "Use the extracted text view instead of the original inline PDF.",
+  "@settingsShowExtractedPdfTextOnlySubtitle": {
+    "description": "Settings switch subtitle for displaying extracted text instead of inline PDF documents"
+  },
+
   "libraryTitle": "Library",
   "@libraryTitle": {
     "description": "Library screen title"
@@ -400,6 +410,11 @@
   "meetingDetailDocumentNotReady": "Document content not available yet.\nGo to the Summary tab to process it.",
   "@meetingDetailDocumentNotReady": {
     "description": "Message in chat tab when document not yet processed"
+  },
+
+  "meetingDetailPdfFileMissing": "Original PDF file not available.",
+  "@meetingDetailPdfFileMissing": {
+    "description": "Message shown when an imported PDF's original file is missing"
   },
 
   "meetingDetailTranscribeFirst": "Transcribe the meeting first to start chatting.",

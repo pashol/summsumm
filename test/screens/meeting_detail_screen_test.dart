@@ -1,12 +1,22 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:summsumm/l10n/app_localizations.dart';
+import 'package:summsumm/models/app_settings.dart';
 import 'package:summsumm/models/custom_prompt.dart';
 import 'package:summsumm/models/meeting.dart';
 import 'package:summsumm/models/summary_style.dart';
 import 'package:summsumm/providers/meeting_library_provider.dart';
+import 'package:summsumm/providers/settings_provider.dart';
 import 'package:summsumm/screens/meeting_detail_screen.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:syncfusion_pdfviewer_platform_interface/pdfviewer_platform_interface.dart';
 
 class _LoadedMeetings extends MeetingLibraryNotifier {
   @override
@@ -28,6 +38,20 @@ class _LoadedDocument extends MeetingLibraryNotifier {
   }
 }
 
+class _LoadedCustomDocument extends MeetingLibraryNotifier {
+  final Meeting document;
+
+  _LoadedCustomDocument(this.document);
+
+  @override
+  Future<List<Meeting>> build() async => [document];
+
+  @override
+  Future<void> refresh() async {
+    state = AsyncData([document]);
+  }
+}
+
 class _NoArchivedMeetings extends ArchivedMeetingsNotifier {
   @override
   Future<List<Meeting>> build() async => [];
@@ -36,6 +60,67 @@ class _NoArchivedMeetings extends ArchivedMeetingsNotifier {
   Future<void> refresh() async {
     state = const AsyncData([]);
   }
+}
+
+class _PdfViewerSettings extends Settings {
+  final bool showExtractedPdfTextOnly;
+
+  _PdfViewerSettings({this.showExtractedPdfTextOnly = false});
+
+  @override
+  AppSettings build() => const AppSettings.defaults().copyWith(
+        showExtractedPdfTextOnly: showExtractedPdfTextOnly,
+      );
+}
+
+class _FakePdfViewerPlatform extends PdfViewerPlatform
+    with MockPlatformInterfaceMixin {
+  Uint8List _rgbaPixels(int width, int height) {
+    final pixels = Uint8List(width * height * 4);
+    for (var i = 0; i < width * height; i++) {
+      final offset = i * 4;
+      pixels[offset] = 0xF5;
+      pixels[offset + 1] = 0xF5;
+      pixels[offset + 2] = 0xF5;
+      pixels[offset + 3] = 0xFF;
+    }
+    return pixels;
+  }
+
+  @override
+  Future<String?> loadPdfFromFile(
+    String path,
+    String documentID, [
+    String? password,
+  ]) async => '1';
+
+  @override
+  Future<List?> getPagesHeight(String documentID) async => [1000.0];
+
+  @override
+  Future<List?> getPagesWidth(String documentID) async => [800.0];
+
+  @override
+  Future<Uint8List?> getPage(
+    int pageNumber,
+    int width,
+    int height,
+    String documentID,
+  ) async => _rgbaPixels(width, height);
+
+  @override
+  Future<Uint8List?> getTileImage(
+    int pageNumber,
+    double scale,
+    double x,
+    double y,
+    double width,
+    double height,
+    String documentID,
+  ) async => _rgbaPixels(width.ceil(), height.ceil());
+
+  @override
+  Future<void> closeDocument(String documentID) async {}
 }
 
 final _meetingWithTranscript = Meeting(
@@ -68,7 +153,40 @@ final _documentWithContent = Meeting(
   rawTranscript: 'Extracted document text.',
 );
 
+Future<Meeting> _documentWithPdfFile(WidgetTester tester) async {
+  final dir = await Directory.systemTemp.createTemp('meeting-detail-test-');
+  final file = File(p.join(dir.path, 'report.pdf'));
+  final document = PdfDocument();
+  try {
+    document.pages.add();
+    await file.writeAsBytes(await document.save());
+  } finally {
+    document.dispose();
+  }
+  return Meeting(
+    id: 'document-1',
+    createdAt: DateTime.utc(2026, 4, 21, 10),
+    durationSec: 0,
+    audioPath: file.path,
+    title: 'Report',
+    status: MeetingStatus.recorded,
+    type: MeetingType.document,
+    rawTranscript: 'Extracted document text.',
+  );
+}
+
 void main() {
+  late PdfViewerPlatform originalPdfViewerPlatform;
+
+  setUpAll(() {
+    originalPdfViewerPlatform = PdfViewerPlatform.instance;
+    PdfViewerPlatform.instance = _FakePdfViewerPlatform();
+  });
+
+  tearDownAll(() {
+    PdfViewerPlatform.instance = originalPdfViewerPlatform;
+  });
+
   testWidgets('transcript tab uses a floating re-transcribe button',
       (tester) async {
     await tester.pumpWidget(
@@ -280,6 +398,9 @@ void main() {
         overrides: [
           meetingLibraryProvider.overrideWith(_LoadedDocument.new),
           archivedMeetingsProvider.overrideWith(_NoArchivedMeetings.new),
+          settingsProvider.overrideWith(
+            () => _PdfViewerSettings(showExtractedPdfTextOnly: true),
+          ),
         ],
         child: const MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -298,5 +419,103 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Extracted document text.'), findsOneWidget);
+  });
+
+  testWidgets('PDF content tab defaults to inline PDF viewer', (tester) async {
+    final document = await _documentWithPdfFile(tester);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          meetingLibraryProvider.overrideWith(
+            () => _LoadedCustomDocument(document),
+          ),
+          archivedMeetingsProvider.overrideWith(_NoArchivedMeetings.new),
+          settingsProvider.overrideWith(() => _PdfViewerSettings()),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: MeetingDetailScreen(meetingId: 'document-1', initialTabIndex: 1),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byType(SfPdfViewer), findsOneWidget);
+    expect(find.text('Extracted document text.'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
+  testWidgets('PDF content tab can show extracted text only', (tester) async {
+    final document = await _documentWithPdfFile(tester);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          meetingLibraryProvider.overrideWith(
+            () => _LoadedCustomDocument(document),
+          ),
+          archivedMeetingsProvider.overrideWith(_NoArchivedMeetings.new),
+          settingsProvider.overrideWith(
+            () => _PdfViewerSettings(showExtractedPdfTextOnly: true),
+          ),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: MeetingDetailScreen(meetingId: 'document-1'),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Content'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SfPdfViewer), findsNothing);
+    expect(find.text('Extracted document text.'), findsOneWidget);
+  });
+
+  testWidgets('PDF content tab reports missing original file in viewer mode',
+      (tester) async {
+    final document = Meeting(
+      id: 'document-1',
+      createdAt: DateTime.utc(2026, 4, 21, 10),
+      durationSec: 0,
+      audioPath: '/tmp/summsumm-missing-report.pdf',
+      title: 'Report',
+      status: MeetingStatus.recorded,
+      type: MeetingType.document,
+      rawTranscript: 'Extracted document text.',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          meetingLibraryProvider.overrideWith(
+            () => _LoadedCustomDocument(document),
+          ),
+          archivedMeetingsProvider.overrideWith(_NoArchivedMeetings.new),
+          settingsProvider.overrideWith(() => _PdfViewerSettings()),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: MeetingDetailScreen(meetingId: 'document-1'),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Content'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Original PDF file not available.'), findsOneWidget);
+    expect(find.text('Extracted document text.'), findsNothing);
   });
 }
