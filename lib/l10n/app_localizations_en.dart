@@ -266,6 +266,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Document content not available yet.\nGo to the Summary tab to process it.';
 
   @override
+  String get meetingDetailPdfFileMissing => 'Original PDF file not available.';
+
+  @override
   String get meetingDetailTranscribeFirst =>
       'Transcribe the meeting first to start chatting.';
 

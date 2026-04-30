@@ -96,6 +96,7 @@
   "meetingDetailDiarizeSpeakers": "Sprecher diarisieren",
   "meetingDetailDocumentContent": "Dies ist der importierte Dokumentinhalt, kein Transkript.",
   "meetingDetailDocumentNotReady": "Dokumentinhalt noch nicht verfügbar.\nWechsle zum Zusammenfassung-Tab, um es zu verarbeiten.",
+  "meetingDetailPdfFileMissing": "Originale PDF-Datei nicht verfügbar.",
   "meetingDetailTranscribeFirst": "Transkribiere zuerst das Meeting, um zu chatten.",
   "meetingDetailChatHint": "Frage zu diesem Meeting…",
 

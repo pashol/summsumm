@@ -412,6 +412,11 @@
     "description": "Message in chat tab when document not yet processed"
   },
 
+  "meetingDetailPdfFileMissing": "Original PDF file not available.",
+  "@meetingDetailPdfFileMissing": {
+    "description": "Message shown when an imported PDF's original file is missing"
+  },
+
   "meetingDetailTranscribeFirst": "Transcribe the meeting first to start chatting.",
   "@meetingDetailTranscribeFirst": {
     "description": "Message in chat tab when no transcript exists"
