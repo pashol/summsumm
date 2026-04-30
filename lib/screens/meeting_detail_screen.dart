@@ -1082,7 +1082,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
         child: SingleChildScrollView(
           controller: _transcriptScrollController,
           primary: false,
-          padding: _textScrollPadding(),
+          padding: _transcriptScrollPadding(),
           child: SelectableText(
             meeting.transcript ?? '',
             style: Theme.of(context).textTheme.bodyMedium,
@@ -1092,7 +1092,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
     );
   }
 
-  EdgeInsets _textScrollPadding() {
+  EdgeInsets _transcriptScrollPadding() {
     return EdgeInsets.only(
       left: 16,
       top: 16,

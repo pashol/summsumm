@@ -129,7 +129,17 @@ class _AskLibraryScreenState extends ConsumerState<AskLibraryScreen> {
     if (assistantMessages.isNotEmpty) {
       final lastAssistant = assistantMessages.last;
       ref.read(askLibrarySessionProvider.notifier).addMessage(
-        ChatMessage(role: 'assistant', content: lastAssistant.content),
+        ChatMessage(
+          role: 'assistant',
+          content: lastAssistant.content,
+          metadata: lastAssistant.citations.isNotEmpty
+              ? {
+                  'citations': lastAssistant.citations
+                      .map((c) => c.toJson())
+                      .toList(),
+                }
+              : null,
+        ),
       );
     }
     await ref.read(askLibrarySessionProvider.notifier).saveCurrentSession();
@@ -238,6 +248,18 @@ class _IndexingView extends StatelessWidget {
   }
 }
 
+class _DisplayMessage {
+  final String role;
+  final String content;
+  final List<LibraryCitation> citations;
+
+  const _DisplayMessage({
+    required this.role,
+    required this.content,
+    this.citations = const [],
+  });
+}
+
 class _ChatView extends StatelessWidget {
   final AskLibraryChatState chat;
   final AskLibrarySessionState session;
@@ -261,9 +283,34 @@ class _ChatView extends StatelessWidget {
     required this.onCitationTap,
   });
 
+  List<_DisplayMessage> _buildMessages() {
+    final messages = <_DisplayMessage>[];
+
+    // Add all session messages
+    for (final msg in session.messages) {
+      messages.add(_DisplayMessage(role: msg.role, content: msg.content));
+    }
+
+    // During streaming, chat may have messages not yet persisted to session.
+    // Append any extra chat messages beyond what session has.
+    if (chat.messages.length > session.messages.length) {
+      final extras = chat.messages.sublist(session.messages.length);
+      for (final msg in extras) {
+        messages.add(_DisplayMessage(
+          role: msg.role,
+          content: msg.content,
+          citations: msg.citations,
+        ));
+      }
+    }
+
+    return messages;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final displayMessages = _buildMessages();
     return Column(
       children: [
         if (isStale)
@@ -289,9 +336,9 @@ class _ChatView extends StatelessWidget {
               top: 16,
               bottom: MediaQuery.of(context).padding.bottom + 16,
             ),
-            itemCount: session.messages.length,
+            itemCount: displayMessages.length,
             itemBuilder: (context, index) {
-              final message = session.messages[index];
+              final message = displayMessages[index];
               return Align(
                 alignment: message.role == 'user'
                     ? Alignment.centerRight
@@ -315,6 +362,18 @@ class _ChatView extends StatelessWidget {
                                 ),
                               )
                             : Text(message.content),
+                        if (message.citations.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            children: message.citations.map((citation) {
+                              return ActionChip(
+                                label: Text(citation.title),
+                                onPressed: () => onCitationTap(citation),
+                              );
+                            }).toList(),
+                          ),
+                        ],
                       ],
                     ),
                   ),

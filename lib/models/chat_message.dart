@@ -33,7 +33,33 @@ class ChatMessage {
   }
 
   @override
-  int get hashCode => Object.hash(role, content, metadata);
+  int get hashCode => Object.hash(role, content, _deepHash(metadata));
+}
+
+int _deepHash(Map<String, dynamic>? map) {
+  if (map == null) return 0;
+  var hash = map.length;
+  for (final entry in map.entries.toList()..sort((a, b) => a.key.compareTo(b.key))) {
+    hash = hash ^ Object.hash(
+      entry.key,
+      _hashValue(entry.value),
+    );
+  }
+  return hash;
+}
+
+int _hashValue(dynamic value) {
+  if (value is Map) {
+    return _deepHash(value.cast<String, dynamic>());
+  } else if (value is List) {
+    var hash = value.length;
+    for (var i = 0; i < value.length; i++) {
+      hash = hash ^ Object.hash(i, _hashValue(value[i]));
+    }
+    return hash;
+  } else {
+    return value.hashCode;
+  }
 }
 
 bool _mapEquals(Map<String, dynamic>? a, Map<String, dynamic>? b) {

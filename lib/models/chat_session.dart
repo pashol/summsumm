@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'chat_message.dart';
+import 'package:summsumm/models/chat_message.dart';
 
 class ChatSession {
   final String id;
@@ -9,7 +9,7 @@ class ChatSession {
   final List<ChatMessage> messages;
   final bool isArchived;
 
-  ChatSession({
+  const ChatSession({
     required this.id,
     required this.title,
     required this.createdAt,
@@ -65,4 +65,35 @@ class ChatSession {
 
   factory ChatSession.fromJsonString(String s) =>
       ChatSession.fromJson(jsonDecode(s) as Map<String, dynamic>);
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is ChatSession &&
+        other.id == id &&
+        other.title == title &&
+        other.createdAt == createdAt &&
+        other.updatedAt == updatedAt &&
+        other.isArchived == isArchived &&
+        _listEquals(other.messages, messages);
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        id,
+        title,
+        createdAt,
+        updatedAt,
+        isArchived,
+        Object.hashAll(messages),
+      );
+}
+
+bool _listEquals<T>(List<T> a, List<T> b) {
+  if (identical(a, b)) return true;
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
 }

@@ -56,6 +56,8 @@ dev_dependencies:
   riverpod_generator: ^2.6.3
   riverpod_lint: ^2.6.3
   custom_lint: ^0.7.0
+  path_provider_platform_interface: ^2.1.0
+  plugin_platform_interface: ^2.1.0
 
 dependency_overrides:
   flutter_rust_bridge: 2.11.1

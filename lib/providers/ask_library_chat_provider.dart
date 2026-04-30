@@ -48,13 +48,12 @@ class AskLibraryChatNotifier extends StateNotifier<AskLibraryChatState> {
 
   AskLibraryChatNotifier(this._ref) : super(const AskLibraryChatState());
 
-  void newChat() {
-    _ref.read(askLibrarySessionProvider.notifier).saveCurrentSession();
-    _ref.read(askLibraryChatHistoryProvider.notifier).refresh();
-
+  Future<void> newChat() async {
     _streamSub?.cancel();
     _streamSub = null;
     state = const AskLibraryChatState();
+    await _ref.read(askLibrarySessionProvider.notifier).saveCurrentSession();
+    _ref.read(askLibraryChatHistoryProvider.notifier).refresh();
     _ref.read(askLibrarySessionProvider.notifier).newSession();
   }
 
@@ -84,14 +83,7 @@ class AskLibraryChatNotifier extends StateNotifier<AskLibraryChatState> {
               'I could not find enough relevant context in your library to answer that.',
         );
         state = state.copyWith(messages: updated, isStreaming: false);
-        _ref.read(askLibrarySessionProvider.notifier).addMessage(
-          ChatMessage(role: updated[updated.length - 2].role, content: updated[updated.length - 2].content),
-        );
-        _ref.read(askLibrarySessionProvider.notifier).addMessage(
-          ChatMessage(role: updated.last.role, content: updated.last.content),
-        );
-        await _ref.read(askLibrarySessionProvider.notifier).saveCurrentSession();
-        _ref.read(askLibraryChatHistoryProvider.notifier).refresh();
+        await _persistSession();
         return;
       }
 
@@ -138,41 +130,17 @@ class AskLibraryChatNotifier extends StateNotifier<AskLibraryChatState> {
           );
           state = state.copyWith(messages: updated);
         },
-        onError: (Object e) {
-          if (!_mounted) return;
-          final updated = List<AskLibraryMessage>.from(state.messages)
-            ..removeLast();
-          state = state.copyWith(
-            messages: updated,
-            isStreaming: false,
-            error: e is AiException ? e.message : e.toString(),
-          );
-        },
+        onError: (Object e) => _handleError(e),
         onDone: () async {
           if (!_mounted) return;
           state = state.copyWith(isStreaming: false);
-          final messages = state.messages;
-          if (messages.length >= 2) {
-            _ref.read(askLibrarySessionProvider.notifier).addMessage(
-              ChatMessage(role: messages[messages.length - 2].role, content: messages[messages.length - 2].content),
-            );
-            _ref.read(askLibrarySessionProvider.notifier).addMessage(
-              ChatMessage(role: messages.last.role, content: messages.last.content),
-            );
-            await _ref.read(askLibrarySessionProvider.notifier).saveCurrentSession();
-            _ref.read(askLibraryChatHistoryProvider.notifier).refresh();
-          }
+          await _persistSession();
         },
         cancelOnError: true,
       );
     } catch (e) {
-      final updated = List<AskLibraryMessage>.from(state.messages)
-        ..removeLast();
-      state = state.copyWith(
-        messages: updated,
-        isStreaming: false,
-        error: e is AiException ? e.message : e.toString(),
-      );
+      if (!_mounted) return;
+      _handleError(e);
     }
   }
 
@@ -203,6 +171,38 @@ class AskLibraryChatNotifier extends StateNotifier<AskLibraryChatState> {
     }
     return citations;
   }
+
+  void _handleError(Object e) {
+    if (!_mounted) return;
+    final updated = List<AskLibraryMessage>.from(state.messages)..removeLast();
+    state = state.copyWith(
+      messages: updated,
+      isStreaming: false,
+      error: e is AiException ? e.message : e.toString(),
+    );
+  }
+
+  Future<void> _persistSession() async {
+    final messages = state.messages;
+    if (messages.length < 2) return;
+
+    _ref.read(askLibrarySessionProvider.notifier).addMessage(
+      _toChatMessage(messages[messages.length - 2]),
+    );
+    _ref.read(askLibrarySessionProvider.notifier).addMessage(
+      _toChatMessage(messages.last),
+    );
+    await _ref.read(askLibrarySessionProvider.notifier).saveCurrentSession();
+    _ref.read(askLibraryChatHistoryProvider.notifier).refresh();
+  }
+
+  ChatMessage _toChatMessage(AskLibraryMessage msg) => ChatMessage(
+        role: msg.role,
+        content: msg.content,
+        metadata: msg.citations.isNotEmpty
+            ? {'citations': msg.citations.map((c) => c.toJson()).toList()}
+            : null,
+      );
 
   List<AskLibraryMessage> _previousMessagesExcludingPendingTurn() {
     if (state.messages.length < 2) return const [];

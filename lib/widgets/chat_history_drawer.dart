@@ -67,6 +67,7 @@ class _ChatListItem extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Slidable(
+      key: ValueKey(session.id),
       endActionPane: ActionPane(
         motion: const DrawerMotion(),
         extentRatio: 0.5,
@@ -114,8 +115,8 @@ class _ChatListItem extends ConsumerWidget {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text('Delete', style: TextStyle(color: Colors.red)),
+              leading: Icon(Icons.delete, color: Theme.of(context).colorScheme.error),
+              title: Text('Delete', style: TextStyle(color: Theme.of(context).colorScheme.error)),
               onTap: () {
                 Navigator.pop(context);
                 _confirmDelete(context, ref);
@@ -128,27 +129,15 @@ class _ChatListItem extends ConsumerWidget {
   }
 
   void _showRenameDialog(BuildContext context, WidgetRef ref) {
-    final controller = TextEditingController(text: session.title);
     showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Rename Chat'),
-        content: TextField(controller: controller),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              ref
-                  .read(askLibraryChatHistoryProvider.notifier)
-                  .renameSession(session.id, controller.text);
-              Navigator.pop(context);
-            },
-            child: const Text('Save'),
-          ),
-        ],
+      builder: (context) => _RenameDialog(
+        initialTitle: session.title,
+        onSave: (newTitle) {
+          ref
+              .read(askLibraryChatHistoryProvider.notifier)
+              .renameSession(session.id, newTitle);
+        },
       ),
     );
   }
@@ -171,10 +160,57 @@ class _ChatListItem extends ConsumerWidget {
                   .deleteSession(session.id);
               Navigator.pop(context);
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: Text('Delete', style: TextStyle(color: Theme.of(context).colorScheme.error)),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _RenameDialog extends StatefulWidget {
+  final String initialTitle;
+  final ValueChanged<String> onSave;
+
+  const _RenameDialog({required this.initialTitle, required this.onSave});
+
+  @override
+  State<_RenameDialog> createState() => _RenameDialogState();
+}
+
+class _RenameDialogState extends State<_RenameDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialTitle);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Rename Chat'),
+      content: TextField(controller: _controller),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () {
+            widget.onSave(_controller.text);
+            Navigator.pop(context);
+          },
+          child: const Text('Save'),
+        ),
+      ],
     );
   }
 }

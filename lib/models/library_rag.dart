@@ -156,6 +156,14 @@ class LibraryCitation {
     required this.contentType,
     this.excerpt,
   });
+
+  Map<String, dynamic> toJson() => {
+        'libraryItemId': libraryItemId,
+        'title': title,
+        'sourceKind': sourceKind.name,
+        'contentType': contentType.name,
+        if (excerpt != null) 'excerpt': excerpt,
+      };
 }
 
 class AskLibraryMessage {

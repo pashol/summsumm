@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/chat_session.dart';
 import 'chat_repository_provider.dart';
@@ -10,9 +11,13 @@ class AskLibraryChatHistoryNotifier extends StateNotifier<List<ChatSession>> {
   }
 
   Future<void> _loadHistory() async {
-    final repository = _ref.read(chatRepositoryProvider);
-    final sessions = await repository.loadAll();
-    state = sessions;
+    try {
+      final repository = _ref.read(chatRepositoryProvider);
+      final sessions = await repository.loadAll();
+      state = sessions;
+    } catch (e) {
+      debugPrint('Error loading chat history: $e');
+    }
   }
 
   Future<void> refresh() async {
@@ -20,19 +25,27 @@ class AskLibraryChatHistoryNotifier extends StateNotifier<List<ChatSession>> {
   }
 
   Future<void> deleteSession(String id) async {
-    final repository = _ref.read(chatRepositoryProvider);
-    await repository.delete(id);
-    await refresh();
+    try {
+      final repository = _ref.read(chatRepositoryProvider);
+      await repository.delete(id);
+      await refresh();
+    } catch (e) {
+      debugPrint('Error deleting session: $e');
+    }
   }
 
   Future<void> renameSession(String id, String newTitle) async {
-    final repository = _ref.read(chatRepositoryProvider);
-    final session = await repository.loadById(id);
-    if (session == null) return;
+    try {
+      final repository = _ref.read(chatRepositoryProvider);
+      final session = await repository.loadById(id);
+      if (session == null) return;
 
-    final updated = session.copyWith(title: newTitle);
-    await repository.save(updated);
-    await refresh();
+      final updated = session.copyWith(title: newTitle);
+      await repository.save(updated);
+      await refresh();
+    } catch (e) {
+      debugPrint('Error renaming session: $e');
+    }
   }
 }
 
