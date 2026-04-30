@@ -3,12 +3,15 @@ import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/chat_message.dart';
 import '../models/library_rag.dart';
 import '../providers/library_rag_provider.dart';
 import '../providers/models_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/ai_service.dart';
 import '../services/library_rag_service.dart';
+import 'ask_library_chat_history_provider.dart';
+import 'ask_library_session_provider.dart';
 
 class AskLibraryChatState {
   final List<AskLibraryMessage> messages;
@@ -46,9 +49,13 @@ class AskLibraryChatNotifier extends StateNotifier<AskLibraryChatState> {
   AskLibraryChatNotifier(this._ref) : super(const AskLibraryChatState());
 
   void newChat() {
+    _ref.read(askLibrarySessionProvider.notifier).saveCurrentSession();
+    _ref.read(askLibraryChatHistoryProvider.notifier).refresh();
+
     _streamSub?.cancel();
     _streamSub = null;
     state = const AskLibraryChatState();
+    _ref.read(askLibrarySessionProvider.notifier).newSession();
   }
 
   Future<void> sendMessage(String question) async {
@@ -77,6 +84,14 @@ class AskLibraryChatNotifier extends StateNotifier<AskLibraryChatState> {
               'I could not find enough relevant context in your library to answer that.',
         );
         state = state.copyWith(messages: updated, isStreaming: false);
+        _ref.read(askLibrarySessionProvider.notifier).addMessage(
+          ChatMessage(role: updated[updated.length - 2].role, content: updated[updated.length - 2].content),
+        );
+        _ref.read(askLibrarySessionProvider.notifier).addMessage(
+          ChatMessage(role: updated.last.role, content: updated.last.content),
+        );
+        await _ref.read(askLibrarySessionProvider.notifier).saveCurrentSession();
+        _ref.read(askLibraryChatHistoryProvider.notifier).refresh();
         return;
       }
 
@@ -133,9 +148,20 @@ class AskLibraryChatNotifier extends StateNotifier<AskLibraryChatState> {
             error: e is AiException ? e.message : e.toString(),
           );
         },
-        onDone: () {
+        onDone: () async {
           if (!_mounted) return;
           state = state.copyWith(isStreaming: false);
+          final messages = state.messages;
+          if (messages.length >= 2) {
+            _ref.read(askLibrarySessionProvider.notifier).addMessage(
+              ChatMessage(role: messages[messages.length - 2].role, content: messages[messages.length - 2].content),
+            );
+            _ref.read(askLibrarySessionProvider.notifier).addMessage(
+              ChatMessage(role: messages.last.role, content: messages.last.content),
+            );
+            await _ref.read(askLibrarySessionProvider.notifier).saveCurrentSession();
+            _ref.read(askLibraryChatHistoryProvider.notifier).refresh();
+          }
         },
         cancelOnError: true,
       );
