@@ -89,6 +89,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSystemDefault => 'System Default';
 
   @override
+  String get settingsShowExtractedPdfTextOnly => 'Show extracted PDF text only';
+
+  @override
+  String get settingsShowExtractedPdfTextOnlySubtitle =>
+      'Use the extracted text view instead of the original inline PDF.';
+
+  @override
   String get libraryTitle => 'Library';
 
   @override
@@ -257,6 +264,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get meetingDetailDocumentNotReady =>
       'Document content not available yet.\nGo to the Summary tab to process it.';
+
+  @override
+  String get meetingDetailPdfFileMissing => 'Original PDF file not available.';
 
   @override
   String get meetingDetailTranscribeFirst =>

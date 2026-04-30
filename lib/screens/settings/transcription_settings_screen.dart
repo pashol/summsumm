@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/transcription_config.dart';
 import '../../providers/model_download_provider.dart';
 import '../../providers/settings_provider.dart';
@@ -17,6 +18,7 @@ class _TranscriptionSettingsScreenState extends ConsumerState<TranscriptionSetti
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
     final notifier = ref.read(settingsProvider.notifier);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
@@ -36,7 +38,14 @@ class _TranscriptionSettingsScreenState extends ConsumerState<TranscriptionSetti
               );
             },
           ),
-          
+
+          SwitchListTile(
+            title: Text(l10n.settingsShowExtractedPdfTextOnly),
+            subtitle: Text(l10n.settingsShowExtractedPdfTextOnlySubtitle),
+            value: settings.showExtractedPdfTextOnly,
+            onChanged: notifier.setShowExtractedPdfTextOnly,
+          ),
+
           // Model Management Section (only when on-device enabled)
           if (settings.transcriptionStrategy == TranscriptionStrategy.onDevice) ...[
             const SizedBox(height: 16),
