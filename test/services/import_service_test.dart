@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
@@ -54,6 +55,26 @@ void main() {
     expect(repo.saved, hasLength(1));
   });
 
+  test(
+    'imports audio stream when source path is not directly readable',
+    () async {
+      final meeting = await service.importStream(
+        sourceName: 'downloaded.aac',
+        stream: Stream<List<int>>.fromIterable([
+          [1, 2, 3],
+          [4, 5],
+        ]),
+      );
+
+      expect(meeting, isNotNull);
+      expect(meeting!.type, MeetingType.meeting);
+      expect(meeting.title, 'downloaded');
+      expect(meeting.audioPath, endsWith('.aac'));
+      expect(await File(meeting.audioPath).readAsBytes(), [1, 2, 3, 4, 5]);
+      expect(repo.saved, hasLength(1));
+    },
+  );
+
   test('imports PDF as MeetingType.document', () async {
     final source = await makeSourceFile('report.pdf');
     final meeting = await service.importFile(source.path);
@@ -75,10 +96,34 @@ void main() {
     final source = await makeSourceFile('report.pdf');
 
     final meeting = await service.importFile(source.path);
+    await Future<void>.delayed(Duration.zero);
 
-    expect(meeting!.rawTranscript, 'Extracted document text');
-    expect(meeting.transcript, 'Extracted document text');
-    expect(repo.saved.single.rawTranscript, 'Extracted document text');
+    expect(meeting!.rawTranscript, isNull);
+    expect(repo.saved.last.rawTranscript, 'Extracted document text');
+  });
+
+  test('adds PDF to the library before text extraction finishes', () async {
+    final extraction = Completer<String>();
+    service = ImportService(
+      repo,
+      getMeetingsDir: () async => meetingsDir,
+      documentTextExtractor: (_) => extraction.future,
+    );
+    final source = await makeSourceFile('report.pdf');
+
+    final meeting = await service.importFile(source.path);
+
+    expect(meeting, isNotNull);
+    expect(meeting!.rawTranscript, isNull);
+    expect(repo.saved, hasLength(1));
+    expect(repo.saved.single.rawTranscript, isNull);
+
+    extraction.complete('Extracted later');
+    await Future<void>.delayed(Duration.zero);
+
+    expect(repo.saved, hasLength(2));
+    expect(repo.saved.last.id, meeting.id);
+    expect(repo.saved.last.rawTranscript, 'Extracted later');
   });
 
   test('normalizes extracted document text before storing it', () async {
@@ -90,9 +135,13 @@ void main() {
     );
     final source = await makeSourceFile('report.pdf');
 
-    final meeting = await service.importFile(source.path);
+    await service.importFile(source.path);
+    await Future<void>.delayed(Duration.zero);
 
-    expect(meeting!.rawTranscript, 'First wrapped line\n\nSecond paragraph');
+    expect(
+      repo.saved.last.rawTranscript,
+      'First wrapped line\n\nSecond paragraph',
+    );
   });
 
   test('imports PDF when text extraction fails', () async {

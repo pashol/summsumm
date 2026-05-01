@@ -59,10 +59,12 @@ class AskLibrarySessionNotifier extends StateNotifier<AskLibrarySessionState> {
   final Ref _ref;
 
   AskLibrarySessionNotifier(this._ref)
-      : super(AskLibrarySessionState(
+    : super(
+        AskLibrarySessionState(
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
-        ));
+        ),
+      );
 
   void loadSession(ChatSession session) {
     state = AskLibrarySessionState(
@@ -122,12 +124,12 @@ class AskLibrarySessionNotifier extends StateNotifier<AskLibrarySessionState> {
       orElse: () => const ChatMessage(role: 'user', content: 'New Chat'),
     );
     final content = firstUserMessage.content;
-    if (content.length <= 50) return 'Q: $content';
-    return 'Q: ${content.substring(0, 50)}...';
+    if (content.length <= 50) return content;
+    return '${content.substring(0, 50)}...';
   }
 }
 
 final askLibrarySessionProvider =
     StateNotifierProvider<AskLibrarySessionNotifier, AskLibrarySessionState>(
-  (ref) => AskLibrarySessionNotifier(ref),
-);
+      (ref) => AskLibrarySessionNotifier(ref),
+    );

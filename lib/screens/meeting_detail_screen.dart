@@ -20,6 +20,7 @@ import 'package:summsumm/providers/settings_provider.dart';
 import 'package:summsumm/utils/audio_seek_state.dart';
 import 'package:summsumm/utils/localized_strings.dart';
 import 'package:summsumm/utils/markdown_text.dart';
+import 'package:summsumm/utils/transcription_status.dart';
 import 'package:summsumm/widgets/meeting_share_sheet.dart';
 import 'package:summsumm/services/audio_player_service.dart';
 
@@ -264,8 +265,9 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                         Icons.error_outline,
                         color: Theme.of(context).colorScheme.onErrorContainer,
                       ),
-                      backgroundColor:
-                          Theme.of(context).colorScheme.errorContainer,
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.errorContainer,
                       actions: const [SizedBox.shrink()],
                     ),
                   ],
@@ -333,20 +335,26 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
   }
 
   Widget _buildSummaryTab(
-      Meeting meeting, MeetingNotifier provider, AppLocalizations l10n) {
+    Meeting meeting,
+    MeetingNotifier provider,
+    AppLocalizations l10n,
+  ) {
     switch (meeting.status) {
       case MeetingStatus.recorded:
         if (meeting.type == MeetingType.document) {
-          final canSummarize = meeting.audioPath.isNotEmpty &&
+          final canSummarize =
+              meeting.audioPath.isNotEmpty &&
               File(meeting.audioPath).existsSync();
           return Center(
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: FilledButton(
                 onPressed: canSummarize ? () => provider.summarize() : null,
-                child: Text(canSummarize
-                    ? l10n.summarizeButton
-                    : l10n.meetingDetailAudioMissing),
+                child: Text(
+                  canSummarize
+                      ? l10n.summarizeButton
+                      : l10n.meetingDetailAudioMissing,
+                ),
               ),
             ),
           );
@@ -436,8 +444,8 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
               Text(
                 l10n.meetingDetailSummarizing,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ],
           ),
@@ -494,7 +502,10 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
   }
 
   Widget _buildFailedContent(
-      Meeting meeting, MeetingNotifier provider, AppLocalizations l10n) {
+    Meeting meeting,
+    MeetingNotifier provider,
+    AppLocalizations l10n,
+  ) {
     if (meeting.summaries.isNotEmpty) {
       return Column(
         children: [
@@ -514,7 +525,9 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                         return Transform.scale(
                           scale: 0.9 + (0.1 * value),
                           child: Opacity(
-                              opacity: value.clamp(0.0, 1.0), child: child),
+                            opacity: value.clamp(0.0, 1.0),
+                            child: child,
+                          ),
                         );
                       },
                       child: Text(
@@ -550,7 +563,10 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
   }
 
   Widget _buildChipRow(
-      Meeting meeting, MeetingNotifier? provider, AppLocalizations l10n) {
+    Meeting meeting,
+    MeetingNotifier? provider,
+    AppLocalizations l10n,
+  ) {
     final settings = ref.watch(settingsProvider);
 
     return Padding(
@@ -564,14 +580,17 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
               // Use custom prompt name if available, otherwise style name
               String chipLabel;
               if (summary.customPromptId != null) {
-                final custom = settings.customPrompts
-                    .firstWhereOrNull((p) => p.id == summary.customPromptId);
+                final custom = settings.customPrompts.firstWhereOrNull(
+                  (p) => p.id == summary.customPromptId,
+                );
                 chipLabel =
                     custom?.name ?? summary.style.localizedTitle(context);
               } else {
                 final styleCount = meeting.summaries
-                    .where((s) =>
-                        s.style == summary.style && s.customPromptId == null)
+                    .where(
+                      (s) =>
+                          s.style == summary.style && s.customPromptId == null,
+                    )
                     .toList();
                 final styleIndex = styleCount.indexOf(summary);
                 final styleTitle = summary.style.localizedTitle(context);
@@ -609,7 +628,10 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
   }
 
   Widget _buildAddControls(
-      Meeting meeting, MeetingNotifier provider, AppLocalizations l10n) {
+    Meeting meeting,
+    MeetingNotifier provider,
+    AppLocalizations l10n,
+  ) {
     final availableStyles = SummaryStyle.forType(meeting.type);
     final settings = ref.read(settingsProvider);
     final customPrompts = settings.customPrompts;
@@ -675,8 +697,12 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
               isDense: true,
             ),
             items: kSupportedLanguages
-                .map((l) => DropdownMenuItem(
-                    value: l, child: Text(localizedLanguageName(context, l))))
+                .map(
+                  (l) => DropdownMenuItem(
+                    value: l,
+                    child: Text(localizedLanguageName(context, l)),
+                  ),
+                )
                 .toList(),
             onChanged: (v) {
               if (v != null) setState(() => _selectedLanguage = v);
@@ -698,8 +724,9 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                     if (styleValue.startsWith('custom:')) {
                       customPromptId = styleValue.substring(7);
                       selectedStyle = SummaryStyle.structured;
-                      final prompt = customPrompts
-                          .firstWhereOrNull((p) => p.id == customPromptId);
+                      final prompt = customPrompts.firstWhereOrNull(
+                        (p) => p.id == customPromptId,
+                      );
                       styleTitle = prompt?.name ?? l10n.styleStructured;
                     } else {
                       selectedStyle = SummaryStyle.values.firstWhere(
@@ -715,13 +742,15 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                         title: Text(l10n.meetingDetailGenerateSummary),
                         content: Text(
                           l10n.meetingDetailGenerateConfirm(
-                              language, styleTitle),
+                            language,
+                            styleTitle,
+                          ),
                         ),
                         actions: _buildDialogActions(ctx, [
                           (
                             label: l10n.cancelButton,
                             onPressed: () => Navigator.pop(ctx),
-                            isDefault: false
+                            isDefault: false,
                           ),
                           (
                             label: l10n.meetingDetailGenerate,
@@ -738,7 +767,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                                 customPromptId: customPromptId,
                               );
                             },
-                            isDefault: true
+                            isDefault: true,
                           ),
                         ]),
                       ),
@@ -808,7 +837,8 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
     MeetingNotifier provider,
     AppLocalizations l10n,
   ) {
-    final showReTranscribe = meeting.type != MeetingType.document &&
+    final showReTranscribe =
+        meeting.type != MeetingType.document &&
         meeting.status != MeetingStatus.recorded &&
         meeting.status != MeetingStatus.transcribing &&
         (meeting.status != MeetingStatus.failed ||
@@ -838,7 +868,8 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
     required AppLocalizations l10n,
     required Widget child,
   }) {
-    final showReTranscribe = meeting.type != MeetingType.document &&
+    final showReTranscribe =
+        meeting.type != MeetingType.document &&
         meeting.status != MeetingStatus.summarizing;
 
     return Stack(
@@ -861,7 +892,10 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
   }
 
   Widget _buildTranscriptTab(
-      Meeting meeting, MeetingNotifier provider, AppLocalizations l10n) {
+    Meeting meeting,
+    MeetingNotifier provider,
+    AppLocalizations l10n,
+  ) {
     if (meeting.type == MeetingType.document &&
         (meeting.transcript?.trim().isNotEmpty ?? false)) {
       return _buildDocumentContentTab(meeting, provider, l10n);
@@ -889,8 +923,9 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Tooltip(
-                message:
-                    canDiarize ? '' : l10n.meetingDetailDiarizationRequires,
+                message: canDiarize
+                    ? ''
+                    : l10n.meetingDetailDiarizationRequires,
                 child: Row(
                   children: [
                     Switch(
@@ -903,8 +938,9 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                     Text(
                       l10n.meetingDetailDiarizeSpeakers,
                       style: TextStyle(
-                        color:
-                            canDiarize ? null : Theme.of(context).disabledColor,
+                        color: canDiarize
+                            ? null
+                            : Theme.of(context).disabledColor,
                       ),
                     ),
                   ],
@@ -915,9 +951,11 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                 onPressed: _audioFileExists
                     ? () => provider.transcribe(diarize: _diarize)
                     : null,
-                child: Text(_audioFileExists
-                    ? l10n.transcribeButton
-                    : l10n.meetingDetailAudioMissing),
+                child: Text(
+                  _audioFileExists
+                      ? l10n.transcribeButton
+                      : l10n.meetingDetailAudioMissing,
+                ),
               ),
             ],
           ),
@@ -936,8 +974,9 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
               MaterialBanner(
                 content: Text(l10n.meetingDetailDocumentContent),
                 actions: const [SizedBox.shrink()],
-                backgroundColor:
-                    Theme.of(context).colorScheme.surfaceContainerHighest,
+                backgroundColor: Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest,
               ),
             if (meeting.speakerSegments != null &&
                 meeting.speakerSegments!.isNotEmpty)
@@ -990,10 +1029,12 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                       padding: _textScrollPadding(right: 64),
                       child: MarkdownBody(
                         data: markdownWithHardLineBreaks(
-                            meeting.transcript ?? ''),
+                          meeting.transcript ?? '',
+                        ),
                         styleSheet: MarkdownStyleSheet(
                           p: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurface),
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
                         ),
                       ),
                     ),
@@ -1003,8 +1044,9 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
           ],
         );
       case MeetingStatus.failed:
-        if (meeting.type == MeetingType.document)
+        if (meeting.type == MeetingType.document) {
           return const SizedBox.shrink();
+        }
         return Column(
           children: [
             _buildTranscriptActions(meeting, provider, l10n),
@@ -1030,16 +1072,17 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
     AppLocalizations l10n,
   ) {
     final settings = ref.watch(settingsProvider);
-    final showPdfViewer = _isPdfDocument(meeting) &&
-        !settings.showExtractedPdfTextOnly;
+    final showPdfViewer =
+        _isPdfDocument(meeting) && !settings.showExtractedPdfTextOnly;
 
     return Column(
       children: [
         MaterialBanner(
           content: Text(l10n.meetingDetailDocumentContent),
           actions: const [SizedBox.shrink()],
-          backgroundColor:
-              Theme.of(context).colorScheme.surfaceContainerHighest,
+          backgroundColor: Theme.of(
+            context,
+          ).colorScheme.surfaceContainerHighest,
         ),
         Expanded(
           child: showPdfViewer
@@ -1145,12 +1188,15 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                 final msg = chatState.messages[index];
                 final isUser = msg.role == 'user';
                 return Align(
-                  alignment:
-                      isUser ? Alignment.centerRight : Alignment.centerLeft,
+                  alignment: isUser
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
                   child: TweenAnimationBuilder<double>(
                     tween: Tween(begin: 0.8, end: 1.0),
                     duration: animDuration(
-                        context, const Duration(milliseconds: 400)),
+                      context,
+                      const Duration(milliseconds: 400),
+                    ),
                     curve: Curves.elasticOut,
                     builder: (context, scale, child) {
                       return Opacity(
@@ -1170,9 +1216,9 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                       decoration: BoxDecoration(
                         color: isUser
                             ? Theme.of(context).colorScheme.primaryContainer
-                            : Theme.of(context)
-                                .colorScheme
-                                .surfaceContainerHighest,
+                            : Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.only(
                           topLeft: const Radius.circular(20),
                           topRight: const Radius.circular(20),
@@ -1189,12 +1235,12 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                         styleSheet: MarkdownStyleSheet(
                           p: TextStyle(
                             color: isUser
-                                ? Theme.of(context)
-                                    .colorScheme
-                                    .onPrimaryContainer
-                                : Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
+                                ? Theme.of(
+                                    context,
+                                  ).colorScheme.onPrimaryContainer
+                                : Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ),
@@ -1242,9 +1288,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                          ),
+                          child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.send),
                   onPressed: chatState.isStreaming
@@ -1282,9 +1326,9 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
 
   String _formatDateTime(BuildContext context, DateTime dateTime) {
     final locale = Localizations.localeOf(context);
-    return DateFormat.yMMMd(locale.languageCode)
-        .add_jm()
-        .format(dateTime.toLocal());
+    return DateFormat.yMMMd(
+      locale.languageCode,
+    ).add_jm().format(dateTime.toLocal());
   }
 
   void _renameMeeting(
@@ -1303,7 +1347,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
           (
             label: l10n.cancelButton,
             onPressed: () => Navigator.pop(ctx),
-            isDefault: false
+            isDefault: false,
           ),
           (
             label: l10n.saveButton,
@@ -1311,7 +1355,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
               provider.rename(controller.text);
               Navigator.pop(ctx);
             },
-            isDefault: true
+            isDefault: true,
           ),
         ]),
       ),
@@ -1341,7 +1385,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
           (
             label: l10n.cancelButton,
             onPressed: () => Navigator.pop(ctx),
-            isDefault: false
+            isDefault: false,
           ),
           (
             label: l10n.deleteButton,
@@ -1350,7 +1394,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
               Navigator.pop(ctx);
               Navigator.pop(context);
             },
-            isDefault: true
+            isDefault: true,
           ),
         ]),
       ),
@@ -1369,10 +1413,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
           child: Text(action.label),
         );
       }
-      return TextButton(
-        onPressed: action.onPressed,
-        child: Text(action.label),
-      );
+      return TextButton(onPressed: action.onPressed, child: Text(action.label));
     }).toList();
   }
 }
@@ -1408,14 +1449,14 @@ class _MetadataRow extends StatelessWidget {
                 Text(
                   label,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
                 Text(
                   value,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
               ],
             ),
@@ -1449,10 +1490,7 @@ class _TranscribingIndicatorState extends State<_TranscribingIndicator>
     )..repeat(reverse: true);
 
     _breathAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
-      CurvedAnimation(
-        parent: _pulseController,
-        curve: Curves.easeInOut,
-      ),
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
   }
 
@@ -1465,7 +1503,7 @@ class _TranscribingIndicatorState extends State<_TranscribingIndicator>
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final displayStatus = widget.status ?? 'Preparing…';
+    final displayStatus = transcriptionStatusLabel(widget.status);
     final determinate = widget.progress != null;
     final progress = widget.progress ?? 0.0;
 
@@ -1493,9 +1531,9 @@ class _TranscribingIndicatorState extends State<_TranscribingIndicator>
                 displayStatus,
                 key: ValueKey(displayStatus),
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: cs.onSurfaceVariant,
-                      fontWeight: FontWeight.w500,
-                    ),
+                  color: cs.onSurfaceVariant,
+                  fontWeight: FontWeight.w500,
+                ),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -1511,9 +1549,9 @@ class _TranscribingIndicatorState extends State<_TranscribingIndicator>
               const SizedBox(height: 8),
               Text(
                 '${(progress * 100).round()}%',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: cs.onSurfaceVariant,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
               ),
             ],
           ],

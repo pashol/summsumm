@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import '../models/chat_session.dart';
+import '../providers/ask_library_chat_provider.dart';
 import '../providers/ask_library_chat_history_provider.dart';
 import '../providers/ask_library_session_provider.dart';
 
@@ -47,7 +48,7 @@ class ChatHistoryDrawer extends ConsumerWidget {
           ),
           TextButton.icon(
             onPressed: () {
-              ref.read(askLibrarySessionProvider.notifier).newSession();
+              ref.read(askLibraryChatProvider.notifier).newChat();
               Navigator.pop(context);
             },
             icon: const Icon(Icons.add),
@@ -115,8 +116,14 @@ class _ChatListItem extends ConsumerWidget {
               },
             ),
             ListTile(
-              leading: Icon(Icons.delete, color: Theme.of(context).colorScheme.error),
-              title: Text('Delete', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              leading: Icon(
+                Icons.delete,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              title: Text(
+                'Delete',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
               onTap: () {
                 Navigator.pop(context);
                 _confirmDelete(context, ref);
@@ -160,7 +167,10 @@ class _ChatListItem extends ConsumerWidget {
                   .deleteSession(session.id);
               Navigator.pop(context);
             },
-            child: Text('Delete', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            child: Text(
+              'Delete',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
           ),
         ],
       ),

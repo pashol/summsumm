@@ -85,22 +85,24 @@ class IndexedLibrarySource {
   });
 
   Map<String, dynamic> toJson() => {
-        'libraryItemId': libraryItemId,
-        'ragSourceId': ragSourceId,
-        'sourceKind': sourceKind.name,
-        'contentType': contentType.name,
-        'title': title,
-        'contentHash': contentHash,
-        'contentLength': contentLength,
-        'indexedAt': indexedAt.toUtc().toIso8601String(),
-      };
+    'libraryItemId': libraryItemId,
+    'ragSourceId': ragSourceId,
+    'sourceKind': sourceKind.name,
+    'contentType': contentType.name,
+    'title': title,
+    'contentHash': contentHash,
+    'contentLength': contentLength,
+    'indexedAt': indexedAt.toUtc().toIso8601String(),
+  };
 
   factory IndexedLibrarySource.fromJson(Map<String, dynamic> json) {
     return IndexedLibrarySource(
       libraryItemId: json['libraryItemId'] as String,
       ragSourceId: (json['ragSourceId'] as num).toInt(),
       sourceKind: LibrarySourceKind.values.byName(json['sourceKind'] as String),
-      contentType: LibraryContentType.values.byName(json['contentType'] as String),
+      contentType: LibraryContentType.values.byName(
+        json['contentType'] as String,
+      ),
       title: json['title'] as String? ?? 'Untitled',
       contentHash: json['contentHash'] as String? ?? '',
       contentLength: (json['contentLength'] as num?)?.toInt() ?? 0,
@@ -122,16 +124,20 @@ class LibraryRagMetadata {
   }
 
   Map<String, dynamic> toJson() => {
-        'sources': sources.map((source) => source.toJson()).toList(),
-      };
+    'sources': sources.map((source) => source.toJson()).toList(),
+  };
 
   factory LibraryRagMetadata.fromJson(Map<String, dynamic> json) {
     final rawSources = json['sources'];
     return LibraryRagMetadata(
       sources: rawSources is List
           ? rawSources
-              .map((source) => IndexedLibrarySource.fromJson(source as Map<String, dynamic>))
-              .toList()
+                .map(
+                  (source) => IndexedLibrarySource.fromJson(
+                    source as Map<String, dynamic>,
+                  ),
+                )
+                .toList()
           : const [],
     );
   }
@@ -158,12 +164,24 @@ class LibraryCitation {
   });
 
   Map<String, dynamic> toJson() => {
-        'libraryItemId': libraryItemId,
-        'title': title,
-        'sourceKind': sourceKind.name,
-        'contentType': contentType.name,
-        if (excerpt != null) 'excerpt': excerpt,
-      };
+    'libraryItemId': libraryItemId,
+    'title': title,
+    'sourceKind': sourceKind.name,
+    'contentType': contentType.name,
+    if (excerpt != null) 'excerpt': excerpt,
+  };
+
+  factory LibraryCitation.fromJson(Map<String, dynamic> json) {
+    return LibraryCitation(
+      libraryItemId: json['libraryItemId'] as String,
+      title: json['title'] as String? ?? 'Untitled',
+      sourceKind: LibrarySourceKind.values.byName(json['sourceKind'] as String),
+      contentType: LibraryContentType.values.byName(
+        json['contentType'] as String,
+      ),
+      excerpt: json['excerpt'] as String?,
+    );
+  }
 }
 
 class AskLibraryMessage {

@@ -27,7 +27,7 @@ class MeetingLibraryScreen extends ConsumerWidget {
     debugPrint('MeetingLibraryScreen.build()');
     final l10n = AppLocalizations.of(context)!;
     final meetingsAsync = ref.watch(meetingLibraryProvider);
-    debugPrint('MeetingLibraryScreen: ${meetingsAsync}');
+    debugPrint('MeetingLibraryScreen: $meetingsAsync');
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.libraryTitle),
@@ -42,7 +42,10 @@ class MeetingLibraryScreen extends ConsumerWidget {
             tooltip: l10n.libraryArchived,
             onPressed: () {
               HapticFeedback.lightImpact();
-              Navigator.push<void>(context, SpringPageRoute(builder: (_) => const ArchivedMeetingsScreen()));
+              Navigator.push<void>(
+                context,
+                SpringPageRoute(builder: (_) => const ArchivedMeetingsScreen()),
+              );
             },
           ),
           IconButton(
@@ -50,7 +53,10 @@ class MeetingLibraryScreen extends ConsumerWidget {
             tooltip: l10n.librarySettings,
             onPressed: () {
               HapticFeedback.lightImpact();
-              Navigator.push<void>(context, SpringPageRoute(builder: (_) => const SettingsScreen()));
+              Navigator.push<void>(
+                context,
+                SpringPageRoute(builder: (_) => const SettingsScreen()),
+              );
             },
           ),
         ],
@@ -92,7 +98,10 @@ class MeetingLibraryScreen extends ConsumerWidget {
           final meetingIndex = i - 1;
           return TweenAnimationBuilder<double>(
             tween: Tween(begin: 0.0, end: 1.0),
-            duration: animDuration(ctx, Duration(milliseconds: 400 + (meetingIndex * 50))),
+            duration: animDuration(
+              ctx,
+              Duration(milliseconds: 400 + (meetingIndex * 50)),
+            ),
             curve: Curves.elasticOut,
             builder: (context, value, child) {
               return Transform.translate(
@@ -109,15 +118,22 @@ class MeetingLibraryScreen extends ConsumerWidget {
 
   Future<void> _importFile(BuildContext context, WidgetRef ref) async {
     final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['m4a', 'mp3', 'wav', 'flac', 'aac', 'ogg', 'webm', 'pdf'],
+      type: FileType.any,
+      withReadStream: true,
     );
     if (result == null || result.files.isEmpty) return;
-    final filePath = result.files.first.path;
-    if (filePath == null) return;
+    final file = result.files.first;
 
     try {
-      final meeting = await ref.read(importServiceProvider).importFile(filePath);
+      final service = ref.read(importServiceProvider);
+      final meeting = file.readStream != null
+          ? await service.importStream(
+              sourceName: file.name,
+              stream: file.readStream!,
+            )
+          : file.path != null
+          ? await service.importFile(file.path!)
+          : null;
       if (meeting == null) return;
       ref.read(meetingLibraryProvider.notifier).refresh();
     } catch (e) {
@@ -132,7 +148,10 @@ class MeetingLibraryScreen extends ConsumerWidget {
 
   Future<void> _startRecording(BuildContext context, WidgetRef ref) async {
     HapticFeedback.lightImpact();
-    await Navigator.push<void>(context, SpringPageRoute(builder: (_) => const RecordingScreen()));
+    await Navigator.push<void>(
+      context,
+      SpringPageRoute(builder: (_) => const RecordingScreen()),
+    );
     ref.read(meetingLibraryProvider.notifier).refresh();
   }
 }
@@ -144,7 +163,9 @@ class _MeetingTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    debugPrint('_MeetingTile.build() for ${meeting.id}, title: ${meeting.title}');
+    debugPrint(
+      '_MeetingTile.build() for ${meeting.id}, title: ${meeting.title}',
+    );
     final l10n = AppLocalizations.of(context)!;
     final notifier = ref.watch(meetingProvider(meeting.id).notifier);
     final cs = Theme.of(context).colorScheme;
@@ -201,23 +222,27 @@ class _MeetingTile extends ConsumerWidget {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-              Text(
-                meeting.type == MeetingType.document
-                    ? _formatDateTime(context, meeting.createdAt)
-                    : '${_formatDuration(meeting.durationSec)} • ${_formatDateTime(context, meeting.createdAt)}',
-              ),
+            Text(
+              meeting.type == MeetingType.document
+                  ? _formatDateTime(context, meeting.createdAt)
+                  : '${_formatDuration(meeting.durationSec)} • ${_formatDateTime(context, meeting.createdAt)}',
+            ),
             if (meeting.lastError != null) ...[
               const SizedBox(height: 4),
               Row(
                 children: [
-                  Icon(Icons.error_outline,
-                      color: Theme.of(context).colorScheme.error, size: 12,),
+                  Icon(
+                    Icons.error_outline,
+                    color: Theme.of(context).colorScheme.error,
+                    size: 12,
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     l10n.libraryFailedDetails,
                     style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                        fontSize: 12,),
+                      color: Theme.of(context).colorScheme.error,
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),
@@ -227,7 +252,12 @@ class _MeetingTile extends ConsumerWidget {
         trailing: _ActionButton(meeting: meeting, notifier: notifier),
         onTap: () async {
           HapticFeedback.lightImpact();
-          await Navigator.push<void>(context, SpringPageRoute(builder: (_) => MeetingDetailScreen(meetingId: meeting.id)));
+          await Navigator.push<void>(
+            context,
+            SpringPageRoute(
+              builder: (_) => MeetingDetailScreen(meetingId: meeting.id),
+            ),
+          );
           ref.read(meetingLibraryProvider.notifier).refresh();
         },
       ),
@@ -243,7 +273,9 @@ class _MeetingTile extends ConsumerWidget {
   String _formatDateTime(BuildContext context, DateTime dateTime) {
     // Get the system locale and format accordingly
     final locale = Localizations.localeOf(context);
-    return DateFormat.yMMMd(locale.languageCode).add_jm().format(dateTime.toLocal());
+    return DateFormat.yMMMd(
+      locale.languageCode,
+    ).add_jm().format(dateTime.toLocal());
   }
 
   void _archive(BuildContext context, MeetingNotifier notifier) {
@@ -266,12 +298,16 @@ class _MeetingTile extends ConsumerWidget {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(meeting.type == MeetingType.document
-            ? l10n.libraryDeleteDocument
-            : l10n.libraryDeleteMeeting,),
-        content: Text(meeting.type == MeetingType.document
-            ? l10n.libraryDeleteDocumentConfirm
-            : l10n.libraryDeleteMeetingConfirm,),
+        title: Text(
+          meeting.type == MeetingType.document
+              ? l10n.libraryDeleteDocument
+              : l10n.libraryDeleteMeeting,
+        ),
+        content: Text(
+          meeting.type == MeetingType.document
+              ? l10n.libraryDeleteDocumentConfirm
+              : l10n.libraryDeleteMeetingConfirm,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -382,7 +418,10 @@ class _AskLibraryTile extends StatelessWidget {
         subtitle: Text(l10n.askLibrarySubtitle),
         onTap: () {
           HapticFeedback.lightImpact();
-          Navigator.push<void>(context, SpringPageRoute(builder: (_) => const AskLibraryScreen()));
+          Navigator.push<void>(
+            context,
+            SpringPageRoute(builder: (_) => const AskLibraryScreen()),
+          );
         },
       ),
     );

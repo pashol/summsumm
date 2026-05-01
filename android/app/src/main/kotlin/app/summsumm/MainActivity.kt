@@ -48,6 +48,8 @@ class MainActivity : FlutterActivity() {
     private var eventSink: EventChannel.EventSink? = null
     private var flutterEngineRef: FlutterEngine? = null
 
+    private val supportedAudioExtensions = setOf("m4a", "mp3", "wav", "flac", "aac", "ogg", "webm")
+
     private val stopRecordingReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             eventSink?.success("stopped")
@@ -283,12 +285,16 @@ class MainActivity : FlutterActivity() {
         val documents = mutableListOf<Map<String, Any?>>()
 
         if (Intent.ACTION_VIEW == action) {
-            when (intent.type) {
-                "application/pdf" -> {
+            val uri = intent.data
+            when {
+                uri != null && isAudioIntent(intent.type, uri) -> {
+                    addAudioDocument(uri, documents, intent.type)
+                }
+                intent.type == "application/pdf" -> {
                     val uri = intent.data
                     uri?.let { addPdfDocument(it, documents) }
                 }
-                "application/octet-stream" -> {
+                intent.type == "application/octet-stream" -> {
                     val uri = intent.data
                     uri?.let { addBackupDocument(it, documents) }
                 }
@@ -299,9 +305,9 @@ class MainActivity : FlutterActivity() {
                     val text = intent.getStringExtra(Intent.EXTRA_TEXT)
                     text?.let { documents.add(mapOf("text" to it)) }
                 }
-                intent.type?.startsWith("audio/") == true -> {
+                isAudioIntent(intent.type, getParcelableExtraCompat(intent, Intent.EXTRA_STREAM)) -> {
                     val uri = getParcelableExtraCompat(intent, Intent.EXTRA_STREAM)
-                    uri?.let { addAudioDocument(it, documents, intent.type!!) }
+                    uri?.let { addAudioDocument(it, documents, intent.type) }
                 }
                 intent.type == "application/pdf" -> {
                     val uri = getParcelableExtraCompat(intent, Intent.EXTRA_STREAM)
@@ -320,15 +326,21 @@ class MainActivity : FlutterActivity() {
                 }
                 intent.type?.startsWith("audio/") == true -> {
                     val uris = getParcelableArrayListExtraCompat(intent, Intent.EXTRA_STREAM)
-                    uris?.forEach { addAudioDocument(it, documents, intent.type!!) }
+                    uris?.forEach { addAudioDocument(it, documents, intent.type) }
+                }
+                intent.type == "application/octet-stream" -> {
+                    val uris = getParcelableArrayListExtraCompat(intent, Intent.EXTRA_STREAM)
+                    uris?.forEach { uri ->
+                        if (isAudioUri(uri)) {
+                            addAudioDocument(uri, documents, intent.type)
+                        } else {
+                            addBackupDocument(uri, documents)
+                        }
+                    }
                 }
                 intent.type == "application/pdf" -> {
                     val uris = getParcelableArrayListExtraCompat(intent, Intent.EXTRA_STREAM)
                     uris?.forEach { uri -> addPdfDocument(uri, documents) }
-                }
-                intent.type == "application/octet-stream" -> {
-                    val uris = getParcelableArrayListExtraCompat(intent, Intent.EXTRA_STREAM)
-                    uris?.forEach { uri -> addBackupDocument(uri, documents) }
                 }
             }
         } else if (Intent.ACTION_PROCESS_TEXT == action) {
@@ -375,7 +387,7 @@ class MainActivity : FlutterActivity() {
         ))
     }
 
-    private fun addAudioDocument(uri: Uri, documents: MutableList<Map<String, Any?>>, mimeType: String) {
+    private fun addAudioDocument(uri: Uri, documents: MutableList<Map<String, Any?>>, mimeType: String?) {
         val fileName = getFileName(uri)
         val fileSize = getFileSize(uri)
         var durationMs: Long? = null
@@ -390,7 +402,7 @@ class MainActivity : FlutterActivity() {
         val meetingsDir = File(filesDir, "meetings")
         meetingsDir.mkdirs()
         val id = UUID.randomUUID().toString()
-        val ext = when (mimeType.lowercase()) {
+        val ext = when (mimeType?.lowercase()) {
             "audio/mpeg" -> "mp3"
             "audio/mp4", "audio/x-m4a" -> "m4a"
             "audio/wav", "audio/x-wav" -> "wav"
@@ -398,7 +410,10 @@ class MainActivity : FlutterActivity() {
             "audio/aac" -> "aac"
             "audio/ogg", "audio/x-ogg" -> "ogg"
             "audio/webm" -> "webm"
-            else -> "audio"
+            else -> fileName?.substringAfterLast('.', missingDelimiterValue = "")
+                ?.lowercase()
+                ?.takeIf { it in supportedAudioExtensions }
+                ?: "audio"
         }
         val destFile = File(meetingsDir, "$id.$ext")
 
@@ -442,6 +457,16 @@ class MainActivity : FlutterActivity() {
             }
         }
         return size
+    }
+
+    private fun isAudioIntent(mimeType: String?, uri: Uri?): Boolean {
+        return mimeType?.startsWith("audio/") == true || (mimeType == "application/octet-stream" && uri != null && isAudioUri(uri))
+    }
+
+    private fun isAudioUri(uri: Uri): Boolean {
+        val fileName = getFileName(uri) ?: uri.lastPathSegment ?: return false
+        val ext = fileName.substringAfterLast('.', missingDelimiterValue = "").lowercase()
+        return ext in supportedAudioExtensions
     }
 
     private fun offerSettingsShortcutIfNeeded() {

@@ -26,6 +26,18 @@ class _LoadedMeetings extends MeetingLibraryNotifier {
   Future<List<Meeting>> build() async => [_meeting];
 }
 
+class _MutableMeetings extends MeetingLibraryNotifier {
+  List<Meeting> meetings = [_meeting];
+
+  @override
+  Future<List<Meeting>> build() async => meetings;
+
+  @override
+  Future<void> refresh() async {
+    state = AsyncValue.data(meetings);
+  }
+}
+
 class _LoadedDocuments extends MeetingLibraryNotifier {
   @override
   Future<List<Meeting>> build() async => [_document];
@@ -78,30 +90,32 @@ void main() {
     expect(state.readiness, LibraryRagReadiness.disabled);
   });
 
-  test('refreshReadiness prepares estimate when enabled library is not indexed',
-      () async {
-    final container = ProviderContainer(
-      overrides: [
-        settingsProvider.overrideWith(_EnabledSettings.new),
-        meetingLibraryProvider.overrideWith(_LoadedMeetings.new),
-        libraryRagRepositoryProvider.overrideWithValue(
-          LibraryRagRepository(
-            ragService: LibraryRagService(client: FakeLibraryRagClient()),
-            metadataStore: _MemoryMetadataStore(),
+  test(
+    'refreshReadiness prepares estimate when enabled library is not indexed',
+    () async {
+      final container = ProviderContainer(
+        overrides: [
+          settingsProvider.overrideWith(_EnabledSettings.new),
+          meetingLibraryProvider.overrideWith(_LoadedMeetings.new),
+          libraryRagRepositoryProvider.overrideWithValue(
+            LibraryRagRepository(
+              ragService: LibraryRagService(client: FakeLibraryRagClient()),
+              metadataStore: _MemoryMetadataStore(),
+            ),
           ),
-        ),
-      ],
-    );
-    addTearDown(container.dispose);
+        ],
+      );
+      addTearDown(container.dispose);
 
-    await container.read(libraryRagSetupProvider.notifier).refreshReadiness();
+      await container.read(libraryRagSetupProvider.notifier).refreshReadiness();
 
-    final state = container.read(libraryRagSetupProvider);
-    expect(state.readiness, LibraryRagReadiness.enabledNotIndexed);
-    expect(state.estimate, isNotNull);
-    expect(state.estimate!.meetingCount, 1);
-    expect(state.estimate!.hasEligibleContent, isTrue);
-  });
+      final state = container.read(libraryRagSetupProvider);
+      expect(state.readiness, LibraryRagReadiness.enabledNotIndexed);
+      expect(state.estimate, isNotNull);
+      expect(state.estimate!.meetingCount, 1);
+      expect(state.estimate!.hasEligibleContent, isTrue);
+    },
+  );
 
   test('loadEstimate surfaces estimate failures in provider state', () async {
     final container = ProviderContainer(
@@ -125,5 +139,40 @@ void main() {
     final state = container.read(libraryRagSetupProvider);
     expect(state.readiness, LibraryRagReadiness.failed);
     expect(state.error, contains('extract failed'));
+  });
+
+  test('refreshes readiness when the meeting library changes', () async {
+    final store = _MemoryMetadataStore();
+    final repository = LibraryRagRepository(
+      ragService: LibraryRagService(client: FakeLibraryRagClient()),
+      metadataStore: store,
+    );
+    await repository.indexAll([_meeting]);
+    final container = ProviderContainer(
+      overrides: [
+        settingsProvider.overrideWith(_EnabledSettings.new),
+        meetingLibraryProvider.overrideWith(_MutableMeetings.new),
+        libraryRagRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(libraryRagSetupProvider.notifier).refreshReadiness();
+    expect(
+      container.read(libraryRagSetupProvider).readiness,
+      LibraryRagReadiness.ready,
+    );
+
+    final meetings =
+        container.read(meetingLibraryProvider.notifier) as _MutableMeetings;
+    meetings.meetings = [_meeting, _meeting.copyWith(id: 'meeting-2')];
+    await meetings.refresh();
+    await Future<void>.delayed(Duration.zero);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(
+      container.read(libraryRagSetupProvider).readiness,
+      LibraryRagReadiness.stale,
+    );
   });
 }

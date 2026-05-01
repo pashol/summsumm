@@ -16,17 +16,34 @@ if (keystorePropertiesFile.exists()) {
 val pubCacheDir = System.getenv("PUB_CACHE") ?: "${System.getProperty("user.home")}/.pub-cache"
 val sherpaOnnxRuntimeJniLibsDir = layout.buildDirectory.dir("generated/sherpaOnnxRuntimeJniLibs")
 
+fun lockedPubPackageVersion(packageName: String): String {
+    val lockFile = rootProject.file("../pubspec.lock")
+    val lockText = lockFile.readText()
+    val packageBlock = Regex("(?m)^  $packageName:\\n(?:    .+\\n)*?    version: \\\"([^\\\"]+)\\\"")
+    return packageBlock.find(lockText)?.groupValues?.get(1)
+        ?: error("Could not find $packageName version in ${lockFile.path}")
+}
+
+val sherpaOnnxAndroidVersion = lockedPubPackageVersion("sherpa_onnx_android_arm64")
+
 val stageSherpaOnnxRuntimeJniLibs by tasks.registering(Copy::class) {
-    from("$pubCacheDir/hosted/pub.dev/sherpa_onnx_android_arm64-1.12.39/android/src/main/jniLibs/arm64-v8a/libonnxruntime.so") {
+    // mobile_rag_engine depends on the onnxruntime Flutter package, which also
+    // ships libonnxruntime.so. Package Sherpa's newer ORT runtime once and let
+    // both Sherpa and the Dart ORT bindings resolve that shared library.
+    from("$pubCacheDir/hosted/pub.dev/sherpa_onnx_android_arm64-$sherpaOnnxAndroidVersion/android/src/main/jniLibs/arm64-v8a/libonnxruntime.so") {
         into("arm64-v8a")
     }
-    from("$pubCacheDir/hosted/pub.dev/sherpa_onnx_android_armeabi-1.12.39/android/src/main/jniLibs/armeabi-v7a/libonnxruntime.so") {
+    from("$pubCacheDir/hosted/pub.dev/sherpa_onnx_android_armeabi-$sherpaOnnxAndroidVersion/android/src/main/jniLibs/armeabi-v7a/libonnxruntime.so") {
         into("armeabi-v7a")
     }
-    from("$pubCacheDir/hosted/pub.dev/sherpa_onnx_android_x86_64-1.12.39/android/src/main/jniLibs/x86_64/libonnxruntime.so") {
+    from("$pubCacheDir/hosted/pub.dev/sherpa_onnx_android_x86_64-$sherpaOnnxAndroidVersion/android/src/main/jniLibs/x86_64/libonnxruntime.so") {
         into("x86_64")
     }
     into(sherpaOnnxRuntimeJniLibsDir)
+}
+
+tasks.matching { it.name.startsWith("merge") && it.name.endsWith("NativeLibs") }.configureEach {
+    dependsOn(stageSherpaOnnxRuntimeJniLibs)
 }
 
 android {

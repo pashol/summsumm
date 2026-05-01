@@ -133,8 +133,9 @@ class AskLibraryChatNotifier extends StateNotifier<AskLibraryChatState> {
         onError: (Object e) => _handleError(e),
         onDone: () async {
           if (!_mounted) return;
-          state = state.copyWith(isStreaming: false);
           await _persistSession();
+          if (!_mounted) return;
+          state = state.copyWith(isStreaming: false);
         },
         cancelOnError: true,
       );

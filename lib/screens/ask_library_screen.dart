@@ -3,9 +3,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/app_localizations.dart';
-import '../models/chat_message.dart';
 import '../models/library_rag.dart';
-import '../providers/ask_library_chat_history_provider.dart';
 import '../providers/ask_library_chat_provider.dart';
 import '../providers/ask_library_session_provider.dart';
 import '../providers/library_rag_provider.dart';
@@ -24,6 +22,17 @@ class AskLibraryScreen extends ConsumerStatefulWidget {
 class _AskLibraryScreenState extends ConsumerState<AskLibraryScreen> {
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollController.hasClients) return;
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+      );
+    });
+  }
 
   @override
   void initState() {
@@ -46,11 +55,19 @@ class _AskLibraryScreenState extends ConsumerState<AskLibraryScreen> {
     final chat = ref.watch(askLibraryChatProvider);
     final session = ref.watch(askLibrarySessionProvider);
 
-    ref.listen(askLibraryChatProvider, (previous, next) {
-      if (previous?.isStreaming == true &&
-          next.isStreaming == false &&
-          next.error == null) {
-        _saveSessionFromChat(next);
+    ref.listen<AskLibraryChatState>(askLibraryChatProvider, (previous, next) {
+      final previousMessages = previous?.messages ?? const <AskLibraryMessage>[];
+      final messageCountIncreased = next.messages.length > previousMessages.length;
+      final lastAssistantChanged =
+          next.isStreaming &&
+          next.messages.isNotEmpty &&
+          previousMessages.isNotEmpty &&
+          next.messages.last.role == 'assistant' &&
+          previousMessages.last.role == 'assistant' &&
+          next.messages.last.content != previousMessages.last.content;
+
+      if (messageCountIncreased || lastAssistantChanged) {
+        _scrollToBottom();
       }
     });
 
@@ -68,7 +85,9 @@ class _AskLibraryScreenState extends ConsumerState<AskLibraryScreen> {
             IconButton(
               tooltip: 'New chat',
               onPressed: () {
-                ref.read(askLibrarySessionProvider.notifier).saveCurrentSession();
+                ref
+                    .read(askLibrarySessionProvider.notifier)
+                    .saveCurrentSession();
                 ref.read(askLibrarySessionProvider.notifier).newSession();
                 _newChat();
               },
@@ -79,32 +98,32 @@ class _AskLibraryScreenState extends ConsumerState<AskLibraryScreen> {
       drawer: const ChatHistoryDrawer(),
       body: switch (setup.readiness) {
         LibraryRagReadiness.disabled => _SetupView(
-            text:
-                'Enable local library chat to index your transcripts and documents for contextual search.',
-            buttonText: 'Enable',
-            onPressed: () =>
-                ref.read(libraryRagSetupProvider.notifier).enableAndEstimate(),
-          ),
+          text:
+              'Enable local library chat to index your transcripts and documents for contextual search.',
+          buttonText: 'Enable',
+          onPressed: () =>
+              ref.read(libraryRagSetupProvider.notifier).enableAndEstimate(),
+        ),
         LibraryRagReadiness.enabledNotIndexed => _EstimateView(setup: setup),
         LibraryRagReadiness.indexing => _IndexingView(setup: setup),
         LibraryRagReadiness.failed => _SetupView(
-            text: setup.error ?? 'Local library chat failed.',
-            buttonText: 'Retry',
-            onPressed: () =>
-                ref.read(libraryRagSetupProvider.notifier).loadEstimate(),
-          ),
+          text: setup.error ?? 'Local library chat failed.',
+          buttonText: 'Retry',
+          onPressed: () =>
+              ref.read(libraryRagSetupProvider.notifier).loadEstimate(),
+        ),
         LibraryRagReadiness.ready || LibraryRagReadiness.stale => _ChatView(
-            chat: chat,
-            session: session,
-            controller: _controller,
-            scrollController: _scrollController,
-            isStale: setup.readiness == LibraryRagReadiness.stale,
-            staleError: setup.error,
-            onUpdateIndex: () =>
-                ref.read(libraryRagSetupProvider.notifier).updateIndex(),
-            onSend: _send,
-            onCitationTap: _openCitation,
-          ),
+          chat: chat,
+          session: session,
+          controller: _controller,
+          scrollController: _scrollController,
+          isStale: setup.readiness == LibraryRagReadiness.stale,
+          staleError: setup.error,
+          onUpdateIndex: () =>
+              ref.read(libraryRagSetupProvider.notifier).updateIndex(),
+          onSend: _send,
+          onCitationTap: _openCitation,
+        ),
       },
     );
   }
@@ -112,9 +131,6 @@ class _AskLibraryScreenState extends ConsumerState<AskLibraryScreen> {
   void _send() {
     final text = _controller.text;
     _controller.clear();
-    ref.read(askLibrarySessionProvider.notifier).addMessage(
-      ChatMessage(role: 'user', content: text),
-    );
     ref.read(askLibraryChatProvider.notifier).sendMessage(text);
   }
 
@@ -123,37 +139,15 @@ class _AskLibraryScreenState extends ConsumerState<AskLibraryScreen> {
     ref.read(askLibraryChatProvider.notifier).newChat();
   }
 
-  Future<void> _saveSessionFromChat(AskLibraryChatState chat) async {
-    final assistantMessages =
-        chat.messages.where((m) => m.role == 'assistant').toList();
-    if (assistantMessages.isNotEmpty) {
-      final lastAssistant = assistantMessages.last;
-      ref.read(askLibrarySessionProvider.notifier).addMessage(
-        ChatMessage(
-          role: 'assistant',
-          content: lastAssistant.content,
-          metadata: lastAssistant.citations.isNotEmpty
-              ? {
-                  'citations': lastAssistant.citations
-                      .map((c) => c.toJson())
-                      .toList(),
-                }
-              : null,
-        ),
-      );
-    }
-    await ref.read(askLibrarySessionProvider.notifier).saveCurrentSession();
-    ref.read(askLibraryChatHistoryProvider.notifier).refresh();
-  }
-
   void _openCitation(LibraryCitation citation) {
     Navigator.push<void>(
       context,
       SpringPageRoute(
         builder: (_) => MeetingDetailScreen(
           meetingId: citation.libraryItemId,
-          initialTabIndex:
-              citation.contentType == LibraryContentType.transcript ? 1 : 0,
+          initialTabIndex: citation.contentType == LibraryContentType.transcript
+              ? 1
+              : 0,
         ),
       ),
     );
@@ -212,8 +206,9 @@ class _EstimateView extends ConsumerWidget {
             const SizedBox(height: 16),
             FilledButton(
               onPressed: estimate?.hasEligibleContent == true
-                  ? () =>
-                      ref.read(libraryRagSetupProvider.notifier).indexLibrary()
+                  ? () => ref
+                        .read(libraryRagSetupProvider.notifier)
+                        .indexLibrary()
                   : null,
               child: const Text('Start indexing'),
             ),
@@ -288,23 +283,42 @@ class _ChatView extends StatelessWidget {
 
     // Add all session messages
     for (final msg in session.messages) {
-      messages.add(_DisplayMessage(role: msg.role, content: msg.content));
+      messages.add(
+        _DisplayMessage(
+          role: msg.role,
+          content: msg.content,
+          citations: _citationsFromMetadata(msg.metadata),
+        ),
+      );
     }
 
     // During streaming, chat may have messages not yet persisted to session.
     // Append any extra chat messages beyond what session has.
-    if (chat.messages.length > session.messages.length) {
+    if ((chat.isStreaming || session.messages.isEmpty) &&
+        chat.messages.length > session.messages.length) {
       final extras = chat.messages.sublist(session.messages.length);
       for (final msg in extras) {
-        messages.add(_DisplayMessage(
-          role: msg.role,
-          content: msg.content,
-          citations: msg.citations,
-        ));
+        messages.add(
+          _DisplayMessage(
+            role: msg.role,
+            content: msg.content,
+            citations: msg.citations,
+          ),
+        );
       }
     }
 
     return messages;
+  }
+
+  List<LibraryCitation> _citationsFromMetadata(Map<String, dynamic>? metadata) {
+    final rawCitations = metadata?['citations'];
+    if (rawCitations is! List) return const [];
+
+    return rawCitations
+        .whereType<Map<String, dynamic>>()
+        .map((citation) => LibraryCitation.fromJson(citation))
+        .toList();
   }
 
   @override
@@ -339,11 +353,16 @@ class _ChatView extends StatelessWidget {
             itemCount: displayMessages.length,
             itemBuilder: (context, index) {
               final message = displayMessages[index];
+              final isUser = message.role == 'user';
+              final colorScheme = Theme.of(context).colorScheme;
               return Align(
-                alignment: message.role == 'user'
+                alignment: isUser
                     ? Alignment.centerRight
                     : Alignment.centerLeft,
                 child: Card(
+                  color: isUser
+                      ? colorScheme.primaryContainer
+                      : colorScheme.surfaceContainerHighest,
                   child: Padding(
                     padding: const EdgeInsets.all(12),
                     child: Column(
@@ -356,12 +375,16 @@ class _ChatView extends StatelessWidget {
                                 ),
                                 styleSheet: MarkdownStyleSheet(
                                   p: TextStyle(
-                                    color:
-                                        Theme.of(context).colorScheme.onSurface,
+                                    color: colorScheme.onSurfaceVariant,
                                   ),
                                 ),
                               )
-                            : Text(message.content),
+                            : Text(
+                                message.content,
+                                style: TextStyle(
+                                  color: colorScheme.onPrimaryContainer,
+                                ),
+                              ),
                         if (message.citations.isNotEmpty) ...[
                           const SizedBox(height: 8),
                           Wrap(

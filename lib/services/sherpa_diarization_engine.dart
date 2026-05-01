@@ -1,7 +1,30 @@
+import 'dart:io';
 import 'dart:ffi';
+import 'package:ffmpeg_kit_flutter_new_audio/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_flutter_new_audio/return_code.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa;
 import 'package:summsumm/models/transcription_config.dart';
 import 'package:summsumm/services/model_download_manager.dart';
+
+Future<String> _convertToDiarizationWav(String inputPath) async {
+  final tempDir = await getTemporaryDirectory();
+  final outputPath =
+      '${tempDir.path}/sherpa_diarization_${DateTime.now().millisecondsSinceEpoch}.wav';
+
+  final cmd =
+      '-y -i "$inputPath" -vn -ac 1 -ar 16000 -acodec pcm_s16le "$outputPath"';
+  final session = await FFmpegKit.execute(cmd);
+  final returnCode = await session.getReturnCode();
+
+  if (!ReturnCode.isSuccess(returnCode)) {
+    final logs = await session.getAllLogsAsString();
+    throw StateError('Failed to convert audio to WAV for diarization: $logs');
+  }
+
+  return outputPath;
+}
 
 class SherpaDiarizationEngine {
   sherpa.OfflineSpeakerDiarization? _diarization;
@@ -13,6 +36,8 @@ class SherpaDiarizationEngine {
 
   Future<void> loadModel() async {
     if (_isInitialized) return;
+
+    sherpa.initBindings();
 
     // Download models if needed
     if (!await _downloadManager.isSegmentationModelAvailable()) {
@@ -34,7 +59,7 @@ class SherpaDiarizationEngine {
       model: '$dir/speaker-embedding.onnx',
     );
 
-    final clusteringConfig = sherpa.FastClusteringConfig(
+    const clusteringConfig = sherpa.FastClusteringConfig(
       numClusters: -1, // Auto-detect
       threshold: 0.5,
     );
@@ -61,25 +86,50 @@ class SherpaDiarizationEngine {
       throw StateError('Engine not initialized. Call loadModel() first.');
     }
 
-    final waveData = sherpa.readWave(audioPath);
-
-    if (_diarization!.sampleRate != waveData.sampleRate) {
-      throw StateError(
-        'Sample rate mismatch: expected ${_diarization!.sampleRate}, got ${waveData.sampleRate}'
-      );
+    final file = File(audioPath);
+    if (!await file.exists()) {
+      throw StateError('Audio file not found: $audioPath');
     }
 
-    final segments = _diarization!.process(samples: waveData.samples);
+    String wavPath = audioPath;
+    var needsCleanup = false;
+    if (p.extension(audioPath).toLowerCase() != '.wav') {
+      wavPath = await _convertToDiarizationWav(audioPath);
+      needsCleanup = true;
+    }
 
-    return segments.map((s) => SpeakerSegment(
-      speakerLabel: 'Speaker ${s.speaker + 1}',
-      startTime: s.start,
-      endTime: s.end,
-      text: '', // Text will be filled by caller
-    )).toList();
+    try {
+      final waveData = sherpa.readWave(wavPath);
+
+      if (_diarization!.sampleRate != waveData.sampleRate) {
+        throw StateError(
+          'Sample rate mismatch: expected ${_diarization!.sampleRate}, got ${waveData.sampleRate}',
+        );
+      }
+
+      final segments = _diarization!.process(samples: waveData.samples);
+
+      return segments
+          .map(
+            (s) => SpeakerSegment(
+              speakerLabel: 'Speaker ${s.speaker + 1}',
+              startTime: s.start,
+              endTime: s.end,
+              text: '', // Text will be filled by caller
+            ),
+          )
+          .toList();
+    } finally {
+      if (needsCleanup) {
+        try {
+          await File(wavPath).delete();
+        } catch (_) {}
+      }
+    }
   }
 
   Future<void> dispose() async {
+    _diarization?.free();
     _diarization = null;
     _isInitialized = false;
   }

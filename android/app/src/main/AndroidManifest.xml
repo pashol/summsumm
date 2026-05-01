@@ -13,6 +13,7 @@
     </queries>
   <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
   <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+  <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
   <uses-permission android:name="android.permission.RECORD_AUDIO" />
   <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -77,11 +78,18 @@
                 <data android:mimeType="application/pdf" />
             </intent-filter>
 
-            <!-- Open PDF directly from file manager / PDF viewer -->
+        <!-- Open PDF directly from file manager / PDF viewer -->
         <intent-filter>
             <action android:name="android.intent.action.VIEW" />
             <category android:name="android.intent.category.DEFAULT" />
             <data android:mimeType="application/pdf" />
+        </intent-filter>
+
+        <!-- Open audio directly from file manager / audio app -->
+        <intent-filter>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.DEFAULT" />
+            <data android:mimeType="audio/*" />
         </intent-filter>
 
         <!-- Audio share (single) -->

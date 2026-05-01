@@ -8,6 +8,7 @@ import 'package:summsumm/providers/meeting_repository_provider.dart';
 import 'package:summsumm/providers/settings_provider.dart';
 import 'package:summsumm/services/ai_service.dart';
 import 'package:summsumm/models/transcription_config.dart';
+import 'package:summsumm/services/on_device_transcription_service.dart';
 import 'package:summsumm/services/processing_service.dart';
 import 'package:summsumm/services/voice_service.dart';
 import 'package:summsumm/providers/on_device_transcription_provider.dart';
@@ -21,8 +22,10 @@ List<SpeakerSegment> _alignTranscriptToSegments(
 ) {
   if (transcript.isEmpty || segments.isEmpty) return segments;
 
-  final words =
-      transcript.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+  final words = transcript
+      .split(RegExp(r'\s+'))
+      .where((w) => w.isNotEmpty)
+      .toList();
   if (words.isEmpty) return segments;
 
   final totalDuration = segments.fold<double>(
@@ -48,15 +51,18 @@ List<SpeakerSegment> _alignTranscriptToSegments(
   }).toList();
 }
 
+const _diarizationFailurePrefix = 'Speaker diarization failed: ';
+
 final voiceServiceProvider = Provider<VoiceService>((ref) => VoiceService());
 final aiServiceProvider = Provider<AiService>((ref) => AiService());
-final processingServiceProvider =
-    Provider<ProcessingService>((ref) => ProcessingService());
+final processingServiceProvider = Provider<ProcessingService>(
+  (ref) => ProcessingService(),
+);
 
 final meetingProvider =
     NotifierProvider.family<MeetingNotifier, Meeting, String>(
-  MeetingNotifier.new,
-);
+      MeetingNotifier.new,
+    );
 
 class MeetingNotifier extends FamilyNotifier<Meeting, String> {
   DateTime? _lastSave;
@@ -92,15 +98,83 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
   }
 
   Meeting _placeholder(String meetingId) => Meeting(
-        id: meetingId,
-        createdAt: DateTime.now(),
-        durationSec: 0,
-        audioPath: '',
-        title: '',
-        status: MeetingStatus.recorded,
-      );
+    id: meetingId,
+    createdAt: DateTime.now(),
+    durationSec: 0,
+    audioPath: '',
+    title: '',
+    status: MeetingStatus.recorded,
+  );
 
   bool get _isPlaceholder => state.title.isEmpty && state.audioPath.isEmpty;
+
+  bool _isFailedOnDeviceDiarization(Meeting meeting) {
+    return meeting.provider == 'on-device' &&
+        meeting.transcript != null &&
+        meeting.lastError?.startsWith(_diarizationFailurePrefix) == true;
+  }
+
+  Future<void> _applyOnDeviceDiarization({
+    required Meeting meeting,
+    required String transcript,
+    required OnDeviceTranscriptionService service,
+    required dynamic repository,
+  }) async {
+    state = state.copyWith(
+      status: MeetingStatus.transcribing,
+      transcriptionStatus: 'Identifying speakers…',
+      transcriptionProgress: null,
+    );
+    await repository.save(state);
+    ref.read(meetingLibraryProvider.notifier).refresh();
+
+    try {
+      final segments = await service.diarizeFile(meeting.audioPath);
+      final aligned = _alignTranscriptToSegments(transcript, segments);
+      state = state.copyWith(
+        speakerSegments: aligned,
+        status: MeetingStatus.transcribed,
+        provider: 'on-device',
+        clearLastError: true,
+        clearTranscriptionStatus: true,
+        clearTranscriptionProgress: true,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        status: MeetingStatus.failed,
+        lastError: '$_diarizationFailurePrefix$e',
+        clearTranscriptionStatus: true,
+        clearTranscriptionProgress: true,
+      );
+    }
+
+    await repository.save(state);
+    ref.read(meetingLibraryProvider.notifier).refresh();
+  }
+
+  Future<void> _retryOnDeviceDiarization(Meeting meeting) async {
+    final transcript = meeting.transcript;
+    if (transcript == null || transcript.isEmpty) {
+      await transcribe();
+      return;
+    }
+
+    final repository = ref.read(meetingRepositoryProvider);
+    final service = ref.read(onDeviceTranscriptionServiceProvider);
+    final processingService = ref.read(processingServiceProvider);
+
+    try {
+      await processingService.start();
+      await _applyOnDeviceDiarization(
+        meeting: meeting,
+        transcript: transcript,
+        service: service,
+        repository: repository,
+      );
+    } finally {
+      await processingService.stop();
+    }
+  }
 
   Future<bool> _hasConnectivity(String provider) async {
     final url = provider == 'openai'
@@ -109,8 +183,9 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
     try {
       final client = http.Client();
       try {
-        final response =
-            await client.head(url).timeout(const Duration(seconds: 5));
+        final response = await client
+            .head(url)
+            .timeout(const Duration(seconds: 5));
         return response.statusCode < 500;
       } finally {
         client.close();
@@ -167,16 +242,18 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
     }
 
     state = meeting.copyWith(
-        status: MeetingStatus.transcribing,
-        clearLastError: true,
-        transcriptionStatus: 'Validating audio…',
-        transcriptionProgress: null);
+      status: MeetingStatus.transcribing,
+      clearLastError: true,
+      transcriptionStatus: 'Validating audio…',
+      transcriptionProgress: null,
+    );
     await repository.save(state);
     ref.read(meetingLibraryProvider.notifier).refresh();
 
     try {
       await processingService.start();
-      final apiKey = await ref
+      final apiKey =
+          await ref
               .read(settingsProvider.notifier)
               .getApiKey(settings.provider) ??
           '';
@@ -286,35 +363,24 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
     if (meeting.wasLiveTranscribed) {
       // Only do diarization if needed
       if (diarize && settings.onDeviceDiarization) {
-        state = meeting.copyWith(
-          status: MeetingStatus.transcribing,
-          clearLastError: true,
-          transcriptionStatus: 'Identifying speakers…',
-          transcriptionProgress: null,
-        );
-        await repository.save(state);
-        ref.read(meetingLibraryProvider.notifier).refresh();
-
-        try {
-          final segments = await service.diarizeFile(meeting.audioPath);
-          final transcript = meeting.transcript ?? '';
-          final aligned = _alignTranscriptToSegments(transcript, segments);
+        final transcript = meeting.transcript;
+        if (transcript == null || transcript.isEmpty) {
           state = meeting.copyWith(
-            speakerSegments: aligned,
-            status: MeetingStatus.transcribed,
-            provider: 'on-device',
-            clearLastError: true,
+            status: MeetingStatus.failed,
+            lastError: 'Transcript not available for speaker diarization.',
             clearTranscriptionStatus: true,
             clearTranscriptionProgress: true,
           );
-        } catch (e) {
-          state = meeting.copyWith(
-            status: MeetingStatus.failed,
-            lastError: e.toString(),
+          await repository.save(state);
+          ref.read(meetingLibraryProvider.notifier).refresh();
+        } else {
+          await _applyOnDeviceDiarization(
+            meeting: meeting,
+            transcript: transcript,
+            service: service,
+            repository: repository,
           );
         }
-        await repository.save(state);
-        ref.read(meetingLibraryProvider.notifier).refresh();
       } else {
         state = meeting.copyWith(
           status: MeetingStatus.transcribed,
@@ -339,9 +405,25 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
       await processingService.start();
 
       // Initialize service
-      await service.initialize(settings.onDeviceModelSize);
+      state = state.copyWith(
+        transcriptionStatus: 'Preparing on-device model…',
+        transcriptionProgress: null,
+      );
+      await repository.save(state);
+      ref.read(meetingLibraryProvider.notifier).refresh();
+
+      await service
+          .initialize(settings.onDeviceModelSize)
+          .timeout(const Duration(minutes: 3));
 
       // Transcribe
+      state = state.copyWith(
+        transcriptionStatus: 'Preparing audio…',
+        transcriptionProgress: null,
+      );
+      await repository.save(state);
+      ref.read(meetingLibraryProvider.notifier).refresh();
+
       final transcript = await service.transcribeFile(
         meeting.audioPath,
         diarize: diarize && settings.onDeviceDiarization,
@@ -370,6 +452,7 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
         status: MeetingStatus.transcribed,
         provider: 'on-device',
         cleanupEnabled: true,
+        clearSpeakerSegments: true,
         clearLastError: true,
         clearTranscriptionStatus: true,
         clearTranscriptionProgress: true,
@@ -378,35 +461,19 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
       ref.read(meetingLibraryProvider.notifier).refresh();
 
       if (diarize && settings.onDeviceDiarization) {
-        state = state.copyWith(
-          status: MeetingStatus.transcribing,
-          transcriptionStatus: 'Identifying speakers…',
-          transcriptionProgress: null,
+        await _applyOnDeviceDiarization(
+          meeting: meeting,
+          transcript: transcript,
+          service: service,
+          repository: repository,
         );
-        await repository.save(state);
-        ref.read(meetingLibraryProvider.notifier).refresh();
-
-        try {
-          final segments = await service.diarizeFile(meeting.audioPath);
-          final aligned = _alignTranscriptToSegments(transcript, segments);
-          state = state.copyWith(
-            speakerSegments: aligned,
-            clearTranscriptionStatus: true,
-            clearTranscriptionProgress: true,
-          );
-        } catch (e) {
-          state = state.copyWith(
-            clearTranscriptionStatus: true,
-            clearTranscriptionProgress: true,
-          );
-        }
-        await repository.save(state);
-        ref.read(meetingLibraryProvider.notifier).refresh();
       }
     } catch (e) {
-      state = meeting.copyWith(
+      state = state.copyWith(
         status: MeetingStatus.failed,
         lastError: e.toString(),
+        clearTranscriptionStatus: true,
+        clearTranscriptionProgress: true,
       );
       await repository.save(state);
       ref.read(meetingLibraryProvider.notifier).refresh();
@@ -416,8 +483,11 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
     }
   }
 
-  Future<void> summarize(
-      {SummaryStyle? style, String? language, String? customPromptId}) async {
+  Future<void> summarize({
+    SummaryStyle? style,
+    String? language,
+    String? customPromptId,
+  }) async {
     final meeting = state;
     final settings = ref.read(settingsProvider);
     final aiService = ref.read(aiServiceProvider);
@@ -451,15 +521,20 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
     }
 
     state = meeting.copyWith(
-        status: MeetingStatus.summarizing, clearLastError: true);
+      status: MeetingStatus.summarizing,
+      clearLastError: true,
+    );
     await repository.save(state);
     ref.read(meetingLibraryProvider.notifier).refresh();
 
     try {
       final langSuffixText = langSuffix(resolvedLanguage, 'The summary');
       final systemPrompt = _promptForStyle(
-          resolvedStyle, meeting.type, langSuffixText,
-          customPromptId: customPromptId);
+        resolvedStyle,
+        meeting.type,
+        langSuffixText,
+        customPromptId: customPromptId,
+      );
 
       String summary = '';
       final newSummary = MeetingSummary(
@@ -478,7 +553,8 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
           model: settings.activeModel,
           prompt: systemPrompt,
           provider: settings.provider,
-          apiKey: await ref
+          apiKey:
+              await ref
                   .read(settingsProvider.notifier)
                   .getApiKey(settings.provider) ??
               '',
@@ -492,16 +568,11 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
         final summaryStream = aiService.streamCompletion(
           model: settings.activeModel,
           messages: [
-            {
-              'role': 'system',
-              'content': systemPrompt,
-            },
-            {
-              'role': 'user',
-              'content': meeting.transcript ?? '',
-            },
+            {'role': 'system', 'content': systemPrompt},
+            {'role': 'user', 'content': meeting.transcript ?? ''},
           ],
-          apiKey: await ref
+          apiKey:
+              await ref
                   .read(settingsProvider.notifier)
                   .getApiKey(settings.provider) ??
               '',
@@ -516,13 +587,11 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
 
       if (summary.trim().isEmpty) {
         throw const AiException(
-            'Summary failed: the provider returned an empty response.');
+          'Summary failed: the provider returned an empty response.',
+        );
       }
 
-      state = state.copyWith(
-        status: MeetingStatus.done,
-        clearLastError: true,
-      );
+      state = state.copyWith(status: MeetingStatus.done, clearLastError: true);
       await repository.save(state);
       ref.read(meetingLibraryProvider.notifier).refresh();
     } catch (e) {
@@ -547,8 +616,11 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
   }
 
   String _promptForStyle(
-      SummaryStyle style, MeetingType type, String langSuffixText,
-      {String? customPromptId}) {
+    SummaryStyle style,
+    MeetingType type,
+    String langSuffixText, {
+    String? customPromptId,
+  }) {
     final settings = ref.read(settingsProvider);
 
     // Check if a custom prompt is selected (either passed in or from settings)
@@ -573,7 +645,9 @@ class MeetingNotifier extends FamilyNotifier<Meeting, String> {
   Future<void> retry() async {
     final meeting = state;
     if (meeting.status == MeetingStatus.failed) {
-      if (meeting.transcript == null) {
+      if (_isFailedOnDeviceDiarization(meeting)) {
+        await _retryOnDeviceDiarization(meeting);
+      } else if (meeting.transcript == null) {
         await transcribe();
       } else if (meeting.summaries.isEmpty) {
         await summarize();

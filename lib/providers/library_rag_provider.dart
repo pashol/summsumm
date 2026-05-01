@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/library_rag.dart';
+import '../models/meeting.dart';
 import '../providers/meeting_library_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/library_rag_metadata_store.dart';
@@ -12,8 +15,9 @@ final libraryRagServiceProvider = Provider<LibraryRagService>((ref) {
   return LibraryRagService();
 });
 
-final libraryRagMetadataStoreProvider =
-    Provider<LibraryRagMetadataStore>((ref) {
+final libraryRagMetadataStoreProvider = Provider<LibraryRagMetadataStore>((
+  ref,
+) {
   return LibraryRagMetadataStore();
 });
 
@@ -58,6 +62,12 @@ class LibraryRagSetupNotifier extends Notifier<LibraryRagSetupState> {
   LibraryRagSetupState build() {
     final enabled = ref.watch(settingsProvider).localLibraryChatEnabled;
     if (!enabled) return const LibraryRagSetupState();
+
+    ref.listen(meetingLibraryProvider, (previous, next) {
+      if (previous == null || next.isLoading || next.hasError) return;
+      unawaited(refreshReadiness());
+    });
+
     return const LibraryRagSetupState(
       readiness: LibraryRagReadiness.enabledNotIndexed,
     );
@@ -65,9 +75,10 @@ class LibraryRagSetupNotifier extends Notifier<LibraryRagSetupState> {
 
   Future<void> loadEstimate() async {
     try {
-      final library = await ref.read(meetingLibraryProvider.future);
-      final estimate =
-          await ref.read(libraryRagRepositoryProvider).estimate(library);
+      final library = await _currentLibrary();
+      final estimate = await ref
+          .read(libraryRagRepositoryProvider)
+          .estimate(library);
       state = state.copyWith(estimate: estimate, clearError: true);
     } catch (e, st) {
       debugPrint('loadEstimate failed: $e\n$st');
@@ -100,9 +111,10 @@ class LibraryRagSetupNotifier extends Notifier<LibraryRagSetupState> {
       return;
     }
     try {
-      final library = await ref.read(meetingLibraryProvider.future);
-      final inspection =
-          await ref.read(libraryRagRepositoryProvider).inspectIndex(library);
+      final library = await _currentLibrary();
+      final inspection = await ref
+          .read(libraryRagRepositoryProvider)
+          .inspectIndex(library);
       if (inspection.status == LibraryIndexInspectionStatus.notIndexed) {
         state = state.copyWith(
           readiness: LibraryRagReadiness.enabledNotIndexed,
@@ -135,23 +147,26 @@ class LibraryRagSetupNotifier extends Notifier<LibraryRagSetupState> {
 
   Future<void> _performSync({required bool preserveStaleOnError}) async {
     final previousReadiness = state.readiness;
-    final library = await ref.read(meetingLibraryProvider.future);
+    final library = await _currentLibrary();
     state = state.copyWith(
       readiness: LibraryRagReadiness.indexing,
       clearError: true,
     );
     try {
-      await ref.read(libraryRagRepositoryProvider).syncLibrary(
-        library,
-        onProgress: (progress) {
-          state = state.copyWith(progress: progress);
-        },
-      );
+      await ref
+          .read(libraryRagRepositoryProvider)
+          .syncLibrary(
+            library,
+            onProgress: (progress) {
+              state = state.copyWith(progress: progress);
+            },
+          );
       state = state.copyWith(readiness: LibraryRagReadiness.ready);
     } catch (e, st) {
       debugPrint('updateIndex failed: $e\n$st');
       state = state.copyWith(
-        readiness: preserveStaleOnError &&
+        readiness:
+            preserveStaleOnError &&
                 previousReadiness == LibraryRagReadiness.stale
             ? LibraryRagReadiness.stale
             : LibraryRagReadiness.failed,
@@ -164,9 +179,15 @@ class LibraryRagSetupNotifier extends Notifier<LibraryRagSetupState> {
     await ref.read(settingsProvider.notifier).setLocalLibraryChatEnabled(false);
     state = const LibraryRagSetupState();
   }
+
+  Future<List<Meeting>> _currentLibrary() async {
+    final library = ref.read(meetingLibraryProvider);
+    if (library.hasValue) return library.requireValue;
+    return ref.read(meetingLibraryProvider.future);
+  }
 }
 
 final libraryRagSetupProvider =
     NotifierProvider<LibraryRagSetupNotifier, LibraryRagSetupState>(
-  LibraryRagSetupNotifier.new,
-);
+      LibraryRagSetupNotifier.new,
+    );
