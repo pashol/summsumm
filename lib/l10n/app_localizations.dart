@@ -1538,6 +1538,24 @@ abstract class AppLocalizations {
   /// **'Ask Library indexing is disabled'**
   String get localLibraryChatSubtitleDisabled;
 
+  /// Settings row title for local AI generation
+  ///
+  /// In en, this message translates to:
+  /// **'On-device AI'**
+  String get localAiTitle;
+
+  /// Subtitle when local AI is enabled
+  ///
+  /// In en, this message translates to:
+  /// **'Using local Gemma 3 1B model'**
+  String get localAiSubtitleEnabled;
+
+  /// Subtitle when local AI is disabled
+  ///
+  /// In en, this message translates to:
+  /// **'Disabled — uses cloud AI'**
+  String get localAiSubtitleDisabled;
+
   /// Label for edited prompts count
   ///
   /// In en, this message translates to:

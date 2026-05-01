@@ -440,6 +440,19 @@
     "description": "Subtitle when local library chat is disabled"
   },
 
+  "localAiTitle": "Lokale KI",
+  "@localAiTitle": {
+    "description": "Settings row title for local AI generation"
+  },
+  "localAiSubtitleEnabled": "Lokales Gemma 3 1B Modell",
+  "@localAiSubtitleEnabled": {
+    "description": "Subtitle when local AI is enabled"
+  },
+  "localAiSubtitleDisabled": "Deaktiviert — Cloud-KI",
+  "@localAiSubtitleDisabled": {
+    "description": "Subtitle when local AI is disabled"
+  },
+
   "askLibraryStaleBanner": "Bibliothek geändert. Antworten könnten aktuelle Änderungen vermissen.",
   "@askLibraryStaleBanner": {
     "description": "Banner shown when library index is stale"

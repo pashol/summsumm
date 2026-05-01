@@ -797,6 +797,15 @@ class AppLocalizationsDe extends AppLocalizations {
       'Indexierung für Bibliothek fragen ist deaktiviert';
 
   @override
+  String get localAiTitle => 'Lokale KI';
+
+  @override
+  String get localAiSubtitleEnabled => 'Lokales Gemma 3 1B Modell';
+
+  @override
+  String get localAiSubtitleDisabled => 'Deaktiviert — Cloud-KI';
+
+  @override
   String get edited => 'bearbeitet';
 
   @override

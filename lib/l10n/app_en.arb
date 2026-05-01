@@ -1236,6 +1236,19 @@
     "description": "Subtitle when local library chat is disabled"
   },
 
+  "localAiTitle": "On-device AI",
+  "@localAiTitle": {
+    "description": "Settings row title for local AI generation"
+  },
+  "localAiSubtitleEnabled": "Using local Gemma 3 1B model",
+  "@localAiSubtitleEnabled": {
+    "description": "Subtitle when local AI is enabled"
+  },
+  "localAiSubtitleDisabled": "Disabled — uses cloud AI",
+  "@localAiSubtitleDisabled": {
+    "description": "Subtitle when local AI is disabled"
+  },
+
   "edited": "edited",
   "@edited": {
     "description": "Label for edited prompts count"

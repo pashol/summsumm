@@ -791,6 +791,15 @@ class AppLocalizationsEn extends AppLocalizations {
       'Ask Library indexing is disabled';
 
   @override
+  String get localAiTitle => 'On-device AI';
+
+  @override
+  String get localAiSubtitleEnabled => 'Using local Gemma 3 1B model';
+
+  @override
+  String get localAiSubtitleDisabled => 'Disabled — uses cloud AI';
+
+  @override
   String get edited => 'edited';
 
   @override
