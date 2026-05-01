@@ -25,6 +25,10 @@
 # FFmpeg Kit
 -keep class com.antonkarpenko.ffmpegkit.** { *; }
 
+# flutter_gemma / MediaPipe
+-keep class com.google.mediapipe.proto.** { *; }
+-dontwarn com.google.mediapipe.proto.**
+
 # Google Play Core (referenced by Flutter embedding but not used)
 -dontwarn com.google.android.play.core.splitcompat.**
 -dontwarn com.google.android.play.core.splitinstall.**
