@@ -1313,6 +1313,7 @@ class _MeetingDetailScreenState extends ConsumerState<MeetingDetailScreen>
       notifier.sendMessage(
         text,
         transcript: meeting.transcript!,
+        meetingId: meeting.id,
         summary: meeting.summary,
       );
     }

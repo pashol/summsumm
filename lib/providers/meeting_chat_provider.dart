@@ -5,6 +5,8 @@ import 'dart:io' as io;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/chat_message.dart';
+import '../providers/library_rag_provider.dart';
+import '../providers/local_llm_provider.dart';
 import '../providers/meeting_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/ai_service.dart';
@@ -43,6 +45,7 @@ class MeetingChatNotifier extends StateNotifier<MeetingChatState> {
   Future<void> sendMessage(
     String question, {
     required String transcript,
+    required String meetingId,
     String? summary,
   }) async {
     if (state.isStreaming || question.trim().isEmpty) return;
@@ -56,33 +59,101 @@ class MeetingChatNotifier extends StateNotifier<MeetingChatState> {
     );
 
     final settings = _ref.read(settingsProvider);
-    final apiKey =
-        await _ref.read(settingsProvider.notifier).getApiKey(settings.provider) ?? '';
 
-    final systemPrompt =
-        'You are a helpful assistant. The user recorded a meeting.\n'
-        'Transcript:\n$transcript\n'
-        '${summary != null ? '\nSummary:\n$summary\n' : ''}'
-        '\nAnswer questions about this meeting concisely.';
+    // Try RAG-first context
+    String systemPrompt;
+    final metadataStore = _ref.read(libraryRagMetadataStoreProvider);
+    final metadata = await metadataStore.load();
+    final indexedSource = metadata.sourceForLibraryItem(meetingId);
+
+    if (indexedSource != null) {
+      try {
+        final ragService = _ref.read(libraryRagServiceProvider);
+        final searchResult = await ragService.search(
+          question,
+          sourceIds: [indexedSource.ragSourceId],
+        );
+        if (searchResult.contextText.trim().isNotEmpty) {
+          systemPrompt =
+              'You are a helpful assistant. The user recorded a meeting. '
+              'Here is the most relevant context from the meeting:\n'
+              '${searchResult.contextText}\n'
+              '${summary != null ? '\nSummary:\n$summary\n' : ''}'
+              '\nAnswer questions about this meeting concisely using the provided context.';
+        } else {
+          systemPrompt =
+              'You are a helpful assistant. The user recorded a meeting.\n'
+              'Transcript:\n$transcript\n'
+              '${summary != null ? '\nSummary:\n$summary\n' : ''}'
+              '\nAnswer questions about this meeting concisely.';
+        }
+      } catch (_) {
+        systemPrompt =
+            'You are a helpful assistant. The user recorded a meeting.\n'
+            'Transcript:\n$transcript\n'
+            '${summary != null ? '\nSummary:\n$summary\n' : ''}'
+            '\nAnswer questions about this meeting concisely.';
+      }
+    } else {
+      systemPrompt =
+          'You are a helpful assistant. The user recorded a meeting.\n'
+          'Transcript:\n$transcript\n'
+          '${summary != null ? '\nSummary:\n$summary\n' : ''}'
+          '\nAnswer questions about this meeting concisely.';
+    }
 
     final history = state.messages
         .take(state.messages.length - 1) // exclude the empty assistant msg
         .map((m) => m.toApiMap())
         .toList();
 
-    final apiMessages = <Map<String, dynamic>>[
-      {'role': 'system', 'content': systemPrompt},
-      ...history,
-    ];
+    late final Stream<String> stream;
 
-    try {
-      final stream = _ref.read(aiServiceProvider).streamCompletion(
+    if (settings.localAiEnabled) {
+      final localLlm = _ref.read(localLlmServiceProvider);
+      final installed = await localLlm.isModelInstalled();
+      if (!installed) {
+        final msgs = List<ChatMessage>.from(state.messages)..removeLast();
+        state = state.copyWith(
+          messages: msgs,
+          isStreaming: false,
+          error: 'Local AI model not downloaded. Download it in Settings first.',
+        );
+        return;
+      }
+      await localLlm.ensureModelLoaded();
+
+      stream = localLlm.streamChat(
+        systemPrompt: systemPrompt,
+        messages: history,
+      );
+    } else {
+      final apiKey =
+          await _ref.read(settingsProvider.notifier).getApiKey(settings.provider) ?? '';
+      if (apiKey.isEmpty) {
+        final msgs = List<ChatMessage>.from(state.messages)..removeLast();
+        state = state.copyWith(
+          messages: msgs,
+          isStreaming: false,
+          error: 'No API key configured. Open Settings first.',
+        );
+        return;
+      }
+
+      final apiMessages = <Map<String, dynamic>>[
+        {'role': 'system', 'content': systemPrompt},
+        ...history,
+      ];
+
+      stream = _ref.read(aiServiceProvider).streamCompletion(
             apiKey: apiKey,
             model: settings.activeModel,
             messages: apiMessages,
             provider: settings.provider,
           );
+    }
 
+    try {
       String accumulated = '';
       _streamSub = stream.listen(
         (delta) {
