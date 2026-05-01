@@ -67,9 +67,11 @@ class LocalLlmService {
       await chat.addQueryChunk(Message.text(text: content, isUser: isUser));
     }
 
-    final controller = StreamController<String>();
-
-    chat.generateChatResponseAsync().listen(
+    StreamSubscription<dynamic>? sub;
+    final controller = StreamController<String>(
+      onCancel: () => sub?.cancel(),
+    );
+    sub = chat.generateChatResponseAsync().listen(
       (response) {
         if (response is TextResponse) {
           controller.add(response.token);
@@ -83,8 +85,14 @@ class LocalLlmService {
       },
       cancelOnError: true,
     );
-
-    yield* controller.stream;
+    try {
+      yield* controller.stream;
+    } finally {
+      await sub.cancel();
+      if (!controller.isClosed) {
+        await controller.close();
+      }
+    }
   }
 
   Future<void> close() async {
