@@ -10,6 +10,7 @@ import '../providers/models_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/ai_service.dart';
 import '../services/library_rag_service.dart';
+import '../providers/local_llm_provider.dart';
 import 'ask_library_chat_history_provider.dart';
 import 'ask_library_session_provider.dart';
 
@@ -89,33 +90,70 @@ class AskLibraryChatNotifier extends StateNotifier<AskLibraryChatState> {
 
       final citations = await _citationsForSearch(search);
       final settings = _ref.read(settingsProvider);
-      final apiKey = await _ref
-              .read(settingsProvider.notifier)
-              .getApiKey(settings.provider) ??
-          '';
-      final apiMessages = <Map<String, dynamic>>[
-        {
-          'role': 'system',
-          'content':
-              'You answer questions using only the provided library context. If the context does not support an answer, say you could not find enough information. Keep answers concise and cite source labels when useful.',
-        },
-        {
-          'role': 'system',
-          'content': 'Library context for this turn:\n${search.contextText}',
-        },
-        ..._buildPromptHistory(previousMessages),
-        {
-          'role': 'user',
-          'content': trimmed,
-        },
-      ];
+      final useLocal = settings.localAiEnabled;
 
-      final stream = _ref.read(aiServiceProvider).streamCompletion(
-            apiKey: apiKey,
-            model: settings.activeModel,
-            messages: apiMessages,
-            provider: settings.provider,
+      late final Stream<String> stream;
+
+      if (useLocal) {
+        final localLlm = _ref.read(localLlmServiceProvider);
+        final installed = await localLlm.isModelInstalled();
+        if (!installed) {
+          throw Exception(
+            'Local AI model not downloaded. Download it in Settings first.',
           );
+        }
+        await localLlm.ensureModelLoaded();
+
+        final systemPrompt =
+            'You answer questions using only the provided library context. '
+            'If the context does not support an answer, say you could not find enough information. '
+            'Keep answers concise and cite source labels when useful.\n\n'
+            'Library context for this turn:\n${search.contextText}';
+
+        final localMessages = <Map<String, dynamic>>[
+          ..._buildPromptHistory(previousMessages),
+          {'role': 'user', 'content': trimmed},
+        ];
+
+        stream = localLlm.streamChat(
+          systemPrompt: systemPrompt,
+          messages: localMessages,
+        );
+      } else {
+        final apiKey = await _ref
+                .read(settingsProvider.notifier)
+                .getApiKey(settings.provider) ??
+            '';
+        if (apiKey.isEmpty) {
+          throw Exception(
+            'No API key configured. Open Settings first.',
+          );
+        }
+
+        final apiMessages = <Map<String, dynamic>>[
+          {
+            'role': 'system',
+            'content':
+                'You answer questions using only the provided library context. If the context does not support an answer, say you could not find enough information. Keep answers concise and cite source labels when useful.',
+          },
+          {
+            'role': 'system',
+            'content': 'Library context for this turn:\n${search.contextText}',
+          },
+          ..._buildPromptHistory(previousMessages),
+          {
+            'role': 'user',
+            'content': trimmed,
+          },
+        ];
+
+        stream = _ref.read(aiServiceProvider).streamCompletion(
+              apiKey: apiKey,
+              model: settings.activeModel,
+              messages: apiMessages,
+              provider: settings.provider,
+            );
+      }
 
       var accumulated = '';
       _streamSub = stream.listen(
