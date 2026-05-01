@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io' as io;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/chat_message.dart';
@@ -42,6 +43,12 @@ class MeetingChatNotifier extends StateNotifier<MeetingChatState> {
 
   MeetingChatNotifier(this._ref) : super(const MeetingChatState());
 
+  String _fullTranscriptPrompt(String transcript, String? summary) =>
+      'You are a helpful assistant. The user recorded a meeting.\n'
+      'Transcript:\n$transcript\n'
+      '${summary != null ? '\nSummary:\n$summary\n' : ''}'
+      '\nAnswer questions about this meeting concisely.';
+
   Future<void> sendMessage(
     String question, {
     required String transcript,
@@ -81,25 +88,14 @@ class MeetingChatNotifier extends StateNotifier<MeetingChatState> {
               '${summary != null ? '\nSummary:\n$summary\n' : ''}'
               '\nAnswer questions about this meeting concisely using the provided context.';
         } else {
-          systemPrompt =
-              'You are a helpful assistant. The user recorded a meeting.\n'
-              'Transcript:\n$transcript\n'
-              '${summary != null ? '\nSummary:\n$summary\n' : ''}'
-              '\nAnswer questions about this meeting concisely.';
+          systemPrompt = _fullTranscriptPrompt(transcript, summary);
         }
-      } catch (_) {
-        systemPrompt =
-            'You are a helpful assistant. The user recorded a meeting.\n'
-            'Transcript:\n$transcript\n'
-            '${summary != null ? '\nSummary:\n$summary\n' : ''}'
-            '\nAnswer questions about this meeting concisely.';
+      } catch (e, st) {
+        debugPrint('RAG lookup failed for meeting $meetingId: $e\n$st');
+        systemPrompt = _fullTranscriptPrompt(transcript, summary);
       }
     } else {
-      systemPrompt =
-          'You are a helpful assistant. The user recorded a meeting.\n'
-          'Transcript:\n$transcript\n'
-          '${summary != null ? '\nSummary:\n$summary\n' : ''}'
-          '\nAnswer questions about this meeting concisely.';
+      systemPrompt = _fullTranscriptPrompt(transcript, summary);
     }
 
     final history = state.messages
