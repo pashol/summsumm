@@ -98,9 +98,14 @@ class AskLibraryChatNotifier extends StateNotifier<AskLibraryChatState> {
         final localLlm = _ref.read(localLlmServiceProvider);
         final installed = await localLlm.isModelInstalled();
         if (!installed) {
-          throw Exception(
-            'Local AI model not downloaded. Download it in Settings first.',
+          final updated = List<AskLibraryMessage>.from(state.messages)
+            ..removeLast();
+          state = state.copyWith(
+            messages: updated,
+            isStreaming: false,
+            error: 'Local AI model not downloaded. Download it in Settings first.',
           );
+          return;
         }
         await localLlm.ensureModelLoaded();
 
@@ -125,9 +130,14 @@ class AskLibraryChatNotifier extends StateNotifier<AskLibraryChatState> {
                 .getApiKey(settings.provider) ??
             '';
         if (apiKey.isEmpty) {
-          throw Exception(
-            'No API key configured. Open Settings first.',
+          final updated = List<AskLibraryMessage>.from(state.messages)
+            ..removeLast();
+          state = state.copyWith(
+            messages: updated,
+            isStreaming: false,
+            error: 'No API key configured. Open Settings first.',
           );
+          return;
         }
 
         final apiMessages = <Map<String, dynamic>>[

@@ -13,6 +13,8 @@ import 'package:summsumm/services/chat_repository.dart';
 import 'package:summsumm/services/library_rag_metadata_store.dart';
 import 'package:summsumm/services/library_rag_repository.dart';
 import 'package:summsumm/services/library_rag_service.dart';
+import 'package:summsumm/services/local_llm_service.dart';
+import 'package:summsumm/providers/local_llm_provider.dart';
 
 void main() {
   test('initial chat state is empty', () {
@@ -227,6 +229,53 @@ void main() {
       'What happened in the budget meeting?',
     );
   });
+
+  test('empty API key guard shows error and stops streaming', () async {
+    final fakeRepository = _FakeLibraryRagRepository([
+      _searchResult('Context', 'Budget Meeting'),
+    ]);
+    final container = ProviderContainer(
+      overrides: [
+        libraryRagRepositoryProvider.overrideWithValue(fakeRepository),
+        settingsProvider.overrideWith(_NoApiKeySettings.new),
+      ],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(askLibraryChatProvider.notifier);
+
+    await notifier.sendMessage('What happened in the budget meeting?');
+    await _flushAsyncEvents();
+
+    final state = container.read(askLibraryChatProvider);
+    expect(state.isStreaming, isFalse);
+    expect(state.error, contains('No API key configured'));
+    expect(state.messages, hasLength(1));
+    expect(state.messages.single.role, 'user');
+  });
+
+  test('local AI routing uses local stream when enabled', () async {
+    final fakeRepository = _FakeLibraryRagRepository([
+      _searchResult('Context', 'Budget Meeting'),
+    ]);
+    final fakeLocalLlm = _FakeLocalLlmService(['Local answer']);
+    final container = ProviderContainer(
+      overrides: [
+        libraryRagRepositoryProvider.overrideWithValue(fakeRepository),
+        settingsProvider.overrideWith(_LocalAiSettings.new),
+        localLlmServiceProvider.overrideWithValue(fakeLocalLlm),
+      ],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(askLibraryChatProvider.notifier);
+
+    await notifier.sendMessage('What happened in the budget meeting?');
+    await _flushAsyncEvents();
+
+    expect(fakeLocalLlm.streamChatCalls, hasLength(1));
+    final state = container.read(askLibraryChatProvider);
+    expect(state.messages.last.content, 'Local answer');
+    expect(state.isStreaming, isFalse);
+  });
 }
 
 Future<void> _flushAsyncEvents() async {
@@ -327,5 +376,62 @@ class _FakeChatRepository extends ChatRepository {
   @override
   Future<void> save(ChatSession session) async {
     saved.add(session);
+  }
+}
+
+class _NoApiKeySettings extends Settings {
+  @override
+  AppSettings build() => const AppSettings.defaults().copyWith(
+    provider: 'openai',
+    openaiModel: 'gpt-5.4-mini',
+    localLibraryChatEnabled: true,
+  );
+
+  @override
+  Future<void> load() async {}
+
+  @override
+  Future<String?> getApiKey(String provider) async => '';
+}
+
+class _LocalAiSettings extends Settings {
+  @override
+  AppSettings build() => const AppSettings.defaults().copyWith(
+    provider: 'openai',
+    openaiModel: 'gpt-5.4-mini',
+    localAiEnabled: true,
+    localLibraryChatEnabled: true,
+  );
+
+  @override
+  Future<void> load() async {}
+
+  @override
+  Future<String?> getApiKey(String provider) async => 'test-key';
+}
+
+class _FakeLocalLlmService extends LocalLlmService {
+  final List<String> _responses;
+  final List<Map<String, dynamic>> streamChatCalls = [];
+  var _index = 0;
+
+  _FakeLocalLlmService(this._responses);
+
+  @override
+  Future<bool> isModelInstalled() async => true;
+
+  @override
+  Future<void> ensureModelLoaded() async {}
+
+  @override
+  Stream<String> streamChat({
+    required String systemPrompt,
+    required List<Map<String, dynamic>> messages,
+  }) async* {
+    streamChatCalls.add({
+      'systemPrompt': systemPrompt,
+      'messages': messages,
+    });
+    yield _responses[_index++];
   }
 }
