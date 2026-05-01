@@ -22,6 +22,7 @@ class LocalLlmService {
   Future<void> downloadModel({
     void Function(double progress)? onProgress,
   }) async {
+    if (await isModelInstalled()) return;
     _isDownloading = true;
     _downloadProgress = 0;
     try {
@@ -31,8 +32,6 @@ class LocalLlmService {
         _downloadProgress = progress / 100.0;
         onProgress?.call(_downloadProgress);
       }).install();
-    } catch (e) {
-      throw StateError('Failed to download model: $e');
     } finally {
       _isDownloading = false;
       _downloadProgress = 0;
