@@ -24,6 +24,7 @@ class AppSettings {
   final bool compressAudioStorage;
   final bool localLibraryChatEnabled;
   final bool showExtractedPdfTextOnly;
+  final bool localAiEnabled;
   final Map<String, String> promptOverrides;
   final List<CustomPrompt> customPrompts;
   final String? selectedCustomPromptId;
@@ -47,6 +48,7 @@ class AppSettings {
     this.compressAudioStorage = false,
     this.localLibraryChatEnabled = false,
     this.showExtractedPdfTextOnly = false,
+    this.localAiEnabled = false,
     this.promptOverrides = const {},
     this.customPrompts = const [],
     this.selectedCustomPromptId,
@@ -72,6 +74,7 @@ class AppSettings {
           compressAudioStorage: false,
           localLibraryChatEnabled: false,
           showExtractedPdfTextOnly: false,
+          localAiEnabled: false,
           promptOverrides: const {},
           customPrompts: const [],
           selectedCustomPromptId: null,
@@ -96,6 +99,7 @@ class AppSettings {
     bool? compressAudioStorage,
     bool? localLibraryChatEnabled,
     bool? showExtractedPdfTextOnly,
+    bool? localAiEnabled,
     Map<String, String>? promptOverrides,
     List<CustomPrompt>? customPrompts,
     String? selectedCustomPromptId,
@@ -120,6 +124,7 @@ class AppSettings {
         localLibraryChatEnabled: localLibraryChatEnabled ?? this.localLibraryChatEnabled,
         showExtractedPdfTextOnly:
             showExtractedPdfTextOnly ?? this.showExtractedPdfTextOnly,
+        localAiEnabled: localAiEnabled ?? this.localAiEnabled,
         promptOverrides: promptOverrides ?? this.promptOverrides,
         customPrompts: customPrompts ?? this.customPrompts,
         selectedCustomPromptId: selectedCustomPromptId ?? this.selectedCustomPromptId,
@@ -144,6 +149,7 @@ class AppSettings {
         'compressAudioStorage': compressAudioStorage,
         'localLibraryChatEnabled': localLibraryChatEnabled,
         'showExtractedPdfTextOnly': showExtractedPdfTextOnly,
+        'localAiEnabled': localAiEnabled,
         'promptOverrides': promptOverrides,
         'customPrompts': customPrompts.map((p) => p.toJson()).toList(),
         'selectedCustomPromptId': selectedCustomPromptId,
@@ -174,6 +180,7 @@ class AppSettings {
         localLibraryChatEnabled: json['localLibraryChatEnabled'] as bool? ?? false,
         showExtractedPdfTextOnly:
             json['showExtractedPdfTextOnly'] as bool? ?? false,
+        localAiEnabled: json['localAiEnabled'] as bool? ?? false,
         promptOverrides: (json['promptOverrides'] as Map<String, dynamic>?)?.map(
               (k, v) => MapEntry(k, v?.toString() ?? ''),
             ) ??
@@ -215,6 +222,7 @@ class AppSettings {
         other.compressAudioStorage == compressAudioStorage &&
         other.localLibraryChatEnabled == localLibraryChatEnabled &&
         other.showExtractedPdfTextOnly == showExtractedPdfTextOnly &&
+        other.localAiEnabled == localAiEnabled &&
         other.promptOverrides == promptOverrides &&
         listEquals(other.customPrompts, customPrompts) &&
         other.selectedCustomPromptId == selectedCustomPromptId;
@@ -240,6 +248,7 @@ class AppSettings {
         compressAudioStorage,
         localLibraryChatEnabled,
         showExtractedPdfTextOnly,
+        localAiEnabled,
         promptOverrides,
         Object.hashAll(customPrompts),
         selectedCustomPromptId,

@@ -30,6 +30,34 @@ void main() {
     expect(decoded.localLibraryChatEnabled, isFalse);
   });
 
+  test('defaults disable local AI', () {
+    const settings = AppSettings.defaults();
+
+    expect(settings.localAiEnabled, isFalse);
+  });
+
+  test('serializes local AI setting', () {
+    const settings = AppSettings.defaults();
+    final enabled = settings.copyWith(localAiEnabled: true);
+
+    final decoded = AppSettings.fromJson(enabled.toJson());
+
+    expect(decoded.localAiEnabled, isTrue);
+  });
+
+  test('missing local AI setting migrates to disabled', () {
+    final decoded = AppSettings.fromJson(const {
+      'provider': 'openrouter',
+      'openrouterModel': '',
+      'openaiModel': '',
+      'language': 'Same as input',
+      'summaryStyle': 'structured',
+      'ttsSpeed': 1.0,
+    });
+
+    expect(decoded.localAiEnabled, isFalse);
+  });
+
   test('defaults to inline PDF display', () {
     const settings = AppSettings.defaults();
 
