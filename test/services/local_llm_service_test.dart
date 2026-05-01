@@ -18,4 +18,9 @@ void main() {
       emitsError(isA<StateError>()),
     );
   });
+
+  // NOTE: Integration tests for streamChat (e.g., subscription cancellation,
+  // resource cleanup) require mocking the flutter_gemma platform channel,
+  // which is not easily done in unit tests. Consider adding widget/integration
+  // tests for full streamChat coverage.
 }

@@ -31,6 +31,8 @@ class LocalLlmService {
         _downloadProgress = progress / 100.0;
         onProgress?.call(_downloadProgress);
       }).install();
+    } catch (e) {
+      throw StateError('Failed to download model: $e');
     } finally {
       _isDownloading = false;
       _downloadProgress = 0;
@@ -62,8 +64,15 @@ class LocalLlmService {
     );
 
     for (final message in messages) {
-      final content = message['content'] as String;
-      final isUser = message['role'] == 'user';
+      final content = message['content'];
+      if (content is! String) {
+        throw ArgumentError('Message content must be a String, got: $content');
+      }
+      final role = message['role'];
+      if (role is! String) {
+        throw ArgumentError('Message role must be a String, got: $role');
+      }
+      final isUser = role == 'user';
       await chat.addQueryChunk(Message.text(text: content, isUser: isUser));
     }
 
