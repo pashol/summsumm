@@ -26,7 +26,7 @@ abstract class LibraryRagClient {
   Future<void> initialize();
   Future<int> addDocument(String text, {required String name, required String metadata});
   Future<void> removeSource(int sourceId);
-  Future<LibraryRagSearchResult> search(String query, {List<int>? sourceIds});
+  Future<LibraryRagSearchResult> search(String query, {List<int>? sourceIds, int tokenBudget = 3000});
   Future<void> clearAllData();
 }
 
@@ -57,14 +57,14 @@ class MobileLibraryRagClient implements LibraryRagClient {
   Future<void> removeSource(int sourceId) => MobileRag.instance.removeSource(sourceId);
 
   @override
-  Future<LibraryRagSearchResult> search(String query, {List<int>? sourceIds}) async {
+  Future<LibraryRagSearchResult> search(String query, {List<int>? sourceIds, int tokenBudget = 3000}) async {
     if (!MobileRag.instance.isIndexReady) {
       await MobileRag.instance.warmupFuture;
     }
     final result = await MobileRag.instance.searchHybridWithContext(
       query,
       topK: 12,
-      tokenBudget: 3000,
+      tokenBudget: tokenBudget,
       adjacentChunks: 1,
       sourceIds: sourceIds,
     );
@@ -145,7 +145,7 @@ class FakeLibraryRagClient implements LibraryRagClient {
   }
 
   @override
-  Future<LibraryRagSearchResult> search(String query, {List<int>? sourceIds}) async => searchResult;
+  Future<LibraryRagSearchResult> search(String query, {List<int>? sourceIds, int tokenBudget = 3000}) async => searchResult;
 
   @override
   Future<void> clearAllData() async {}
@@ -178,9 +178,9 @@ class LibraryRagService {
     await _client.removeSource(sourceId);
   }
 
-  Future<LibraryRagSearchResult> search(String query, {List<int>? sourceIds}) async {
+  Future<LibraryRagSearchResult> search(String query, {List<int>? sourceIds, int tokenBudget = 3000}) async {
     await initialize();
-    return _client.search(query, sourceIds: sourceIds);
+    return _client.search(query, sourceIds: sourceIds, tokenBudget: tokenBudget);
   }
 
   Future<void> clearAllData() async {

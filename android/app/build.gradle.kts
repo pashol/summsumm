@@ -36,9 +36,6 @@ val stageSherpaOnnxRuntimeJniLibs by tasks.registering(Copy::class) {
     from("$pubCacheDir/hosted/pub.dev/sherpa_onnx_android_armeabi-$sherpaOnnxAndroidVersion/android/src/main/jniLibs/armeabi-v7a/libonnxruntime.so") {
         into("armeabi-v7a")
     }
-    from("$pubCacheDir/hosted/pub.dev/sherpa_onnx_android_x86_64-$sherpaOnnxAndroidVersion/android/src/main/jniLibs/x86_64/libonnxruntime.so") {
-        into("x86_64")
-    }
     into(sherpaOnnxRuntimeJniLibsDir)
 }
 
@@ -75,7 +72,6 @@ android {
         jniLibs {
             pickFirsts += "lib/arm64-v8a/libonnxruntime.so"
             pickFirsts += "lib/armeabi-v7a/libonnxruntime.so"
-            pickFirsts += "lib/x86_64/libonnxruntime.so"
         }
     }
 

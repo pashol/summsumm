@@ -246,6 +246,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         }
                       },
               ),
+              if (settings.localAiEnabled) ...[
+                Padding(
+                  padding: const EdgeInsets.only(
+                    left: 16,
+                    right: 16,
+                    top: 8,
+                    bottom: 4,
+                  ),
+                  child: Text(
+                    'Privacy-friendly and works offline, but has a very small context window (2048 tokens). '
+                    'Long conversations or large documents may produce confusing answers. '
+                    'Use cloud AI for best results.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withOpacity(0.6),
+                        ),
+                  ),
+                ),
+              ],
               if (!settings.localAiEnabled) ...[
                 const Divider(height: 1, indent: 16, endIndent: 16),
                 _SettingsRow(

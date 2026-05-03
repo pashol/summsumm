@@ -4,15 +4,12 @@ import 'dart:io';
 import 'dart:isolate';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_sound/flutter_sound.dart';
-import 'package:ffmpeg_kit_flutter_new_audio/ffmpeg_kit.dart';
-import 'package:ffmpeg_kit_flutter_new_audio/ffmpeg_kit_config.dart';
-import 'package:ffmpeg_kit_flutter_new_audio/return_code.dart';
-import 'package:ffmpeg_kit_flutter_new_audio/statistics.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:summsumm/services/ffmpeg_service.dart';
 
 enum LogLevel { debug, info, warning, error }
 

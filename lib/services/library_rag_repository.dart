@@ -116,8 +116,8 @@ class LibraryRagRepository {
     return metadata;
   }
 
-  Future<LibraryRagSearchResult> search(String query, {List<int>? sourceIds}) =>
-      _ragService.search(query, sourceIds: sourceIds);
+  Future<LibraryRagSearchResult> search(String query, {List<int>? sourceIds, int tokenBudget = 3000}) =>
+      _ragService.search(query, sourceIds: sourceIds, tokenBudget: tokenBudget);
 
   Future<LibraryRagMetadata> loadMetadata() => _metadataStore.load();
 

@@ -48,10 +48,28 @@ class LocalLlmService {
     final installed = await isModelInstalled();
     if (!installed) throw StateError('Model not downloaded. Call downloadModel() first.');
 
-    _model = await FlutterGemma.getActiveModel(
-      maxTokens: 2048,
-      preferredBackend: PreferredBackend.gpu,
-    );
+    try {
+      _model = await FlutterGemma.getActiveModel(
+        maxTokens: 2048,
+        preferredBackend: PreferredBackend.gpu,
+      );
+    } on StateError catch (e) {
+      // After app updates the model file still exists on disk but the
+      // in-memory "active model spec" is lost. Re-installing from network
+      // is idempotent: it skips the download when the file is already
+      // present and simply re-activates the model.
+      if (e.toString().contains('No active inference model set')) {
+        await FlutterGemma.installModel(
+          modelType: ModelType.gemmaIt,
+        ).fromNetwork(_kGemmaModelUrl).install();
+        _model = await FlutterGemma.getActiveModel(
+          maxTokens: 2048,
+          preferredBackend: PreferredBackend.gpu,
+        );
+      } else {
+        rethrow;
+      }
+    }
   }
 
   Stream<String> streamChat({

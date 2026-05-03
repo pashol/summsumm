@@ -350,7 +350,7 @@ class _FakeLibraryRagRepository extends LibraryRagRepository {
   var _index = 0;
 
   @override
-  Future<LibraryRagSearchResult> search(String query, {List<int>? sourceIds}) async {
+  Future<LibraryRagSearchResult> search(String query, {List<int>? sourceIds, int tokenBudget = 3000}) async {
     queries.add(query);
     return _results[_index++];
   }

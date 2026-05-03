@@ -1,29 +1,14 @@
 import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
-import 'package:ffmpeg_kit_flutter_new_audio/ffmpeg_kit.dart';
-import 'package:ffmpeg_kit_flutter_new_audio/return_code.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa;
 import 'package:summsumm/models/transcription_config.dart';
+import 'package:summsumm/services/ffmpeg_service.dart';
 
 Future<String> _convertToWav(String inputPath) async {
-  final tempDir = await getTemporaryDirectory();
-  final outputPath =
-      '${tempDir.path}/sherpa_input_${DateTime.now().millisecondsSinceEpoch}.wav';
-
-  final cmd =
-      '-y -i "$inputPath" -vn -ac 1 -ar 16000 -acodec pcm_s16le "$outputPath"';
-  final session = await FFmpegKit.execute(cmd);
-  final returnCode = await session.getReturnCode();
-
-  if (!ReturnCode.isSuccess(returnCode)) {
-    final logs = await session.getAllLogsAsString();
-    throw StateError('Failed to convert audio to WAV: $logs');
-  }
-
-  return outputPath;
+  return convertAudioToWav(inputPath);
 }
 
 class SherpaAsrEngine {

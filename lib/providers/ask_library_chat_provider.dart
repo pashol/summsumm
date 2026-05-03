@@ -73,8 +73,13 @@ class AskLibraryChatNotifier extends StateNotifier<AskLibraryChatState> {
     try {
       final repository = _ref.read(libraryRagRepositoryProvider);
       final previousMessages = _previousMessagesExcludingPendingTurn();
+      final settings = _ref.read(settingsProvider);
+      final useLocal = settings.localAiEnabled;
+      // Local models have tiny context windows (Gemma 3 1B = 2048 tokens total).
+      // Use a much smaller token budget so the retrieved context actually fits.
       final search = await repository.search(
         _buildRetrievalQuery(previousMessages, trimmed),
+        tokenBudget: useLocal ? 800 : 3000,
       );
       if (search.contextText.trim().isEmpty) {
         final updated = List<AskLibraryMessage>.from(state.messages);
@@ -89,8 +94,6 @@ class AskLibraryChatNotifier extends StateNotifier<AskLibraryChatState> {
       }
 
       final citations = await _citationsForSearch(search);
-      final settings = _ref.read(settingsProvider);
-      final useLocal = settings.localAiEnabled;
 
       late final Stream<String> stream;
 
@@ -109,12 +112,12 @@ class AskLibraryChatNotifier extends StateNotifier<AskLibraryChatState> {
         }
         await localLlm.ensureModelLoaded();
 
-        final truncatedContext = _truncateForLocalModel(search.contextText, maxChars: 2500);
+        // Small models (Gemma 3 1B) struggle with XML-wrapped context.
+        // Strip XML tags and use a simple plain-text format.
+        final plainContext = _stripXmlTags(search.contextText);
         final systemPrompt =
-            'You answer questions using only the provided library context. '
-            'If the context does not support an answer, say you could not find enough information. '
-            'Keep answers concise and cite source labels when useful.\n\n'
-            'Library context for this turn:\n$truncatedContext';
+            'Use ONLY the context below to answer. If the answer is not in the context, say "I could not find enough information."\n\n'
+            'Context:\n$plainContext';
 
         final localMessages = <Map<String, dynamic>>[
           ..._buildPromptHistory(previousMessages),
@@ -305,9 +308,12 @@ class AskLibraryChatNotifier extends StateNotifier<AskLibraryChatState> {
     return buffer.toString();
   }
 
-  String _truncateForLocalModel(String text, {required int maxChars}) {
-    if (text.length <= maxChars) return text;
-    return text.substring(0, maxChars - 3) + '...';
+  /// Strip XML tags from context text for small local models (Gemma 3 1B).
+  /// XML wrappers like `<document>`, `<metadata>`, `<content>` add token
+  /// overhead and confuse 1B-parameter models. Plain text is easier to follow.
+  static final _xmlTagPattern = RegExp(r'<[^>]+>');
+  String _stripXmlTags(String text) {
+    return text.replaceAll(_xmlTagPattern, '').trim();
   }
 
   @override
