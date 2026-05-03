@@ -9,6 +9,10 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:ffmpeg_kit_flutter_new_audio/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_flutter_new_audio/ffmpeg_kit_config.dart';
+import 'package:ffmpeg_kit_flutter_new_audio/return_code.dart';
+import 'package:ffmpeg_kit_flutter_new_audio/statistics.dart';
 import 'package:summsumm/services/ffmpeg_service.dart';
 
 enum LogLevel { debug, info, warning, error }
@@ -147,10 +151,24 @@ class VoiceService {
   // --- FFmpeg static helpers (can run in isolate) ---
 
   Future<String> _preprocessAudio(String inputPath, String outputPath, {void Function(double)? onProgress}) async {
+    final args = [
+      '-y', '-i', inputPath, '-vn', '-ac', '1', '-ar', '16000',
+      '-af', 'highpass=f=80,lowpass=f=7600,loudnorm=I=-16:TP=-1.5:LRA=11',
+      '-c:a', 'aac', '-b:a', '64k', outputPath,
+    ];
+
+    if (Platform.isLinux) {
+      onProgress?.call(0.5);
+      final result = await Process.run('ffmpeg', args);
+      if (result.exitCode != 0) {
+        throw VoiceTranscriptionException('Preprocessing failed: ${result.stderr}');
+      }
+      onProgress?.call(0.99);
+      return outputPath;
+    }
+
     final completer = Completer<String>();
-    final cmd = '-y -i "$inputPath" -vn -ac 1 -ar 16000 '
-        '-af "highpass=f=80,lowpass=f=7600,loudnorm=I=-16:TP=-1.5:LRA=11" '
-        '-c:a aac -b:a 64k "$outputPath"';
+    final cmd = args.join(' ');
     await FFmpegKit.executeAsync(cmd, (session) async {
       final returnCode = await session.getReturnCode();
       if (ReturnCode.isSuccess(returnCode)) {
@@ -169,8 +187,31 @@ class VoiceService {
   }
 
   Future<List<Map<String, double>>> _detectSilence(String inputPath, {void Function(double)? onProgress}) async {
-    final logs = StringBuffer();
+    if (Platform.isLinux) {
+      onProgress?.call(0.5);
+      final result = await Process.run('ffmpeg', [
+        '-i', inputPath, '-af', 'silencedetect=noise=-32dB:d=0.7', '-f', 'null', '-',
+      ]);
+      onProgress?.call(0.99);
 
+      final silenceStarts = <double>[];
+      final silenceEnds = <double>[];
+
+      for (final line in (result.stderr as String).split('\n')) {
+        final startMatch = RegExp(r'silence_start:\s+([0-9.]+)').firstMatch(line);
+        if (startMatch != null) {
+          silenceStarts.add(double.parse(startMatch.group(1)!));
+        }
+        final endMatch = RegExp(r'silence_end:\s+([0-9.]+)\s').firstMatch(line);
+        if (endMatch != null) {
+          silenceEnds.add(double.parse(endMatch.group(1)!));
+        }
+      }
+
+      return _buildSpeechSegments(silenceStarts, silenceEnds, inputPath);
+    }
+
+    final logs = StringBuffer();
     await FFmpegKit.executeAsync(
       '-i "$inputPath" -af "silencedetect=noise=-32dB:d=0.7" -f null -',
       (session) {},
@@ -198,6 +239,14 @@ class VoiceService {
       }
     }
 
+    return _buildSpeechSegments(silenceStarts, silenceEnds, inputPath);
+  }
+
+  Future<List<Map<String, double>>> _buildSpeechSegments(
+    List<double> silenceStarts,
+    List<double> silenceEnds,
+    String inputPath,
+  ) async {
     final segments = <Map<String, double>>[];
     double lastEnd = 0.0;
     for (int i = 0; i < silenceStarts.length; i++) {
@@ -209,15 +258,12 @@ class VoiceService {
       }
     }
 
-    // If no silence was detected, the entire audio is speech.
-    // Return it as a single segment using the audio duration.
     if (segments.isEmpty) {
       final duration = await _getAudioDuration(inputPath);
       if (duration > 0) {
         segments.add({'start': 0.0, 'end': duration});
       }
     } else {
-      // Add trailing speech after the last silence
       final duration = await _getAudioDuration(inputPath);
       if (duration > lastEnd + 0.5) {
         segments.add({'start': lastEnd, 'end': duration});
@@ -228,6 +274,20 @@ class VoiceService {
   }
 
   Future<double> _getAudioDuration(String inputPath) async {
+    if (Platform.isLinux) {
+      final result = await Process.run('ffmpeg', ['-i', inputPath, '-f', 'null', '-']);
+      final allLogs = result.stderr as String;
+      final match = RegExp(r'Duration:\s*(\d+):(\d+):(\d+)\.(\d+)').firstMatch(allLogs);
+      if (match != null) {
+        final hours = int.parse(match.group(1)!);
+        final minutes = int.parse(match.group(2)!);
+        final seconds = int.parse(match.group(3)!);
+        final centiseconds = int.parse(match.group(4)!);
+        return hours * 3600.0 + minutes * 60.0 + seconds + centiseconds / 100.0;
+      }
+      return 0.0;
+    }
+
     final completer = Completer<double>();
     await FFmpegKit.executeAsync('-i "$inputPath" -f null -', (session) async {
       final allLogs = await session.getAllLogsAsString();
@@ -270,6 +330,23 @@ class VoiceService {
   }
 
   Future<String> _cutChunk(String inputPath, double start, double end, String outputPath, {void Function(double)? onProgress}) async {
+    if (Platform.isLinux) {
+      onProgress?.call(0.5);
+      final result = await Process.run('ffmpeg', [
+        '-y', '-i', inputPath, '-ss', start.toString(), '-to', end.toString(),
+        '-c:a', 'aac', '-b:a', '64k', outputPath,
+      ]);
+      onProgress?.call(0.99);
+      final file = File(outputPath);
+      if (result.exitCode != 0) {
+        if (await file.exists() && await file.length() > 0) {
+          return outputPath;
+        }
+        throw VoiceTranscriptionException('Failed to cut chunk: ${result.stderr}');
+      }
+      return outputPath;
+    }
+
     final chunkDuration = end - start;
     final completer = Completer<String>();
     final cmd = '-y -i "$inputPath" -ss $start -to $end -c:a aac -b:a 64k "$outputPath"';
@@ -397,7 +474,9 @@ class VoiceService {
       logger.info('Created ${chunks.length} chunks');
 
       // Clean up FFmpeg sessions before transcription
-      await FFmpegKitConfig.clearSessions();
+      if (!Platform.isLinux) {
+        await FFmpegKitConfig.clearSessions();
+      }
 
       // Prepare output directory for chunks
       final chunksDir = Directory('${tempDir.path}/chunks_${DateTime.now().millisecondsSinceEpoch}');

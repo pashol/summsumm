@@ -4,9 +4,11 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   dynamic_color
+  ffmpeg_kit_flutter_new_audio
   flutter_gemma
   flutter_secure_storage_linux
   flutter_sound
+  flutter_tts
   syncfusion_pdfviewer_linux
   url_launcher_linux
 )

@@ -1,10 +1,20 @@
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 import '../models/summary_state.dart' show TtsState;
 
 class TtsService {
-  final FlutterTts _tts = FlutterTts();
+  FlutterTts? _tts;
+
+  FlutterTts get tts {
+    if (_tts != null) return _tts!;
+    if (Platform.isLinux) {
+      throw UnsupportedError('TTS not supported on Linux');
+    }
+    _tts = FlutterTts();
+    return _tts!;
+  }
 
   TtsState _state = TtsState.stopped;
   String _lastSpokenText = '';
@@ -13,26 +23,41 @@ class TtsService {
 
   TtsState get state => _state;
 
-  void setOnStart(void Function() cb) => _tts.setStartHandler(cb);
+  void setOnStart(void Function() cb) {
+    if (Platform.isLinux) return;
+    tts.setStartHandler(cb);
+  }
 
-  void setOnCompletion(void Function() cb) => _tts.setCompletionHandler(cb);
+  void setOnCompletion(void Function() cb) {
+    if (Platform.isLinux) return;
+    tts.setCompletionHandler(cb);
+  }
 
-  void setOnPause(void Function() cb) => _tts.setPauseHandler(cb);
+  void setOnPause(void Function() cb) {
+    if (Platform.isLinux) return;
+    tts.setPauseHandler(cb);
+  }
 
-  void setOnContinue(void Function() cb) => _tts.setContinueHandler(cb);
+  void setOnContinue(void Function() cb) {
+    if (Platform.isLinux) return;
+    tts.setContinueHandler(cb);
+  }
 
-  void setOnError(void Function(String) cb) =>
-      _tts.setErrorHandler((msg) => cb(msg.toString()));
+  void setOnError(void Function(String) cb) {
+    if (Platform.isLinux) return;
+    tts.setErrorHandler((msg) => cb(msg.toString()));
+  }
 
   Future<void> speak(String text, String language, double speed) async {
+    if (Platform.isLinux) return;
     final cleanText = stripMarkdown(text);
     try {
-      await _tts.setLanguage(language);
-      await _tts.setSpeechRate(speed);
+      await tts.setLanguage(language);
+      await tts.setSpeechRate(speed);
       _lastSpokenText = cleanText;
       _lastLanguage = language;
       _lastSpeed = speed;
-      await _tts.speak(cleanText);
+      await tts.speak(cleanText);
       _state = TtsState.playing;
     } catch (e) {
       debugPrint('TtsService.speak failed: $e');
@@ -41,9 +66,9 @@ class TtsService {
   }
 
   Future<void> pause() async {
-    if (_state != TtsState.playing) return;
+    if (Platform.isLinux || _state != TtsState.playing) return;
     try {
-      await _tts.pause();
+      await tts.pause();
       _state = TtsState.paused;
     } catch (e) {
       debugPrint('TtsService.pause failed: $e');
@@ -51,14 +76,11 @@ class TtsService {
   }
 
   Future<void> resume() async {
-    if (_state != TtsState.paused) return;
+    if (Platform.isLinux || _state != TtsState.paused) return;
     try {
-      // flutter_tts has no programmatic resume on Android — restart playback
-      // with the same text, re-applying language/speed in case the engine
-      // reset them on pause.
-      await _tts.setLanguage(_lastLanguage);
-      await _tts.setSpeechRate(_lastSpeed);
-      await _tts.speak(_lastSpokenText);
+      await tts.setLanguage(_lastLanguage);
+      await tts.setSpeechRate(_lastSpeed);
+      await tts.speak(_lastSpokenText);
       _state = TtsState.playing;
     } catch (e) {
       debugPrint('TtsService.resume failed: $e');
@@ -66,8 +88,9 @@ class TtsService {
   }
 
   Future<void> stop() async {
+    if (Platform.isLinux) return;
     try {
-      await _tts.stop();
+      await tts.stop();
     } catch (e) {
       debugPrint('TtsService.stop failed: $e');
     } finally {

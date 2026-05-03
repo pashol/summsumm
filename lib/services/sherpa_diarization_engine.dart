@@ -13,6 +13,17 @@ Future<String> _convertToDiarizationWav(String inputPath) async {
   final outputPath =
       '${tempDir.path}/sherpa_diarization_${DateTime.now().millisecondsSinceEpoch}.wav';
 
+  if (Platform.isLinux) {
+    final result = await Process.run('ffmpeg', [
+      '-y', '-i', inputPath, '-vn', '-ac', '1', '-ar', '16000',
+      '-acodec', 'pcm_s16le', outputPath,
+    ]);
+    if (result.exitCode != 0) {
+      throw StateError('Failed to convert audio to WAV for diarization: ${result.stderr}');
+    }
+    return outputPath;
+  }
+
   final cmd =
       '-y -i "$inputPath" -vn -ac 1 -ar 16000 -acodec pcm_s16le "$outputPath"';
   final session = await FFmpegKit.execute(cmd);
