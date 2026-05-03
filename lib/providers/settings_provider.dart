@@ -164,6 +164,17 @@ class Settings extends _$Settings {
     await _persist(next);
   }
 
+  Future<void> setHuggingFaceToken(String token) async {
+    final next = state.copyWith(huggingFaceToken: token);
+    state = next;
+    await _persist(next);
+    await ref.read(secureStorageProvider).saveHuggingFaceToken(token);
+  }
+
+  Future<String?> getHuggingFaceToken() async {
+    return ref.read(secureStorageProvider).getHuggingFaceToken();
+  }
+
   Future<void> setPromptOverride(String style, String text) async {
     final nextOverrides = Map<String, String>.from(state.promptOverrides);
     nextOverrides[style] = text;

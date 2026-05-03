@@ -43,11 +43,23 @@ class MeetingChatNotifier extends StateNotifier<MeetingChatState> {
 
   MeetingChatNotifier(this._ref) : super(const MeetingChatState());
 
-  String _fullTranscriptPrompt(String transcript, String? summary) =>
-      'You are a helpful assistant. The user recorded a meeting.\n'
-      'Transcript:\n$transcript\n'
-      '${summary != null ? '\nSummary:\n$summary\n' : ''}'
-      '\nAnswer questions about this meeting concisely.';
+  String _truncateForLocalModel(String text, {required int maxChars}) {
+    if (text.length <= maxChars) return text;
+    return text.substring(0, maxChars - 3) + '...';
+  }
+
+  String _fullTranscriptPrompt(String transcript, String? summary, {bool isLocal = false}) {
+    final effectiveTranscript = isLocal
+        ? _truncateForLocalModel(transcript, maxChars: 2000)
+        : transcript;
+    final effectiveSummary = summary != null && isLocal
+        ? _truncateForLocalModel(summary, maxChars: 500)
+        : summary;
+    return 'You are a helpful assistant. The user recorded a meeting.\n'
+        'Transcript:\n$effectiveTranscript\n'
+        '${effectiveSummary != null ? '\nSummary:\n$effectiveSummary\n' : ''}'
+        '\nAnswer questions about this meeting concisely.';
+  }
 
   Future<void> sendMessage(
     String question, {
@@ -81,21 +93,27 @@ class MeetingChatNotifier extends StateNotifier<MeetingChatState> {
           sourceIds: [indexedSource.ragSourceId],
         );
         if (searchResult.contextText.trim().isNotEmpty) {
+          final contextText = settings.localAiEnabled
+              ? _truncateForLocalModel(searchResult.contextText, maxChars: 2000)
+              : searchResult.contextText;
+          final summaryText = summary != null && settings.localAiEnabled
+              ? _truncateForLocalModel(summary, maxChars: 500)
+              : summary;
           systemPrompt =
               'You are a helpful assistant. The user recorded a meeting. '
               'Here is the most relevant context from the meeting:\n'
-              '${searchResult.contextText}\n'
-              '${summary != null ? '\nSummary:\n$summary\n' : ''}'
+              '$contextText\n'
+              '${summaryText != null ? '\nSummary:\n$summaryText\n' : ''}'
               '\nAnswer questions about this meeting concisely using the provided context.';
         } else {
-          systemPrompt = _fullTranscriptPrompt(transcript, summary);
+          systemPrompt = _fullTranscriptPrompt(transcript, summary, isLocal: settings.localAiEnabled);
         }
       } catch (e, st) {
         debugPrint('RAG lookup failed for meeting $meetingId: $e\n$st');
-        systemPrompt = _fullTranscriptPrompt(transcript, summary);
+        systemPrompt = _fullTranscriptPrompt(transcript, summary, isLocal: settings.localAiEnabled);
       }
     } else {
-      systemPrompt = _fullTranscriptPrompt(transcript, summary);
+      systemPrompt = _fullTranscriptPrompt(transcript, summary, isLocal: settings.localAiEnabled);
     }
 
     final history = state.messages
@@ -164,10 +182,19 @@ class MeetingChatNotifier extends StateNotifier<MeetingChatState> {
           if (!_mounted) return;
           final msgs = List<ChatMessage>.from(state.messages)
             ..removeLast();
+          final errorStr = e.toString();
+          String friendlyError;
+          if (errorStr.contains('OUT_OF_RANGE') && errorStr.contains('too long')) {
+            friendlyError = 'The question and context are too long for the local model. Try a shorter question or use cloud AI instead.';
+          } else if (errorStr.contains('maxTokens')) {
+            friendlyError = 'Input is too long for the local model. Try a shorter question or use cloud AI instead.';
+          } else {
+            friendlyError = e is AiException ? e.message : e.toString();
+          }
           state = state.copyWith(
             messages: msgs,
             isStreaming: false,
-            error: e is AiException ? e.message : e.toString(),
+            error: friendlyError,
           );
         },
         onDone: () {
@@ -178,10 +205,19 @@ class MeetingChatNotifier extends StateNotifier<MeetingChatState> {
       );
     } catch (e) {
       final msgs = List<ChatMessage>.from(state.messages)..removeLast();
+      final errorStr = e.toString();
+      String friendlyError;
+      if (errorStr.contains('OUT_OF_RANGE') && errorStr.contains('too long')) {
+        friendlyError = 'The question and context are too long for the local model. Try a shorter question or use cloud AI instead.';
+      } else if (errorStr.contains('maxTokens')) {
+        friendlyError = 'Input is too long for the local model. Try a shorter question or use cloud AI instead.';
+      } else {
+        friendlyError = e is AiException ? e.message : e.toString();
+      }
       state = state.copyWith(
         messages: msgs,
         isStreaming: false,
-        error: e is AiException ? e.message : e.toString(),
+        error: friendlyError,
       );
     }
   }

@@ -32,6 +32,8 @@
 
 ### Task 1: Add `localAiEnabled` setting to AppSettings
 
+**Note:** `localLibraryChatEnabled` already exists for library indexing. `localAiEnabled` is a NEW separate field controlling local LLM generation.
+
 **Files:**
 - Modify: `lib/models/app_settings.dart`
 - Modify: `test/models/app_settings_test.dart`
@@ -79,47 +81,47 @@ Expected: FAIL — `localAiEnabled` getter not defined
 
 In `lib/models/app_settings.dart`:
 
-1. Add field after `showExtractedPdfTextOnly` (line 26):
+1. Add field after `showExtractedPdfTextOnly` (around line 26):
 ```dart
 final bool localAiEnabled;
 ```
 
-2. Add to constructor (after line 49):
+2. Add to constructor (after `showExtractedPdfTextOnly` line):
 ```dart
 this.localAiEnabled = false,
 ```
 
-3. Add to `AppSettings.defaults()` (after line 74):
+3. Add to `AppSettings.defaults()` (after `showExtractedPdfTextOnly: false`):
 ```dart
 localAiEnabled: false,
 ```
 
-4. Add to `copyWith()` parameter list (after line 98):
+4. Add to `copyWith()` parameter list (after `bool? showExtractedPdfTextOnly`):
 ```dart
 bool? localAiEnabled,
 ```
 
-5. Add to `copyWith()` body (after line 121):
+5. Add to `copyWith()` body (after `showExtractedPdfTextOnly`):
 ```dart
 localAiEnabled: localAiEnabled ?? this.localAiEnabled,
 ```
 
-6. Add to `toJson()` (after line 146):
+6. Add to `toJson()` (after `showExtractedPdfTextOnly`):
 ```dart
 'localAiEnabled': localAiEnabled,
 ```
 
-7. Add to `fromJson()` (after line 175):
+7. Add to `fromJson()` (after `showExtractedPdfTextOnly`):
 ```dart
 localAiEnabled: json['localAiEnabled'] as bool? ?? false,
 ```
 
-8. Add to `operator ==` (after line 217):
+8. Add to `operator ==` (after `showExtractedPdfTextOnly`):
 ```dart
 other.localAiEnabled == localAiEnabled &&
 ```
 
-9. Add to `hashCode` (after line 242):
+9. Add to `hashCode` (after `showExtractedPdfTextOnly`):
 ```dart
 localAiEnabled,
 ```
@@ -140,12 +142,14 @@ git commit -m "feat: add localAiEnabled setting to AppSettings"
 
 ### Task 2: Add `setLocalAiEnabled` to Settings notifier
 
+**Note:** `setLocalLibraryChatEnabled` already exists for library indexing. We're adding `setLocalAiEnabled` as a separate method for local LLM generation.
+
 **Files:**
 - Modify: `lib/providers/settings_provider.dart`
 
 - [ ] **Step 1: Add `setLocalAiEnabled` method**
 
-Add after `setShowExtractedPdfTextOnly` (line 159):
+Add after `setShowExtractedPdfTextOnly` (around line 159):
 
 ```dart
 Future<void> setLocalAiEnabled(bool enabled) async {
@@ -169,10 +173,11 @@ git commit -m "feat: add setLocalAiEnabled to Settings notifier"
 
 ---
 
-### Task 3: Add `sourceIds` parameter to LibraryRagService search
+### Task 3: Add `sourceIds` parameter to LibraryRagService and LibraryRagRepository
 
 **Files:**
 - Modify: `lib/services/library_rag_service.dart`
+- Modify: `lib/services/library_rag_repository.dart`
 
 - [ ] **Step 1: Add `sourceIds` to `LibraryRagClient` abstract method**
 
@@ -230,16 +235,24 @@ Future<LibraryRagSearchResult> search(String query, {List<int>? sourceIds}) asyn
 }
 ```
 
-- [ ] **Step 5: Run analysis**
+- [ ] **Step 5: Add `sourceIds` to `LibraryRagRepository.search()`**
 
-Run: `flutter analyze lib/services/library_rag_service.dart`
+Change line 119:
+```dart
+Future<LibraryRagSearchResult> search(String query, {List<int>? sourceIds}) =>
+    _ragService.search(query, sourceIds: sourceIds);
+```
+
+- [ ] **Step 6: Run analysis**
+
+Run: `flutter analyze lib/services/library_rag_service.dart lib/services/library_rag_repository.dart`
 Expected: No errors
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add lib/services/library_rag_service.dart
-git commit -m "feat: add sourceIds filter to LibraryRagService search"
+git add lib/services/library_rag_service.dart lib/services/library_rag_repository.dart
+git commit -m "feat: add sourceIds filter to LibraryRagService and LibraryRagRepository search"
 ```
 
 ---
@@ -480,6 +493,8 @@ import '../providers/local_llm_provider.dart';
 ```
 
 - [ ] **Step 2: Modify `sendMessage` to guard empty API key and route to local**
+
+**Note:** The Ask Library provider currently uses `libraryRagRepositoryProvider` for search, not `libraryRagServiceProvider` directly. The routing logic should go after the search results are obtained.
 
 Replace lines 91-118 (from `final settings` to end of `streamCompletion` call) with:
 
@@ -729,16 +744,25 @@ Replace the `sendMessage` method (lines 43-120) with:
 
 - [ ] **Step 3: Update call sites that pass `meetingId`**
 
-Search for calls to `sendMessage` in `meeting_detail_screen.dart` and add `meetingId: meeting.id`. The current call is like:
+In `meeting_detail_screen.dart` line 1313-1317, the current call is:
 
 ```dart
-chatNotifier.sendMessage(text, transcript: transcript, summary: summary);
+notifier.sendMessage(
+  text,
+  transcript: meeting.transcript!,
+  summary: meeting.summary,
+);
 ```
 
 Change to:
 
 ```dart
-chatNotifier.sendMessage(text, transcript: transcript, meetingId: meeting.id, summary: summary);
+notifier.sendMessage(
+  text,
+  transcript: meeting.transcript!,
+  meetingId: meeting.id,
+  summary: meeting.summary,
+);
 ```
 
 - [ ] **Step 4: Run analysis**
@@ -763,42 +787,78 @@ git commit -m "feat: RAG-first context + local generation for meeting chat"
 - Modify: `lib/l10n/app_localizations_de.dart`
 - Modify: `lib/l10n/app_localizations.dart`
 
-- [ ] **Step 1: Add localization strings**
+- [ ] **Step 1: Add localization strings to .arb files**
 
-In `lib/l10n/app_localizations_en.dart`, add after `localLibraryChatSubtitleDisabled`:
+**Note:** Localizations are generated from `.arb` files, not the `.dart` files. Add to the `.arb` files and then regenerate.
 
-```dart
-String get localAiTitle => 'On-device AI';
-String get localAiSubtitleEnabled => 'Using local Gemma 3 1B model';
-String get localAiSubtitleDisabled => 'Disabled — uses cloud AI';
-String get localAiDownloadModel => 'Download model (~500 MB)';
-String get localAiDownloading => 'Downloading model...';
-String get localAiReady => 'Model ready';
-String get localAiNotDownloaded => 'Model not downloaded';
+In `lib/l10n/app_en.arb`, add after `localLibraryChatSubtitleDisabled`:
+
+```json
+  "localAiTitle": "On-device AI",
+  "@localAiTitle": {
+    "description": "Settings row title for local AI generation"
+  },
+  "localAiSubtitleEnabled": "Using local Gemma 3 1B model",
+  "@localAiSubtitleEnabled": {
+    "description": "Subtitle when local AI is enabled"
+  },
+  "localAiSubtitleDisabled": "Disabled — uses cloud AI",
+  "@localAiSubtitleDisabled": {
+    "description": "Subtitle when local AI is disabled"
+  }
 ```
 
-In `lib/l10n/app_localizations_de.dart`, add corresponding German strings:
+In `lib/l10n/app_de.arb`, add corresponding German strings:
 
-```dart
-String get localAiTitle => 'Lokale KI';
-String get localAiSubtitleEnabled => 'Lokales Gemma 3 1B Modell';
-String get localAiSubtitleDisabled => 'Deaktiviert — Cloud-KI';
-String get localAiDownloadModel => 'Modell herunterladen (~500 MB)';
-String get localAiDownloading => 'Modell wird heruntergeladen...';
-String get localAiReady => 'Modell bereit';
-String get localAiNotDownloaded => 'Modell nicht heruntergeladen';
+```json
+  "localAiTitle": "Lokale KI",
+  "@localAiTitle": {
+    "description": "Settings row title for local AI generation"
+  },
+  "localAiSubtitleEnabled": "Lokales Gemma 3 1B Modell",
+  "@localAiSubtitleEnabled": {
+    "description": "Subtitle when local AI is enabled"
+  },
+  "localAiSubtitleDisabled": "Deaktiviert — Cloud-KI",
+  "@localAiSubtitleDisabled": {
+    "description": "Subtitle when local AI is disabled"
+  }
 ```
 
-In `lib/l10n/app_localizations.dart`, add the abstract getters:
+- [ ] **Step 2: Regenerate localizations**
+
+Run: `flutter gen-l10n`
+
+- [ ] **Step 3: Add Local AI row to settings screen**
+
+In `lib/screens/settings_screen.dart`, add after the local library chat row (after line 153 `},`), inside the same `_SettingsSection` children list:
 
 ```dart
-String get localAiTitle;
-String get localAiSubtitleEnabled;
-String get localAiSubtitleDisabled;
-String get localAiDownloadModel;
-String get localAiDownloading;
-String get localAiReady;
-String get localAiNotDownloaded;
+const Divider(height: 1, indent: 16, endIndent: 16),
+_SettingsRow(
+  icon: Icons.smart_toy_outlined,
+  title: l10n.localAiTitle,
+  subtitle: settings.localAiEnabled
+      ? l10n.localAiSubtitleEnabled
+      : l10n.localAiSubtitleDisabled,
+  onTap: () {
+    ref
+        .read(settingsProvider.notifier)
+        .setLocalAiEnabled(!settings.localAiEnabled);
+  },
+),
+```
+
+- [ ] **Step 4: Run analysis**
+
+Run: `flutter analyze lib/screens/settings_screen.dart lib/l10n/`
+Expected: No errors
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add lib/screens/settings_screen.dart lib/l10n/
+git commit -m "feat: add Local AI toggle to settings screen"
 ```
 
 - [ ] **Step 2: Add Local AI row to settings screen**

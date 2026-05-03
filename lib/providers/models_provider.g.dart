@@ -13,8 +13,9 @@ String _$aiServiceHash() => r'b6be8ed33706119e4469ff82cefaa6dfbfc95f9b';
 final aiServiceProvider = Provider<AiService>.internal(
   aiService,
   name: r'aiServiceProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product') ? null : _$aiServiceHash,
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$aiServiceHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );
@@ -55,21 +56,15 @@ class OpenRouterModelsFamily extends Family<AsyncValue<List<AIModel>>> {
   const OpenRouterModelsFamily();
 
   /// See also [openRouterModels].
-  OpenRouterModelsProvider call(
-    String apiKey,
-  ) {
-    return OpenRouterModelsProvider(
-      apiKey,
-    );
+  OpenRouterModelsProvider call(String apiKey) {
+    return OpenRouterModelsProvider(apiKey);
   }
 
   @override
   OpenRouterModelsProvider getProviderOverride(
     covariant OpenRouterModelsProvider provider,
   ) {
-    return call(
-      provider.apiKey,
-    );
+    return call(provider.apiKey);
   }
 
   static const Iterable<ProviderOrFamily>? _dependencies = null;
@@ -91,24 +86,19 @@ class OpenRouterModelsFamily extends Family<AsyncValue<List<AIModel>>> {
 class OpenRouterModelsProvider
     extends AutoDisposeFutureProvider<List<AIModel>> {
   /// See also [openRouterModels].
-  OpenRouterModelsProvider(
-    String apiKey,
-  ) : this._internal(
-          (ref) => openRouterModels(
-            ref as OpenRouterModelsRef,
-            apiKey,
-          ),
-          from: openRouterModelsProvider,
-          name: r'openRouterModelsProvider',
-          debugGetCreateSourceHash:
-              const bool.fromEnvironment('dart.vm.product')
-                  ? null
-                  : _$openRouterModelsHash,
-          dependencies: OpenRouterModelsFamily._dependencies,
-          allTransitiveDependencies:
-              OpenRouterModelsFamily._allTransitiveDependencies,
-          apiKey: apiKey,
-        );
+  OpenRouterModelsProvider(String apiKey)
+    : this._internal(
+        (ref) => openRouterModels(ref as OpenRouterModelsRef, apiKey),
+        from: openRouterModelsProvider,
+        name: r'openRouterModelsProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$openRouterModelsHash,
+        dependencies: OpenRouterModelsFamily._dependencies,
+        allTransitiveDependencies:
+            OpenRouterModelsFamily._allTransitiveDependencies,
+        apiKey: apiKey,
+      );
 
   OpenRouterModelsProvider._internal(
     super._createNotifier, {
@@ -174,5 +164,6 @@ class _OpenRouterModelsProviderElement
   @override
   String get apiKey => (origin as OpenRouterModelsProvider).apiKey;
 }
+
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

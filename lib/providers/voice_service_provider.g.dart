@@ -13,8 +13,9 @@ String _$voiceServiceHash() => r'de716fd989da7a6c7cfdac6d5ad218a45ccf2e5a';
 final voiceServiceProvider = Provider<VoiceService>.internal(
   voiceService,
   name: r'voiceServiceProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product') ? null : _$voiceServiceHash,
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$voiceServiceHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );

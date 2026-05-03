@@ -23,15 +23,16 @@ final secureStorageProvider = Provider<SecureStorageService>.internal(
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef SecureStorageRef = ProviderRef<SecureStorageService>;
-String _$settingsHash() => r'b192fe3f102463500b7ccd3c83776dc71249669e';
+String _$settingsHash() => r'07b2ac4d49b40712bd56d49dbcee77e877835a40';
 
 /// See also [Settings].
 @ProviderFor(Settings)
 final settingsProvider = NotifierProvider<Settings, AppSettings>.internal(
   Settings.new,
   name: r'settingsProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product') ? null : _$settingsHash,
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$settingsHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );

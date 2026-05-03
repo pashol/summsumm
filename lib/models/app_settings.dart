@@ -25,6 +25,7 @@ class AppSettings {
   final bool localLibraryChatEnabled;
   final bool showExtractedPdfTextOnly;
   final bool localAiEnabled;
+  final String huggingFaceToken;
   final Map<String, String> promptOverrides;
   final List<CustomPrompt> customPrompts;
   final String? selectedCustomPromptId;
@@ -49,6 +50,7 @@ class AppSettings {
     this.localLibraryChatEnabled = false,
     this.showExtractedPdfTextOnly = false,
     this.localAiEnabled = false,
+    this.huggingFaceToken = '',
     this.promptOverrides = const {},
     this.customPrompts = const [],
     this.selectedCustomPromptId,
@@ -75,6 +77,7 @@ class AppSettings {
           localLibraryChatEnabled: false,
           showExtractedPdfTextOnly: false,
           localAiEnabled: false,
+          huggingFaceToken: '',
           promptOverrides: const {},
           customPrompts: const [],
           selectedCustomPromptId: null,
@@ -100,6 +103,7 @@ class AppSettings {
     bool? localLibraryChatEnabled,
     bool? showExtractedPdfTextOnly,
     bool? localAiEnabled,
+    String? huggingFaceToken,
     Map<String, String>? promptOverrides,
     List<CustomPrompt>? customPrompts,
     String? selectedCustomPromptId,
@@ -125,6 +129,7 @@ class AppSettings {
         showExtractedPdfTextOnly:
             showExtractedPdfTextOnly ?? this.showExtractedPdfTextOnly,
         localAiEnabled: localAiEnabled ?? this.localAiEnabled,
+        huggingFaceToken: huggingFaceToken ?? this.huggingFaceToken,
         promptOverrides: promptOverrides ?? this.promptOverrides,
         customPrompts: customPrompts ?? this.customPrompts,
         selectedCustomPromptId: selectedCustomPromptId ?? this.selectedCustomPromptId,
@@ -150,6 +155,7 @@ class AppSettings {
         'localLibraryChatEnabled': localLibraryChatEnabled,
         'showExtractedPdfTextOnly': showExtractedPdfTextOnly,
         'localAiEnabled': localAiEnabled,
+        'huggingFaceToken': huggingFaceToken,
         'promptOverrides': promptOverrides,
         'customPrompts': customPrompts.map((p) => p.toJson()).toList(),
         'selectedCustomPromptId': selectedCustomPromptId,
@@ -181,6 +187,7 @@ class AppSettings {
         showExtractedPdfTextOnly:
             json['showExtractedPdfTextOnly'] as bool? ?? false,
         localAiEnabled: json['localAiEnabled'] as bool? ?? false,
+        huggingFaceToken: json['huggingFaceToken'] as String? ?? '',
         promptOverrides: (json['promptOverrides'] as Map<String, dynamic>?)?.map(
               (k, v) => MapEntry(k, v?.toString() ?? ''),
             ) ??
@@ -223,6 +230,7 @@ class AppSettings {
         other.localLibraryChatEnabled == localLibraryChatEnabled &&
         other.showExtractedPdfTextOnly == showExtractedPdfTextOnly &&
         other.localAiEnabled == localAiEnabled &&
+        other.huggingFaceToken == huggingFaceToken &&
         other.promptOverrides == promptOverrides &&
         listEquals(other.customPrompts, customPrompts) &&
         other.selectedCustomPromptId == selectedCustomPromptId;
@@ -249,6 +257,7 @@ class AppSettings {
         localLibraryChatEnabled,
         showExtractedPdfTextOnly,
         localAiEnabled,
+        huggingFaceToken,
         promptOverrides,
         Object.hashAll(customPrompts),
         selectedCustomPromptId,

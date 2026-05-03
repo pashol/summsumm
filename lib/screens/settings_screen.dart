@@ -6,6 +6,7 @@ import 'package:summsumm/l10n/app_localizations.dart';
 import '../models/app_settings.dart';
 import '../models/summary_style.dart';
 import '../models/transcription_config.dart';
+import '../providers/local_llm_provider.dart';
 import '../providers/settings_provider.dart';
 import '../utils/localized_strings.dart';
 import '../widgets/glass_card.dart';
@@ -30,6 +31,8 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   String? _apiKeyStatus;
+  bool _localAiDownloading = false;
+  double _localAiDownloadProgress = 0;
 
   @override
   void initState() {
@@ -155,15 +158,156 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _SettingsRow(
                 icon: Icons.smart_toy_outlined,
                 title: l10n.localAiTitle,
-                subtitle: settings.localAiEnabled
-                    ? l10n.localAiSubtitleEnabled
-                    : l10n.localAiSubtitleDisabled,
-                onTap: () {
-                  ref
-                      .read(settingsProvider.notifier)
-                      .setLocalAiEnabled(!settings.localAiEnabled);
-                },
+                subtitle: _localAiDownloading
+                    ? 'Downloading model... ${(_localAiDownloadProgress * 100).toStringAsFixed(0)}%'
+                    : (settings.localAiEnabled
+                        ? l10n.localAiSubtitleEnabled
+                        : l10n.localAiSubtitleDisabled),
+                onTap: _localAiDownloading
+                    ? () {}
+                    : () async {
+                        final next = !settings.localAiEnabled;
+                        if (!next) {
+                          ref
+                              .read(settingsProvider.notifier)
+                              .setLocalAiEnabled(false);
+                          return;
+                        }
+                        final localLlm = ref.read(localLlmServiceProvider);
+                        final installed = await localLlm.isModelInstalled();
+                        if (installed) {
+                          ref
+                              .read(settingsProvider.notifier)
+                              .setLocalAiEnabled(true);
+                          return;
+                        }
+                        if (!mounted) return;
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text('Download Local AI Model'),
+                            content: const Text(
+                                'The Gemma 3 1B model (~750 MB) must be downloaded to use on-device AI.\n\nA Hugging Face token is required.\n\nDownload now?'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text('Cancel'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text('Download'),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirmed != true || !mounted) return;
+                        setState(() => _localAiDownloading = true);
+                        try {
+                          final token = await ref
+                              .read(settingsProvider.notifier)
+                              .getHuggingFaceToken();
+                          await localLlm.downloadModel(
+                            onProgress: (progress) {
+                              if (mounted) {
+                                setState(() =>
+                                    _localAiDownloadProgress = progress);
+                              }
+                            },
+                            token: token,
+                          );
+                          if (mounted) {
+                            ref
+                                .read(settingsProvider.notifier)
+                                .setLocalAiEnabled(true);
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            final errorMsg = e.toString();
+                            final isAuthError = errorMsg.contains('401') ||
+                                errorMsg.contains('Authentication') ||
+                                errorMsg.contains('Unauthorized');
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(isAuthError
+                                    ? 'Authentication failed. Please set your Hugging Face token in Settings → API Connection.'
+                                    : 'Download failed: $e'),
+                                backgroundColor: Colors.red,
+                                duration: const Duration(seconds: 5),
+                              ),
+                            );
+                          }
+                        } finally {
+                          if (mounted) {
+                            setState(() {
+                              _localAiDownloading = false;
+                              _localAiDownloadProgress = 0;
+                            });
+                          }
+                        }
+                      },
               ),
+              if (!settings.localAiEnabled) ...[
+                const Divider(height: 1, indent: 16, endIndent: 16),
+                _SettingsRow(
+                  icon: Icons.token,
+                  title: 'Hugging Face Token',
+                  subtitle: settings.huggingFaceToken.isEmpty
+                      ? 'Required for gated models'
+                      : 'Token set',
+                  onTap: () async {
+                    final controller = TextEditingController(
+                      text: settings.huggingFaceToken,
+                    );
+                    final result = await showDialog<String>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Hugging Face Token'),
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Required to download gated models like Gemma.\n\n'
+                              '1. Go to huggingface.co\n'
+                              '2. Accept the Gemma license\n'
+                              '3. Create a token at Settings → Access Tokens\n'
+                              '4. Paste it here',
+                              style: TextStyle(fontSize: 13),
+                            ),
+                            const SizedBox(height: 12),
+                            TextField(
+                              controller: controller,
+                              obscureText: true,
+                              decoration: const InputDecoration(
+                                labelText: 'Token',
+                                hintText: 'hf_...',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                          ],
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () =>
+                                Navigator.pop(context, controller.text),
+                            child: const Text('Save'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (result != null) {
+                      await ref
+                          .read(settingsProvider.notifier)
+                          .setHuggingFaceToken(result);
+                    }
+                    controller.dispose();
+                  },
+                ),
+              ],
             ],
           ),
 

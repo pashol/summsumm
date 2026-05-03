@@ -110,7 +110,7 @@ class _AboutScreenState extends State<AboutScreen> {
                     size: 18,
                     color: cs.onSurfaceVariant,
                   ),
-                  onTap: () => _launchUrl('https://github.com/anomalyco/summsumm'),
+                  onTap: () => _launchUrl('https://github.com/pashol/summsumm'),
                 ),
                 const Divider(height: 1, indent: 16, endIndent: 16),
                 const Divider(height: 1, indent: 16, endIndent: 16),

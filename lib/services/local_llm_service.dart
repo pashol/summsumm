@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:flutter_gemma/flutter_gemma.dart';
 
-const _kGemmaModelName = 'gemma-3-1b-it-gpu-int8.task';
+const _kGemmaModelName = 'gemma3-1b-it-int4.task';
 const _kGemmaModelUrl =
-    'https://huggingface.co/litert-community/Gemma3-1B-IT/resolve/main/gemma-3-1b-it-gpu-int8.task';
+    'https://huggingface.co/litert-community/Gemma3-1B-IT/resolve/main/gemma3-1b-it-int4.task';
 
 class LocalLlmService {
   InferenceModel? _model;
@@ -21,6 +21,7 @@ class LocalLlmService {
 
   Future<void> downloadModel({
     void Function(double progress)? onProgress,
+    String? token,
   }) async {
     if (await isModelInstalled()) return;
     _isDownloading = true;
@@ -28,7 +29,10 @@ class LocalLlmService {
     try {
       await FlutterGemma.installModel(
         modelType: ModelType.gemmaIt,
-      ).fromNetwork(_kGemmaModelUrl).withProgress((progress) {
+      ).fromNetwork(
+        _kGemmaModelUrl,
+        token: token,
+      ).withProgress((progress) {
         _downloadProgress = progress / 100.0;
         onProgress?.call(_downloadProgress);
       }).install();
@@ -56,13 +60,34 @@ class LocalLlmService {
   }) async* {
     if (_model == null) throw StateError('Model not ready. Call ensureModelLoaded() first.');
 
+    // WORKAROUND: flutter_gemma's systemInstruction doesn't work properly with
+    // MediaPipe (.task files). It prepends [System: ...] to the first user
+    // message instead of using MediaPipe's native setSystemInstruction().
+    // When chat history is present, this attaches the context to an old
+    // message instead of the current question, causing the model to ignore
+    // the context. We manually prepend the system prompt to the last user
+    // message to ensure the context is always with the current question.
+    final modifiedMessages = List<Map<String, dynamic>>.from(messages);
+    if (systemPrompt.isNotEmpty) {
+      for (var i = modifiedMessages.length - 1; i >= 0; i--) {
+        if (modifiedMessages[i]['role'] == 'user') {
+          final content = modifiedMessages[i]['content'] as String;
+          modifiedMessages[i] = {
+            ...modifiedMessages[i],
+            'content': '$systemPrompt\n\n$content',
+          };
+          break;
+        }
+      }
+    }
+
     final chat = await _model!.createChat(
-      systemInstruction: systemPrompt,
+      systemInstruction: '',
       temperature: 0.8,
       topK: 3,
     );
 
-    for (final message in messages) {
+    for (final message in modifiedMessages) {
       final content = message['content'];
       if (content is! String) {
         throw ArgumentError('Message content must be a String, got: $content');

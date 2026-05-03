@@ -109,11 +109,12 @@ class AskLibraryChatNotifier extends StateNotifier<AskLibraryChatState> {
         }
         await localLlm.ensureModelLoaded();
 
+        final truncatedContext = _truncateForLocalModel(search.contextText, maxChars: 2500);
         final systemPrompt =
             'You answer questions using only the provided library context. '
             'If the context does not support an answer, say you could not find enough information. '
             'Keep answers concise and cite source labels when useful.\n\n'
-            'Library context for this turn:\n${search.contextText}';
+            'Library context for this turn:\n$truncatedContext';
 
         final localMessages = <Map<String, dynamic>>[
           ..._buildPromptHistory(previousMessages),
@@ -224,10 +225,19 @@ class AskLibraryChatNotifier extends StateNotifier<AskLibraryChatState> {
   void _handleError(Object e) {
     if (!_mounted) return;
     final updated = List<AskLibraryMessage>.from(state.messages)..removeLast();
+    final errorStr = e.toString();
+    String friendlyError;
+    if (errorStr.contains('OUT_OF_RANGE') && errorStr.contains('too long')) {
+      friendlyError = 'The question and context are too long for the local model. Try a shorter question or use cloud AI instead.';
+    } else if (errorStr.contains('maxTokens')) {
+      friendlyError = 'Input is too long for the local model. Try a shorter question or use cloud AI instead.';
+    } else {
+      friendlyError = e is AiException ? e.message : e.toString();
+    }
     state = state.copyWith(
       messages: updated,
       isStreaming: false,
-      error: e is AiException ? e.message : e.toString(),
+      error: friendlyError,
     );
   }
 
@@ -293,6 +303,11 @@ class AskLibraryChatNotifier extends StateNotifier<AskLibraryChatState> {
       ..writeln()
       ..write('Current question: $question');
     return buffer.toString();
+  }
+
+  String _truncateForLocalModel(String text, {required int maxChars}) {
+    if (text.length <= maxChars) return text;
+    return text.substring(0, maxChars - 3) + '...';
   }
 
   @override

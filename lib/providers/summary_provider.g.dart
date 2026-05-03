@@ -13,8 +13,9 @@ String _$summaryHash() => r'8396ca200d5ae220486a12b45999e2cb2c8081c5';
 final summaryProvider = NotifierProvider<Summary, SummaryState>.internal(
   Summary.new,
   name: r'summaryProvider',
-  debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product') ? null : _$summaryHash,
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$summaryHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );
